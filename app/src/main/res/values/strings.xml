@@ -1,0 +1,64 @@
+<resources>
+    <string name="app_name">Pickly</string>
+    <string name="nav_organize">정리하기</string>
+    <string name="nav_weekly">모아보기</string>
+    <string name="nav_settings">설정</string>
+    <string name="folder_selection">폴더 선택</string>
+    <string name="filter_all">전체</string>
+    <string name="filter_selected">선택됨</string>
+    <string name="filter_not_selected">선택 안됨</string>
+    <string name="sort_newest">최신순</string>
+    <string name="sort_oldest">오래된순</string>
+    <string name="sort_name">이름순</string>
+    <string name="empty_folder_guide">정리할 폴더를 선택해주세요</string>
+    <string name="photo_count_format">%d장</string>
+    <string name="selected_count_format">%d개 선택됨</string>
+    <string name="bulk_action_share">공유</string>
+    <string name="bulk_action_move">이동</string>
+    <string name="bulk_action_copy">복사</string>
+    <string name="bulk_action_delete">삭제</string>
+    <!-- Archive Screen -->
+    <string name="archive_title">모아보기</string>
+    <string name="archive_empty_title">아직 모아볼 사진이 없어요</string>
+    <string name="archive_empty_subtitle">정리하기 탭에서 사진을 골라보세요</string>
+    <string name="archive_empty_cta">사진 정리하러 가기</string>
+    <string name="archive_section_picks_format">%1$d Picks</string>
+
+    <!-- Settings Screen (S-08) -->
+    <string name="settings_title">설정</string>
+
+    <string name="settings_section_organize">사진 정리</string>
+    <string name="settings_group_result_save_location">결과 저장 위치</string>
+    <string name="settings_option_remember_last_folder">마지막 사용 폴더 기억</string>
+    <string name="settings_option_always_new_folder">항상 새 폴더 생성</string>
+    <string name="settings_group_duplicate_filename">동일 파일명 처리</string>
+    <string name="settings_option_duplicate_overwrite">덮어쓰기</string>
+    <string name="settings_option_duplicate_skip">건너뛰기</string>
+    <string name="settings_option_duplicate_autorename">자동 이름 변경</string>
+
+    <string name="settings_section_recommendation">사진 추천</string>
+    <string name="settings_option_recommendation_enabled">사진 추천 기능</string>
+    <string name="settings_option_recommendation_subtitle">추천 사진은 자동 선택되지 않고 뱃지로만 표시됩니다.</string>
+
+    <string name="settings_section_display">화면 표시</string>
+    <string name="settings_group_theme">테마</string>
+    <string name="settings_option_theme_system">시스템 설정 따름</string>
+    <string name="settings_option_theme_light">라이트 모드</string>
+    <string name="settings_option_theme_dark">다크 모드</string>
+
+    <string name="settings_section_data">데이터 관리</string>
+    <string name="settings_cache_size">캐시 용량</string>
+    <string name="settings_cache_size_placeholder">—</string>
+    <string name="settings_cache_clear">캐시 삭제</string>
+    <string name="settings_cache_size_loading">계산 중…</string>
+    <string name="settings_cache_clear_in_progress">삭제 중…</string>
+    <string name="settings_cache_clear_done">캐시를 삭제했어요.</string>
+    <string name="settings_cache_clear_failed">캐시 삭제에 실패했어요.</string>
+
+    <string name="settings_section_app_info">앱 정보</string>
+    <string name="settings_app_version">앱 버전</string>
+    <string name="settings_privacy_policy">개인정보 처리방침</string>
+    <string name="settings_open_source_licenses">오픈소스 라이선스</string>
+
+    <string name="settings_snackbar_coming_soon">준비 중입니다.</string>
+</resources>
