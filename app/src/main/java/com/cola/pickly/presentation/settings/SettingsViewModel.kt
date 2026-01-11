@@ -21,7 +21,8 @@ import javax.inject.Inject
 /**
  * S-08 Settings 화면의 상태/정책 변경을 관리하는 ViewModel.
  *
- * UI-only 단계에서는 InMemorySettingsRepository로도 즉시 반영 흐름을 확인할 수 있습니다.
+ * DataStoreSettingsRepository를 통해 설정값을 영속 저장하고,
+ * 변경 사항은 즉시 반영됩니다.
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
