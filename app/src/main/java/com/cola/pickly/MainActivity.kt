@@ -12,10 +12,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cola.pickly.presentation.MainUiState
 import com.cola.pickly.presentation.MainViewModel
 import com.cola.pickly.presentation.ui.PicklyNavGraph
-import com.cola.pickly.data.settings.Settings
-import com.cola.pickly.data.settings.SettingsRepository
-import com.cola.pickly.data.settings.ThemeMode
-import com.cola.pickly.ui.theme.PicklyTheme
+import com.cola.pickly.core.data.settings.Settings
+import com.cola.pickly.core.data.settings.SettingsRepository
+import com.cola.pickly.core.data.settings.ThemeMode
+import com.cola.pickly.core.ui.theme.PicklyTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

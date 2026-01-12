@@ -2,16 +2,14 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("kotlin-kapt")
     id("kotlin-parcelize")
-    alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
 
 android {
     namespace = "com.cola.pickly"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.cola.pickly"
@@ -41,12 +39,29 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
+    // --- Core Modules ---
+    implementation(project(":core:model"))
+    implementation(project(":core:ui"))
+    implementation(project(":core:domain"))
+    implementation(project(":core:data"))
+    
+    // --- Feature Modules ---
+    implementation(project(":feature:settings"))
+    implementation(project(":feature:archive"))
+    implementation(project(":feature:weekly"))
+    implementation(project(":feature:organize"))
+    
     // --- Splash Screen ---
     implementation("androidx.core:core-splashscreen:1.0.1")
+
+    // --- Coil ---
+    implementation("io.coil-kt:coil:2.7.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // --- Compose BOM ---
     implementation(platform(libs.androidx.compose.bom))
@@ -56,47 +71,26 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose) // compose + activity-ktx 연동
 
-    // --- DataStore (Settings persistence) ---
-    implementation(libs.androidx.datastore.preferences)
-
     // --- Lifecycle Compose (collectAsStateWithLifecycle) ---
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-
-    // (viewModel() 같은 걸 Compose에서 쓸 때 필요, 지금은 없어도 되지만 남겨도 무방)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-
-    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // --- Navigation Compose ---
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
     // --- Compose UI ---
+    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.text)
-    // Material 아이콘 확장 라이브러리 추가
     implementation("androidx.compose.material:material-icons-extended-android:1.6.7")
-
-    // --- ML Kit ---
-    implementation(libs.mlkit.face.detection)
-    
-    // --- Exif Interface ---
-    implementation(libs.androidx.exifinterface)
-
-    // --- Room ---
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.compose.foundation)
-    ksp(libs.androidx.room.compiler)
-
-    // --- Gson ---
-    implementation(libs.google.gson)
 
     // --- Hilt ---
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    kapt(libs.hilt.compiler)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // --- Debug / Test ---
@@ -108,4 +102,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+}
+
+kapt {
+    correctErrorTypes = true
 }

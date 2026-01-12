@@ -17,15 +17,15 @@ import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.compose.ui.window.DialogProperties
-import com.cola.pickly.domain.model.WeekId
+import com.cola.pickly.core.model.WeekId
 import com.cola.pickly.presentation.MainScreen
 import com.cola.pickly.presentation.MainViewModel
 import com.cola.pickly.presentation.splash.SplashScreen
-import com.cola.pickly.presentation.viewer.PhotoSelectionState
+import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.presentation.viewer.ViewerUiState
 import com.cola.pickly.presentation.viewer.ViewerViewModel
 import com.cola.pickly.presentation.viewer.ViewerScreen
-import com.cola.pickly.presentation.weeklydetail.WeeklyDetailScreen
+import com.cola.pickly.feature.weekly.WeeklyDetailScreen
 
 @Composable
 fun PicklyNavGraph(

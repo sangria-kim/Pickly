@@ -3,7 +3,8 @@ package com.cola.pickly.presentation.viewer
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cola.pickly.domain.repository.PhotoRepository
+import com.cola.pickly.core.domain.repository.PhotoRepository
+import com.cola.pickly.core.model.PhotoSelectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
