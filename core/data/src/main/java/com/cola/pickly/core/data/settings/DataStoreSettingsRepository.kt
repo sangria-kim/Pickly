@@ -25,6 +25,7 @@ class DataStoreSettingsRepository @Inject constructor(
         Settings(
             resultSaveLocationPolicy = prefs.getEnum(KEY_RESULT_SAVE_LOCATION, ResultSaveLocationPolicy.RememberLastUsedFolder),
             duplicateFilenamePolicy = prefs.getEnum(KEY_DUPLICATE_FILENAME, DuplicateFilenamePolicy.AutoRename),
+            lastUsedSaveFolder = prefs[KEY_LAST_USED_SAVE_FOLDER],
             isRecommendationEnabled = prefs[KEY_RECOMMENDATION_ENABLED] ?: false,
             themeMode = prefs.getEnum(KEY_THEME_MODE, ThemeMode.System)
         )
@@ -36,6 +37,10 @@ class DataStoreSettingsRepository @Inject constructor(
 
     override suspend fun setDuplicateFilenamePolicy(policy: DuplicateFilenamePolicy) {
         dataStore.edit { it[KEY_DUPLICATE_FILENAME] = policy.name }
+    }
+
+    override suspend fun setLastUsedSaveFolder(relativePath: String) {
+        dataStore.edit { it[KEY_LAST_USED_SAVE_FOLDER] = relativePath }
     }
 
     override suspend fun setRecommendationEnabled(enabled: Boolean) {
@@ -54,6 +59,7 @@ class DataStoreSettingsRepository @Inject constructor(
     private companion object {
         val KEY_RESULT_SAVE_LOCATION = stringPreferencesKey("settings.result_save_location_policy")
         val KEY_DUPLICATE_FILENAME = stringPreferencesKey("settings.duplicate_filename_policy")
+        val KEY_LAST_USED_SAVE_FOLDER = stringPreferencesKey("settings.last_used_save_folder")
         val KEY_RECOMMENDATION_ENABLED = booleanPreferencesKey("settings.recommendation_enabled")
         val KEY_THEME_MODE = stringPreferencesKey("settings.theme_mode")
     }

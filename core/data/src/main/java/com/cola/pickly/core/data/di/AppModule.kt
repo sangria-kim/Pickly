@@ -8,6 +8,8 @@ import com.cola.pickly.core.data.database.DatabaseModule
 import com.cola.pickly.core.data.database.PhotoScoreDao
 import com.cola.pickly.core.data.database.PicklyDatabase
 import com.cola.pickly.core.data.photo.MediaStorePhotoRepository
+import com.cola.pickly.core.data.photo.MediaStorePhotoActionRepository
+import com.cola.pickly.core.data.photo.PhotoActionRepository
 import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.data.usecase.PickBestPhotosUseCaseImpl
 import com.cola.pickly.core.domain.usecase.GroupPhotosByWeekUseCase
@@ -79,4 +81,10 @@ abstract class RepositoryModule {
     abstract fun bindPhotoRepository(
         mediaStorePhotoRepository: MediaStorePhotoRepository
     ): PhotoRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPhotoActionRepository(
+        mediaStorePhotoActionRepository: MediaStorePhotoActionRepository
+    ): PhotoActionRepository
 }

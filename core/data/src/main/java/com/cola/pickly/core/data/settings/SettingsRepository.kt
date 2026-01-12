@@ -15,6 +15,8 @@ interface SettingsRepository {
 
     suspend fun setDuplicateFilenamePolicy(policy: DuplicateFilenamePolicy)
 
+    suspend fun setLastUsedSaveFolder(relativePath: String)
+
     suspend fun setRecommendationEnabled(enabled: Boolean)
 
     suspend fun setThemeMode(mode: ThemeMode)

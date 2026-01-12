@@ -1,13 +1,20 @@
 package com.cola.pickly.feature.organize
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cola.pickly.core.model.WeeklyPhoto
 import com.cola.pickly.core.domain.repository.PhotoRepository
-import com.cola.pickly.feature.organize.components.FilterOption
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.feature.organize.components.FilterOption
+import com.cola.pickly.feature.organize.domain.usecase.MoveSelectedPhotosUseCase
+import com.cola.pickly.feature.organize.domain.usecase.ShareSelectedPhotosUseCase
+import com.cola.pickly.feature.organize.domain.usecase.CopySelectedPhotosUseCase
+import com.cola.pickly.feature.organize.domain.usecase.SoftDeleteSelectedPhotosUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -15,7 +22,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class OrganizeViewModel @Inject constructor(
-    private val photoRepository: PhotoRepository
+    private val photoRepository: PhotoRepository,
+    private val shareSelectedPhotosUseCase: ShareSelectedPhotosUseCase,
+    private val moveSelectedPhotosUseCase: MoveSelectedPhotosUseCase,
+    private val copySelectedPhotosUseCase: CopySelectedPhotosUseCase,
+    private val softDeleteSelectedPhotosUseCase: SoftDeleteSelectedPhotosUseCase
 ) : ViewModel() {
 
     /**
@@ -27,6 +38,18 @@ class OrganizeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<OrganizeUiState>(OrganizeUiState.NoFolderSelected)
     val uiState: StateFlow<OrganizeUiState> = _uiState.asStateFlow()
+
+    private val _shareEvents = MutableSharedFlow<List<Uri>>(extraBufferCapacity = 1)
+    val shareEvents: SharedFlow<List<Uri>> = _shareEvents
+
+    private val _showDeleteConfirm = MutableStateFlow(false)
+    val showDeleteConfirm: StateFlow<Boolean> = _showDeleteConfirm.asStateFlow()
+
+    private val _snackbarMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val snackbarMessages: SharedFlow<String> = _snackbarMessages
+
+    private val _isActionInProgress = MutableStateFlow(false)
+    val isActionInProgress: StateFlow<Boolean> = _isActionInProgress.asStateFlow()
 
     fun updateSelectedFolder(folderId: String, folderName: String) {
         viewModelScope.launch {
@@ -176,51 +199,162 @@ class OrganizeViewModel @Inject constructor(
 
     /**
      * 선택된 사진 공유
-     * V1에서는 기본 동작만 구현 (실제 기능은 향후 확장)
      */
     fun shareSelectedPhotos() {
         val currentState = _uiState.value
+        if (_isActionInProgress.value) return
         if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
-            // TODO: 실제 공유 기능 구현
-            // 현재는 선택된 사진 ID만 로그로 출력
-            android.util.Log.d("OrganizeViewModel", "공유: ${currentState.selectedIds.size}장 선택됨")
+            viewModelScope.launch {
+                try {
+                    _isActionInProgress.value = true
+                    val uris = shareSelectedPhotosUseCase(currentState.selectedIds.toList())
+                    if (uris.isNotEmpty()) {
+                        _shareEvents.emit(uris)
+                        _snackbarMessages.emit("공유 준비가 완료되었어요.")
+                    }
+                } catch (e: Exception) {
+                    handleActionError(e, "공유 준비에 실패했어요.")
+                } finally {
+                    _isActionInProgress.value = false
+                }
+            }
         }
     }
 
     /**
      * 선택된 사진 이동
-     * V1에서는 기본 동작만 구현 (실제 기능은 향후 확장)
      */
     fun moveSelectedPhotos() {
         val currentState = _uiState.value
+        if (_isActionInProgress.value) return
         if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
-            // TODO: 실제 이동 기능 구현
-            android.util.Log.d("OrganizeViewModel", "이동: ${currentState.selectedIds.size}장 선택됨")
+            viewModelScope.launch {
+                try {
+                    _isActionInProgress.value = true
+                    val report = moveSelectedPhotosUseCase(currentState.selectedIds.toList())
+                    runCatching {
+                        android.util.Log.d(
+                            "OrganizeViewModel",
+                            "이동 완료 success=${report.successCount}, skipped=${report.skippedCount}, failed=${report.failedCount}"
+                        )
+                    }
+                    emitReportMessage("이동", report)
+                    exitMultiSelectMode()
+                } catch (e: Exception) {
+                    handleActionError(e, "이동 중 오류가 발생했어요.")
+                } finally {
+                    _isActionInProgress.value = false
+                }
+            }
         }
     }
 
     /**
      * 선택된 사진 복사
-     * V1에서는 기본 동작만 구현 (실제 기능은 향후 확장)
      */
     fun copySelectedPhotos() {
         val currentState = _uiState.value
+        if (_isActionInProgress.value) return
         if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
-            // TODO: 실제 복사 기능 구현
-            android.util.Log.d("OrganizeViewModel", "복사: ${currentState.selectedIds.size}장 선택됨")
+            viewModelScope.launch {
+                try {
+                    _isActionInProgress.value = true
+                    val report = copySelectedPhotosUseCase(currentState.selectedIds.toList())
+                    runCatching {
+                        android.util.Log.d(
+                            "OrganizeViewModel",
+                            "복사 완료 success=${report.successCount}, skipped=${report.skippedCount}, failed=${report.failedCount}"
+                        )
+                    }
+                    emitReportMessage("복사", report)
+                    exitMultiSelectMode()
+                } catch (e: Exception) {
+                    handleActionError(e, "복사 중 오류가 발생했어요.")
+                } finally {
+                    _isActionInProgress.value = false
+                }
+            }
         }
     }
 
     /**
-     * 선택된 사진 삭제
-     * V1에서는 기본 동작만 구현 (실제 기능은 향후 확장)
-     * 삭제 시 확인 다이얼로그 필요 (Wireframe.md 참고)
+     * 선택된 사진 삭제 (휴지통 이동)
      */
-    fun deleteSelectedPhotos() {
+    fun requestDeleteConfirmation() {
         val currentState = _uiState.value
         if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
-            // TODO: 실제 삭제 기능 구현 (확인 다이얼로그 포함)
-            android.util.Log.d("OrganizeViewModel", "삭제: ${currentState.selectedIds.size}장 선택됨")
+            _showDeleteConfirm.value = true
         }
+    }
+
+    fun dismissDeleteConfirmation() {
+        _showDeleteConfirm.value = false
+    }
+
+    fun deleteSelectedPhotos() {
+        val currentState = _uiState.value
+        if (_isActionInProgress.value) return
+        if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
+            viewModelScope.launch {
+                try {
+                    _isActionInProgress.value = true
+                    _showDeleteConfirm.value = false
+                    val report = softDeleteSelectedPhotosUseCase(currentState.selectedIds.toList())
+                    runCatching {
+                        android.util.Log.d(
+                            "OrganizeViewModel",
+                            "삭제 완료 success=${report.successCount}, failed=${report.failedCount}"
+                        )
+                    }
+                    emitReportMessage("삭제", report)
+                    exitMultiSelectMode()
+                } catch (e: Exception) {
+                    handleActionError(e, "삭제 중 오류가 발생했어요.")
+                } finally {
+                    _isActionInProgress.value = false
+                }
+            }
+        }
+    }
+
+    private suspend fun emitReportMessage(prefix: String, report: com.cola.pickly.core.data.photo.PhotoActionReport) {
+        // 권한 관련 오류가 있는지 확인
+        val hasPermissionError = report.errors.any { 
+            it.contains("권한") || it.contains("permission", ignoreCase = true) || 
+            it.contains("SecurityException", ignoreCase = true)
+        }
+        
+        if (hasPermissionError && report.failedCount > 0) {
+            // 권한 오류가 있는 경우 사용자 친화적인 메시지 표시
+            _snackbarMessages.emit("저장소 접근 권한이 필요해요. 설정에서 권한을 허용한 뒤 다시 시도해주세요.")
+            return
+        }
+        
+        val errors = report.errors.takeIf { it.isNotEmpty() }?.joinToString(limit = 1)
+        val message = buildString {
+            append("$prefix 완료: ${report.successCount} 성공")
+            if (report.skippedCount > 0) append(", ${report.skippedCount} 건너뜀")
+            if (report.failedCount > 0) append(", ${report.failedCount} 실패")
+            if (!errors.isNullOrBlank()) append(" (${errors})")
+        }
+        _snackbarMessages.emit(message)
+    }
+
+    private suspend fun handleActionError(e: Exception, fallback: String) {
+        val message = when {
+            e is SecurityException -> {
+                "저장소 접근 권한이 필요해요. 설정에서 권한을 허용한 뒤 다시 시도해주세요."
+            }
+            e.message?.contains("permission", ignoreCase = true) == true -> {
+                "저장소 접근 권한이 필요해요. 설정에서 권한을 허용한 뒤 다시 시도해주세요."
+            }
+            e.message?.contains("SAF", ignoreCase = true) == true -> {
+                "저장소 접근에 실패했어요. 저장 위치를 다시 선택해주세요."
+            }
+            else -> {
+                e.message ?: fallback
+            }
+        }
+        _snackbarMessages.emit(message)
     }
 }

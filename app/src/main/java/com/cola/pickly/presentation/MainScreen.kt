@@ -129,6 +129,9 @@ fun MainScreen(
     var onMoveClick: (() -> Unit)? by remember { mutableStateOf(null) }
     var onCopyClick: (() -> Unit)? by remember { mutableStateOf(null) }
     var onDeleteClick: (() -> Unit)? by remember { mutableStateOf(null) }
+    
+    // 액션 진행 상태 관찰
+    val isActionInProgress by organizeViewModel.isActionInProgress.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = BackgroundWhite, // 전체 배경색 흰색 적용
@@ -140,7 +143,8 @@ fun MainScreen(
                     onShareClick = { onShareClick?.invoke() },
                     onMoveClick = { onMoveClick?.invoke() },
                     onCopyClick = { onCopyClick?.invoke() },
-                    onDeleteClick = { onDeleteClick?.invoke() }
+                    onDeleteClick = { onDeleteClick?.invoke() },
+                    isActionInProgress = isActionInProgress
                 )
             } else {
                 // Normal Mode: Bottom Navigation Bar 표시

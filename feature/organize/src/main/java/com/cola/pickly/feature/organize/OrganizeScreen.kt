@@ -3,10 +3,16 @@ package com.cola.pickly.feature.organize
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,8 +24,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.collectLatest
 import com.cola.pickly.core.model.PhotoFolder
 import com.cola.pickly.feature.organize.FolderSelectUiState
 import com.cola.pickly.feature.organize.FolderSelectViewModel
@@ -29,6 +38,8 @@ import com.cola.pickly.feature.organize.components.OrganizeGridScreen
 import com.cola.pickly.feature.organize.components.OrganizeTopBar
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.ui.theme.BackgroundWhite
+import com.cola.pickly.core.ui.R
+import android.content.Intent
 
 @Composable
 fun OrganizeScreen(
@@ -45,6 +56,10 @@ fun OrganizeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
+    val showDeleteConfirm by viewModel.showDeleteConfirm.collectAsStateWithLifecycle()
+    val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val selectedCount = (uiState as? OrganizeUiState.GridReady)?.selectedCount ?: 0
     
     var showFolderSheet by rememberSaveable { mutableStateOf(false) }
 
@@ -57,6 +72,32 @@ fun OrganizeScreen(
     LaunchedEffect(selectionUpdates) {
         selectionUpdates?.let { updates ->
             viewModel.applySelectionUpdates(updates)
+        }
+    }
+
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.shareEvents.collectLatest { uris ->
+            if (uris.isEmpty()) return@collectLatest
+
+            val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                type = "image/*"
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(
+                Intent.createChooser(
+                    intent,
+                    context.getString(R.string.bulk_action_share)
+                )
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.snackbarMessages.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
         }
     }
 
@@ -74,10 +115,10 @@ fun OrganizeScreen(
     
     // Bulk Action 콜백 설정
     LaunchedEffect(Unit) {
-        onShareClick?.invoke { viewModel.shareSelectedPhotos() }
-        onMoveClick?.invoke { viewModel.moveSelectedPhotos() }
-        onCopyClick?.invoke { viewModel.copySelectedPhotos() }
-        onDeleteClick?.invoke { viewModel.deleteSelectedPhotos() }
+        onShareClick?.invoke { if (!isActionInProgress) viewModel.shareSelectedPhotos() }
+        onMoveClick?.invoke { if (!isActionInProgress) viewModel.moveSelectedPhotos() }
+        onCopyClick?.invoke { if (!isActionInProgress) viewModel.copySelectedPhotos() }
+        onDeleteClick?.invoke { if (!isActionInProgress) viewModel.requestDeleteConfirmation() }
     }
     
     BackHandler(enabled = isMultiSelectMode) {
@@ -86,6 +127,7 @@ fun OrganizeScreen(
 
     Scaffold(
         containerColor = BackgroundWhite, // 전체 배경색 흰색 적용
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         // Bottom Area는 MainScreen에서 관리됨
         // Normal Mode: Bottom Navigation Bar, Multi Select Mode: Bulk Action Bar
         topBar = {
@@ -129,6 +171,13 @@ fun OrganizeScreen(
                 .padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
+            if (isActionInProgress) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                )
+            }
             when (val state = uiState) {
                 is OrganizeUiState.NoFolderSelected -> {
                     OrganizeEmptyScreen(
@@ -174,6 +223,49 @@ fun OrganizeScreen(
                 onFolderClick = { folder ->
                     viewModel.updateSelectedFolder(folderId = folder.id, folderName = folder.name)
                     showFolderSheet = false
+                }
+            )
+        }
+
+        if (showDeleteConfirm) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { 
+                    if (!isActionInProgress) {
+                        viewModel.dismissDeleteConfirmation()
+                    }
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { viewModel.deleteSelectedPhotos() },
+                        enabled = !isActionInProgress
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = stringResource(R.string.delete_confirm_button)
+                        )
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { viewModel.dismissDeleteConfirmation() },
+                        enabled = !isActionInProgress
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = stringResource(R.string.delete_confirm_cancel)
+                        )
+                    }
+                },
+                title = { 
+                    androidx.compose.material3.Text(
+                        text = stringResource(R.string.delete_confirm_title)
+                    )
+                },
+                text = { 
+                    androidx.compose.material3.Text(
+                        text = stringResource(
+                            R.string.delete_confirm_message,
+                            selectedCount
+                        )
+                    )
                 }
             )
         }

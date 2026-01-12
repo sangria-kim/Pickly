@@ -52,6 +52,7 @@ enum class ThemeMode {
 data class Settings(
     val resultSaveLocationPolicy: ResultSaveLocationPolicy = ResultSaveLocationPolicy.RememberLastUsedFolder,
     val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.AutoRename,
+    val lastUsedSaveFolder: String? = null,
     val isRecommendationEnabled: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.System
 )

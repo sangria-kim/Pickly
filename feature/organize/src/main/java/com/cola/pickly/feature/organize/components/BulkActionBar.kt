@@ -46,7 +46,8 @@ fun BulkActionBar(
     onShareClick: () -> Unit,
     onMoveClick: () -> Unit,
     onCopyClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    isActionInProgress: Boolean = false
 ) {
     NavigationBar(
         modifier = Modifier.height(104.dp),
@@ -65,13 +66,16 @@ fun BulkActionBar(
                 icon = { Icon(action.icon, contentDescription = stringResource(action.labelResId)) },
                 label = { Text(stringResource(action.labelResId)) },
                 selected = false,
-                onClick = onClickHandler,
+                onClick = if (isActionInProgress) { {} } else onClickHandler,
+                enabled = !isActionInProgress,
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = BottomNavSelected,
                     selectedTextColor = BottomNavSelected,
                     unselectedIconColor = BottomNavUnselected,
                     unselectedTextColor = BottomNavUnselected,
-                    indicatorColor = Color.Transparent
+                    indicatorColor = Color.Transparent,
+                    disabledIconColor = BottomNavUnselected.copy(alpha = 0.38f),
+                    disabledTextColor = BottomNavUnselected.copy(alpha = 0.38f)
                 )
             )
         }
