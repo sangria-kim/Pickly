@@ -26,6 +26,8 @@ import com.cola.pickly.core.ui.R
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
 import com.cola.pickly.core.data.settings.ResultSaveLocationPolicy
 import com.cola.pickly.core.data.settings.ThemeMode
+import com.cola.pickly.core.ui.theme.BackgroundWhite
+import com.cola.pickly.core.ui.theme.TextPrimary
 import com.cola.pickly.feature.settings.components.SettingsActionItem
 import com.cola.pickly.feature.settings.components.SettingsDivider
 import com.cola.pickly.feature.settings.components.SettingsGroupLabel
@@ -33,8 +35,7 @@ import com.cola.pickly.feature.settings.components.SettingsRadioItem
 import com.cola.pickly.feature.settings.components.SettingsSectionHeader
 import com.cola.pickly.feature.settings.components.SettingsSwitchItem
 import com.cola.pickly.feature.settings.components.SettingsTextItem
-import com.cola.pickly.core.ui.theme.BackgroundWhite
-import com.cola.pickly.core.ui.theme.TextPrimary
+import androidx.compose.material3.MaterialTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 
@@ -78,7 +79,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundWhite,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -87,7 +88,13 @@ fun SettingsScreen(
                     containerColor = BackgroundWhite,
                     titleContentColor = TextPrimary
                 ),
-                title = { Text(text = stringResource(R.string.settings_title), color = TextPrimary) }
+                title = {
+                    Text(
+                        text = stringResource(R.string.settings_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary
+                    )
+                }
             )
         }
     ) { innerPadding ->

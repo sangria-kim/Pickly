@@ -19,23 +19,20 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.cola.pickly.core.ui.theme.Gray100
-import com.cola.pickly.core.ui.theme.TextPrimary
-import com.cola.pickly.core.ui.theme.TextSecondary
-
 @Composable
 fun SettingsSectionHeader(
     title: String,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
+        val titleColor = MaterialTheme.colorScheme.onSurface
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = TextPrimary,
+            color = titleColor,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
         )
-        HorizontalDivider(color = Gray100)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
     }
 }
 
@@ -47,14 +44,14 @@ fun SettingsGroupLabel(
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
-        color = TextSecondary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.padding(horizontal = 16.dp, vertical = 10.dp)
     )
 }
 
 @Composable
 fun SettingsDivider() {
-    HorizontalDivider(color = Gray100)
+    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 }
 
 @Composable
@@ -65,6 +62,9 @@ fun SettingsRadioItem(
     modifier: Modifier = Modifier,
     subtitle: String? = null
 ) {
+    val primaryColor = MaterialTheme.colorScheme.onSurface
+    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     ListItem(
         modifier = modifier
             .fillMaxWidth()
@@ -76,9 +76,9 @@ fun SettingsRadioItem(
         leadingContent = {
             RadioButton(selected = selected, onClick = null)
         },
-        headlineContent = { Text(text = title, color = TextPrimary) },
+        headlineContent = { Text(text = title, color = primaryColor) },
         supportingContent = subtitle?.let {
-            { Text(text = it, color = TextSecondary) }
+            { Text(text = it, color = secondaryColor) }
         }
     )
 }
@@ -91,11 +91,14 @@ fun SettingsSwitchItem(
     modifier: Modifier = Modifier,
     subtitle: String? = null
 ) {
+    val primaryColor = MaterialTheme.colorScheme.onSurface
+    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     ListItem(
         modifier = modifier.fillMaxWidth(),
-        headlineContent = { Text(text = title, color = TextPrimary) },
+        headlineContent = { Text(text = title, color = primaryColor) },
         supportingContent = subtitle?.let {
-            { Text(text = it, color = TextSecondary) }
+            { Text(text = it, color = secondaryColor) }
         },
         trailingContent = {
             Switch(checked = checked, onCheckedChange = onCheckedChange)
@@ -110,13 +113,16 @@ fun SettingsTextItem(
     modifier: Modifier = Modifier,
     subtitle: String? = null
 ) {
+    val primaryColor = MaterialTheme.colorScheme.onSurface
+    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     ListItem(
         modifier = modifier.fillMaxWidth(),
-        headlineContent = { Text(text = title, color = TextPrimary) },
+        headlineContent = { Text(text = title, color = primaryColor) },
         supportingContent = subtitle?.let {
-            { Text(text = it, color = TextSecondary) }
+            { Text(text = it, color = secondaryColor) }
         },
-        trailingContent = { Text(text = value, color = TextSecondary) }
+        trailingContent = { Text(text = value, color = secondaryColor) }
     )
 }
 
@@ -129,6 +135,13 @@ fun SettingsActionItem(
     trailingText: String? = null,
     enabled: Boolean = true
 ) {
+    val primaryColor = if (enabled) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    }
+    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     ListItem(
         modifier = modifier
             .fillMaxWidth()
@@ -137,12 +150,12 @@ fun SettingsActionItem(
                 if (!enabled) disabled()
             }
             .clickable(enabled = enabled, onClick = onClick),
-        headlineContent = { Text(text = title, color = if (enabled) TextPrimary else TextSecondary) },
+        headlineContent = { Text(text = title, color = primaryColor) },
         supportingContent = subtitle?.let {
-            { Text(text = it, color = TextSecondary) }
+            { Text(text = it, color = secondaryColor) }
         },
         trailingContent = trailingText?.let { tt ->
-            { Text(text = tt, color = TextSecondary) }
+            { Text(text = tt, color = secondaryColor) }
         }
     )
 }
