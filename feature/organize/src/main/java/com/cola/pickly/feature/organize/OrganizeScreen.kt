@@ -34,7 +34,7 @@ import com.cola.pickly.core.ui.theme.BackgroundWhite
 fun OrganizeScreen(
     viewModel: OrganizeViewModel = hiltViewModel(),
     folderSelectViewModel: FolderSelectViewModel = hiltViewModel(),
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null,
     onMultiSelectModeChanged: ((Boolean) -> Unit)? = null,
@@ -145,7 +145,7 @@ fun OrganizeScreen(
                         selectionMap = state.selectionMap,
                         isMultiSelectMode = state.isMultiSelectMode,
                         onPhotoClick = { photo ->
-                            onNavigateToPhotoDetail(state.folderId, photo.id, state.selectionMap)
+                            onNavigateToPhotoDetail(state.folderId, photo.id, state.selectionMap, false)
                         },
                         onToggleSelection = { photoId ->
                             viewModel.toggleSelection(photoId)

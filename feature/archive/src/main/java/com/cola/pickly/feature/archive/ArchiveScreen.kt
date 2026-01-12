@@ -34,7 +34,7 @@ import com.cola.pickly.core.ui.theme.BackgroundWhite
 fun ArchiveScreen(
     viewModel: ArchiveViewModel = hiltViewModel(),
     globalSelectionMap: Map<Long, PhotoSelectionState> = emptyMap(),
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean) -> Unit,
     onNavigateToOrganize: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,7 +88,8 @@ fun ArchiveScreen(
                                             onNavigateToPhotoDetail(
                                                 bucketId,
                                                 photo.id,
-                                                globalSelectionMap
+                                                globalSelectionMap,
+                                                true
                                             )
                                         }
                                     }

@@ -21,6 +21,7 @@ class ViewerViewModel @Inject constructor(
 
     private val folderId: String? = savedStateHandle["folderId"]
     private val initialPhotoId: Long? = savedStateHandle["photoId"]
+    private val selectedOnly: Boolean = savedStateHandle["selectedOnly"] ?: false
     private val savedStateHandleRef = savedStateHandle
     
     private var initialSelectionMap: Map<Long, PhotoSelectionState> = 
@@ -60,27 +61,42 @@ class ViewerViewModel @Inject constructor(
             try {
                 // 폴더의 사진 목록 로드 (Bucket ID 기반)
                 // TODO: 페이징이나 대량 데이터 처리 고려 필요, 현재는 전체 로드
-                val photos = photoRepository.getPhotosByBucketId(folderId)
+                val allPhotos = photoRepository.getPhotosByBucketId(folderId)
+
+                // selectionMap 사용 시점에 최신값 읽기 (초기화 후 업데이트된 값 반영)
+                val currentSelectionMap = savedStateHandleRef.get<Map<Long, PhotoSelectionState>>("initial_selection_map") 
+                    ?: initialSelectionMap
+
+                val filteredPhotos = if (selectedOnly) {
+                    val selectedIds = currentSelectionMap
+                        .filterValues { it == PhotoSelectionState.Selected }
+                        .keys
+                    allPhotos.filter { selectedIds.contains(it.id) }
+                } else {
+                    allPhotos
+                }
                 
-                if (photos.isEmpty()) {
+                if (filteredPhotos.isEmpty()) {
                     _uiState.value = ViewerUiState.Error("사진이 없는 폴더입니다.")
                 } else {
                     // 초기 인덱스 계산
                     val initialIndex = if (initialPhotoId != null) {
-                        val index = photos.indexOfFirst { it.id == initialPhotoId }
+                        val index = filteredPhotos.indexOfFirst { it.id == initialPhotoId }
                         if (index != -1) index else 0
                     } else {
                         0
                     }
                     
-                    // selectionMap 사용 시점에 최신값 읽기 (초기화 후 업데이트된 값 반영)
-                    val currentSelectionMap = savedStateHandleRef.get<Map<Long, PhotoSelectionState>>("initial_selection_map") 
-                        ?: initialSelectionMap
-                    
                     _uiState.value = ViewerUiState.Success(
-                        photos = photos,
+                        photos = filteredPhotos,
                         initialIndex = initialIndex,
-                        selectionMap = currentSelectionMap
+                        selectionMap = if (selectedOnly) {
+                            currentSelectionMap.filterKeys { key ->
+                                filteredPhotos.any { it.id == key }
+                            }
+                        } else {
+                            currentSelectionMap
+                        }
                     )
                 }
             } catch (e: Exception) {

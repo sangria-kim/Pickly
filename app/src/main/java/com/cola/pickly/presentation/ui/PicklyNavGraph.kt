@@ -70,14 +70,14 @@ fun PicklyNavGraph(
                     // 여기서는 빈 람다 혹은 로깅 정도만 처리하면 됩니다.
                     // (OrganizeScreen 내부에서 showFolderSheet 상태로 처리됨)
                 },
-                onNavigateToPhotoDetail = { folderId, photoId, selectionMap ->
+                onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly ->
                     // viewer 라우트로 이동하기 전에 selectionMap을 현재 backStackEntry의 savedStateHandle에 저장
                     // viewer composable에서 previousBackStackEntry의 savedStateHandle을 통해 읽어옴
                     navController.currentBackStackEntry?.savedStateHandle?.set(
                         "initial_selection_map_for_viewer",
                         selectionMap
                     )
-                    navController.navigate("viewer/$folderId/$photoId")
+                    navController.navigate("viewer/$folderId/$photoId?selectedOnly=$selectedOnly")
                 },
                 selectedFolder = if (selectedFolderId != null && selectedFolderName != null) {
                     selectedFolderId to selectedFolderName
@@ -108,10 +108,14 @@ fun PicklyNavGraph(
         // FolderSelectScreen 라우트 제거됨 (S-03)
 
         dialog(
-            route = "viewer/{folderId}/{photoId}",
+            route = "viewer/{folderId}/{photoId}?selectedOnly={selectedOnly}",
             arguments = listOf(
                 navArgument("folderId") { type = NavType.StringType },
-                navArgument("photoId") { type = NavType.LongType }
+                navArgument("photoId") { type = NavType.LongType },
+                navArgument("selectedOnly") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
             ),
             dialogProperties = DialogProperties(
                 usePlatformDefaultWidth = false

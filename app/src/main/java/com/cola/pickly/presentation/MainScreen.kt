@@ -112,7 +112,7 @@ fun MainScreen(
     weeklyListViewModel: WeeklyListViewModel,
     onNavigateToDetail: (WeekId) -> Unit,
     onNavigateToFolderSelect: () -> Unit,
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null
 ) {
