@@ -1,6 +1,5 @@
 package com.cola.pickly.presentation.splash
 
-import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -24,8 +23,8 @@ fun SplashScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val requestPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            viewModel.onPermissionResult(isGranted)
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            viewModel.onPermissionResult(result)
         }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -46,9 +45,9 @@ fun SplashScreen(
         if (!initializingState.isChecking) {
             when (initializingState.permissionState) {
                 PermissionState.NotDetermined -> {
-                    val permission = viewModel.getRequiredPermission()
-                    LaunchedEffect(Unit) {
-                        requestPermissionLauncher.launch(permission)
+                    val permissions = viewModel.getRequiredPermissions()
+                    LaunchedEffect(permissions) {
+                        requestPermissionLauncher.launch(permissions.toTypedArray())
                     }
                 }
                 PermissionState.Granted -> {

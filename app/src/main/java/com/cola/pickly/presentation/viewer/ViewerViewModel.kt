@@ -51,7 +51,7 @@ class ViewerViewModel @Inject constructor(
     }
 
     private fun loadPhotos() {
-        if (folderId == null) {
+        if (folderId.isNullOrBlank()) {
             _uiState.value = ViewerUiState.Error("잘못된 접근입니다. (Folder ID 누락)")
             return
         }

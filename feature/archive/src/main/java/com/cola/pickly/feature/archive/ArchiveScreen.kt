@@ -84,12 +84,13 @@ fun ArchiveScreen(
                                         // 아카이브는 읽기 전용이므로 전역 selectionMap 사용
                                         // 모든 아카이브 사진을 Selected 상태로 표시하기 위해
                                         // 전역 selectionMap을 그대로 전달
-                                        // TODO: 사진의 실제 폴더 ID를 추출하여 사용
-                                        onNavigateToPhotoDetail(
-                                            "", // folderId는 향후 개선
-                                            photo.id,
-                                            globalSelectionMap
-                                        )
+                                        photo.bucketId?.let { bucketId ->
+                                            onNavigateToPhotoDetail(
+                                                bucketId,
+                                                photo.id,
+                                                globalSelectionMap
+                                            )
+                                        }
                                     }
                                 )
                             }

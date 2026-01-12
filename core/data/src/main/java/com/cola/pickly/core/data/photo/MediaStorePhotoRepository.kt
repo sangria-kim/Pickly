@@ -41,7 +41,8 @@ class MediaStorePhotoRepository @Inject constructor(
             MediaStore.Images.Media.DATE_TAKEN,
             MediaStore.Images.Media.DATE_ADDED,
             MediaStore.Images.Media.WIDTH,
-            MediaStore.Images.Media.HEIGHT
+            MediaStore.Images.Media.HEIGHT,
+            MediaStore.Images.Media.BUCKET_ID
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -70,7 +71,8 @@ class MediaStorePhotoRepository @Inject constructor(
             MediaStore.Images.Media.DATE_TAKEN,
             MediaStore.Images.Media.DATE_ADDED,
             MediaStore.Images.Media.WIDTH,
-            MediaStore.Images.Media.HEIGHT
+            MediaStore.Images.Media.HEIGHT,
+            MediaStore.Images.Media.BUCKET_ID
         )
         val selection = "${MediaStore.Images.Media.BUCKET_ID} = ?"
         val selectionArgs = arrayOf(bucketId)
@@ -141,7 +143,8 @@ class MediaStorePhotoRepository @Inject constructor(
             MediaStore.Images.Media.DATE_TAKEN,
             MediaStore.Images.Media.DATE_ADDED,
             MediaStore.Images.Media.WIDTH,
-            MediaStore.Images.Media.HEIGHT
+            MediaStore.Images.Media.HEIGHT,
+            MediaStore.Images.Media.BUCKET_ID
         )
         val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
 
@@ -171,6 +174,7 @@ class MediaStorePhotoRepository @Inject constructor(
             val dateAddedColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATE_ADDED)
             val widthColumn = cursor.getColumnIndex(MediaStore.Images.Media.WIDTH)
             val heightColumn = cursor.getColumnIndex(MediaStore.Images.Media.HEIGHT)
+            val bucketIdColumn = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
@@ -195,7 +199,12 @@ class MediaStorePhotoRepository @Inject constructor(
                         filePath = filePath,
                         takenAt = takenAtMillis,
                         width = width,
-                        height = height
+                        height = height,
+                        bucketId = if (bucketIdColumn != -1 && !cursor.isNull(bucketIdColumn)) {
+                            cursor.getString(bucketIdColumn)
+                        } else {
+                            null
+                        }
                     )
                 )
             }

@@ -10,5 +10,6 @@ data class WeeklyPhoto(
     val takenAt: Long,       // 촬영 시각(epoch millis)
     val width: Int?,         // 해상도 정보 (optional)
     val height: Int?,
-    val recommendationScore: RecommendationScore? = null // 품질 점수 객체 (null이면 평가 전)
+    val recommendationScore: RecommendationScore? = null, // 품질 점수 객체 (null이면 평가 전)
+    val bucketId: String? = null // MediaStore BUCKET_ID (폴더 식별용)
 )
