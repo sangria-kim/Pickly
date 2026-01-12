@@ -21,3 +21,12 @@ dependencyResolutionManagement {
 
 rootProject.name = "Pickly"
 include(":app")
+include(":core:model")
+include(":core:common")
+include(":core:ui")
+include(":core:domain")
+include(":core:data")
+include(":feature:settings")
+include(":feature:archive")
+include(":feature:weekly")
+include(":feature:organize")

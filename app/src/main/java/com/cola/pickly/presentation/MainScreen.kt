@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,18 +35,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.cola.pickly.R
-import com.cola.pickly.domain.model.WeekId
-import com.cola.pickly.presentation.archive.ArchiveScreen
-import com.cola.pickly.presentation.organize.OrganizeScreen
-import com.cola.pickly.presentation.organize.OrganizeViewModel
-import com.cola.pickly.presentation.organize.components.BulkActionBar
-import com.cola.pickly.presentation.settings.SettingsScreen
-import com.cola.pickly.presentation.viewer.PhotoSelectionState
-import com.cola.pickly.presentation.weeklylist.WeeklyListScreen
-import com.cola.pickly.presentation.weeklylist.WeeklyListViewModel
-import com.cola.pickly.ui.theme.BackgroundWhite
-import com.cola.pickly.ui.theme.BottomNavSelected
-import com.cola.pickly.ui.theme.BottomNavUnselected
+import com.cola.pickly.core.model.WeekId
+import com.cola.pickly.feature.archive.ArchiveScreen
+import com.cola.pickly.feature.organize.OrganizeScreen
+import com.cola.pickly.feature.organize.OrganizeViewModel
+import com.cola.pickly.feature.organize.components.BulkActionBar
+import com.cola.pickly.feature.settings.SettingsScreen
+import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.feature.weekly.WeeklyListScreen
+import com.cola.pickly.feature.weekly.WeeklyListViewModel
+import com.cola.pickly.core.ui.theme.BackgroundWhite
+import com.cola.pickly.core.ui.theme.BottomNavSelected
+import com.cola.pickly.core.ui.theme.BottomNavUnselected
 
 sealed class MainTab(
     val route: String,
@@ -111,7 +112,7 @@ fun MainScreen(
     weeklyListViewModel: WeeklyListViewModel,
     onNavigateToDetail: (WeekId) -> Unit,
     onNavigateToFolderSelect: () -> Unit,
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null
 ) {
@@ -176,8 +177,9 @@ fun MainScreen(
                 )
             }
             composable(MainTab.Archive.route) {
+                val globalSelectionMap by organizeViewModel.globalSelectionMap.collectAsStateWithLifecycle()
                 ArchiveScreen(
-                    organizeViewModel = organizeViewModel,
+                    globalSelectionMap = globalSelectionMap,
                     onNavigateToPhotoDetail = onNavigateToPhotoDetail,
                     onNavigateToOrganize = {
                         // Tab 1 (정리하기)로 이동

@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.cola.pickly.domain.model.WeeklyPhoto
+import com.cola.pickly.core.model.WeeklyPhoto
 
 @Composable
 fun DebugOverlay(
@@ -73,21 +73,21 @@ fun DebugOverlay(
 
                     score?.let { s ->
                         // 모든 얼굴 그리기 (녹색)
-                        s.allFaceBoundingBoxes.forEach { rect ->
+                        s.allFaceBoundingBoxes.forEach { box ->
                             drawRect(
                                 color = Color.Green,
-                                topLeft = Offset(rect.left * scaleX, rect.top * scaleY),
-                                size = Size(rect.width() * scaleX, rect.height() * scaleY),
+                                topLeft = Offset(box.left * scaleX, box.top * scaleY),
+                                size = Size((box.right - box.left) * scaleX, (box.bottom - box.top) * scaleY),
                                 style = Stroke(width = 2.dp.toPx())
                             )
                         }
 
                         // 대표 얼굴 그리기 (노란색, 조금 더 두껍게) - 점수 계산의 기준
-                        s.faceBoundingBox?.let { rect ->
+                        s.faceBoundingBox?.let { box ->
                             drawRect(
                                 color = Color.Yellow,
-                                topLeft = Offset(rect.left * scaleX, rect.top * scaleY),
-                                size = Size(rect.width() * scaleX, rect.height() * scaleY),
+                                topLeft = Offset(box.left * scaleX, box.top * scaleY),
+                                size = Size((box.right - box.left) * scaleX, (box.bottom - box.top) * scaleY),
                                 style = Stroke(width = 3.dp.toPx())
                             )
                         }

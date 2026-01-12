@@ -17,15 +17,15 @@ import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.compose.ui.window.DialogProperties
-import com.cola.pickly.domain.model.WeekId
+import com.cola.pickly.core.model.WeekId
 import com.cola.pickly.presentation.MainScreen
 import com.cola.pickly.presentation.MainViewModel
 import com.cola.pickly.presentation.splash.SplashScreen
-import com.cola.pickly.presentation.viewer.PhotoSelectionState
+import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.presentation.viewer.ViewerUiState
 import com.cola.pickly.presentation.viewer.ViewerViewModel
 import com.cola.pickly.presentation.viewer.ViewerScreen
-import com.cola.pickly.presentation.weeklydetail.WeeklyDetailScreen
+import com.cola.pickly.feature.weekly.WeeklyDetailScreen
 
 @Composable
 fun PicklyNavGraph(
@@ -70,14 +70,14 @@ fun PicklyNavGraph(
                     // 여기서는 빈 람다 혹은 로깅 정도만 처리하면 됩니다.
                     // (OrganizeScreen 내부에서 showFolderSheet 상태로 처리됨)
                 },
-                onNavigateToPhotoDetail = { folderId, photoId, selectionMap ->
+                onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly ->
                     // viewer 라우트로 이동하기 전에 selectionMap을 현재 backStackEntry의 savedStateHandle에 저장
                     // viewer composable에서 previousBackStackEntry의 savedStateHandle을 통해 읽어옴
                     navController.currentBackStackEntry?.savedStateHandle?.set(
                         "initial_selection_map_for_viewer",
                         selectionMap
                     )
-                    navController.navigate("viewer/$folderId/$photoId")
+                    navController.navigate("viewer/$folderId/$photoId?selectedOnly=$selectedOnly")
                 },
                 selectedFolder = if (selectedFolderId != null && selectedFolderName != null) {
                     selectedFolderId to selectedFolderName
@@ -108,10 +108,14 @@ fun PicklyNavGraph(
         // FolderSelectScreen 라우트 제거됨 (S-03)
 
         dialog(
-            route = "viewer/{folderId}/{photoId}",
+            route = "viewer/{folderId}/{photoId}?selectedOnly={selectedOnly}",
             arguments = listOf(
                 navArgument("folderId") { type = NavType.StringType },
-                navArgument("photoId") { type = NavType.LongType }
+                navArgument("photoId") { type = NavType.LongType },
+                navArgument("selectedOnly") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
             ),
             dialogProperties = DialogProperties(
                 usePlatformDefaultWidth = false

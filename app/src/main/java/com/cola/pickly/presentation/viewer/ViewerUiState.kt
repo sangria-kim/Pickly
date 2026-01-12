@@ -1,6 +1,7 @@
 package com.cola.pickly.presentation.viewer
 
-import com.cola.pickly.domain.model.WeeklyPhoto
+import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.WeeklyPhoto
 
 sealed interface ViewerUiState {
     data object Loading : ViewerUiState
@@ -12,8 +13,4 @@ sealed interface ViewerUiState {
     ) : ViewerUiState
     
     data class Error(val message: String) : ViewerUiState
-}
-
-enum class PhotoSelectionState {
-    None, Selected, Rejected
 }

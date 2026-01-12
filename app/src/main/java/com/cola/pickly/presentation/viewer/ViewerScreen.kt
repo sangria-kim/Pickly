@@ -24,7 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.dp
-import com.cola.pickly.domain.model.WeeklyPhoto
+import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.WeeklyPhoto
 import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerTopOverlay
 import com.cola.pickly.presentation.viewer.components.ZoomableImage
