@@ -349,7 +349,7 @@ class OrganizeViewModel @Inject constructor(
                 "저장소 접근 권한이 필요해요. 설정에서 권한을 허용한 뒤 다시 시도해주세요."
             }
             e.message?.contains("SAF", ignoreCase = true) == true -> {
-                "저장소 접근에 실패했어요. 저장 위치를 다시 선택해주세요."
+                "저장소 접근에 실패했어요. 권한을 확인한 뒤 다시 시도해주세요."
             }
             else -> {
                 e.message ?: fallback

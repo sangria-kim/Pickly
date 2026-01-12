@@ -24,7 +24,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cola.pickly.core.ui.R
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
-import com.cola.pickly.core.data.settings.ResultSaveLocationPolicy
 import com.cola.pickly.core.data.settings.ThemeMode
 import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.theme.TextPrimary
@@ -107,7 +106,6 @@ fun SettingsScreen(
             cacheSizeText = cacheSizeText,
             onComingSoon = ::showComingSoon,
             onClearCache = viewModel::clearCache,
-            onSetResultSaveLocationPolicy = viewModel::setResultSaveLocationPolicy,
             onSetDuplicateFilenamePolicy = viewModel::setDuplicateFilenamePolicy,
             onSetRecommendationEnabled = viewModel::setRecommendationEnabled,
             onSetThemeMode = viewModel::setThemeMode
@@ -146,7 +144,6 @@ internal fun SettingsScreenContent(
     cacheSizeText: String,
     onComingSoon: () -> Unit,
     onClearCache: () -> Unit,
-    onSetResultSaveLocationPolicy: (ResultSaveLocationPolicy) -> Unit,
     onSetDuplicateFilenamePolicy: (DuplicateFilenamePolicy) -> Unit,
     onSetRecommendationEnabled: (Boolean) -> Unit,
     onSetThemeMode: (ThemeMode) -> Unit
@@ -154,24 +151,6 @@ internal fun SettingsScreenContent(
     LazyColumn(modifier = modifier) {
         // A. 사진 정리
         item { SettingsSectionHeader(stringResource(R.string.settings_section_organize)) }
-
-        item { SettingsGroupLabel(stringResource(R.string.settings_group_result_save_location)) }
-        item {
-            SettingsRadioItem(
-                title = stringResource(R.string.settings_option_remember_last_folder),
-                selected = uiState.resultSaveLocationPolicy == ResultSaveLocationPolicy.RememberLastUsedFolder,
-                onClick = { onSetResultSaveLocationPolicy(ResultSaveLocationPolicy.RememberLastUsedFolder) }
-            )
-        }
-        item { SettingsDivider() }
-        item {
-            SettingsRadioItem(
-                title = stringResource(R.string.settings_option_always_new_folder),
-                selected = uiState.resultSaveLocationPolicy == ResultSaveLocationPolicy.AlwaysCreateNewFolder,
-                onClick = { onSetResultSaveLocationPolicy(ResultSaveLocationPolicy.AlwaysCreateNewFolder) }
-            )
-        }
-        item { SettingsDivider() }
 
         item { SettingsGroupLabel(stringResource(R.string.settings_group_duplicate_filename)) }
         item {

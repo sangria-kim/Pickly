@@ -26,9 +26,6 @@
     <!-- Settings Screen -->
     <string name="settings_title">설정</string>
     <string name="settings_section_organize">사진 정리</string>
-    <string name="settings_group_result_save_location">결과 저장 위치</string>
-    <string name="settings_option_remember_last_folder">마지막 사용 폴더 기억</string>
-    <string name="settings_option_always_new_folder">항상 새 폴더 생성</string>
     <string name="settings_group_duplicate_filename">동일 파일명 처리</string>
     <string name="settings_option_duplicate_overwrite">덮어쓰기</string>
     <string name="settings_option_duplicate_skip">건너뛰기</string>

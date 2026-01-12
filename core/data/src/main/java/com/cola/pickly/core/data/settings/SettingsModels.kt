@@ -8,21 +8,6 @@ package com.cola.pickly.core.data.settings
  */
 
 /**
- * A-01. 결과 저장 위치 정책
- */
-enum class ResultSaveLocationPolicy {
-    /**
-     * 마지막으로 사용한 폴더를 기본 저장 위치로 기억합니다.
-     */
-    RememberLastUsedFolder,
-
-    /**
-     * 사진 정리 완료 시 항상 새 폴더를 생성하여 저장합니다.
-     */
-    AlwaysCreateNewFolder
-}
-
-/**
  * A-02. 동일 파일명 처리 방식
  */
 enum class DuplicateFilenamePolicy {
@@ -50,9 +35,7 @@ enum class ThemeMode {
  * 나머지 기본값은 명세에 명확한 디폴트가 없어, 안전한(데이터 손실 방지) 쪽으로 설정합니다.
  */
 data class Settings(
-    val resultSaveLocationPolicy: ResultSaveLocationPolicy = ResultSaveLocationPolicy.RememberLastUsedFolder,
     val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.AutoRename,
-    val lastUsedSaveFolder: String? = null,
     val isRecommendationEnabled: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.System
 )

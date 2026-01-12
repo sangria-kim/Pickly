@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cola.pickly.core.data.cache.CacheRepository
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
-import com.cola.pickly.core.data.settings.ResultSaveLocationPolicy
 import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.data.settings.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,7 +40,6 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.settings.collectLatest { settings ->
                 _uiState.update {
                     it.copy(
-                        resultSaveLocationPolicy = settings.resultSaveLocationPolicy,
                         duplicateFilenamePolicy = settings.duplicateFilenamePolicy,
                         isRecommendationEnabled = settings.isRecommendationEnabled,
                         themeMode = settings.themeMode
@@ -51,10 +49,6 @@ class SettingsViewModel @Inject constructor(
         }
 
         refreshCacheSize()
-    }
-
-    fun setResultSaveLocationPolicy(policy: ResultSaveLocationPolicy) {
-        viewModelScope.launch { settingsRepository.setResultSaveLocationPolicy(policy) }
     }
 
     fun setDuplicateFilenamePolicy(policy: DuplicateFilenamePolicy) {

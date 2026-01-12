@@ -1,7 +1,6 @@
 package com.cola.pickly.feature.settings
 
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
-import com.cola.pickly.core.data.settings.ResultSaveLocationPolicy
 import com.cola.pickly.core.data.settings.ThemeMode
 
 /**
@@ -11,7 +10,6 @@ import com.cola.pickly.core.data.settings.ThemeMode
  * - 실제 영속 저장은 SettingsRepository 구현체 교체로 확장합니다.
  */
 data class SettingsUiState(
-    val resultSaveLocationPolicy: ResultSaveLocationPolicy = ResultSaveLocationPolicy.RememberLastUsedFolder,
     val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.AutoRename,
     val isRecommendationEnabled: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.System,

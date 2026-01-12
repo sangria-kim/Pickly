@@ -3,7 +3,6 @@ package com.cola.pickly.feature.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
-import com.cola.pickly.core.data.settings.ResultSaveLocationPolicy
 import com.cola.pickly.core.data.settings.ThemeMode
 import com.cola.pickly.core.ui.theme.PicklyTheme
 
@@ -17,7 +16,6 @@ private fun SettingsScreenContentPreview_Default() {
             cacheSizeText = "—",
             onComingSoon = {},
             onClearCache = {},
-            onSetResultSaveLocationPolicy = {},
             onSetDuplicateFilenamePolicy = {},
             onSetRecommendationEnabled = {},
             onSetThemeMode = {}
@@ -31,7 +29,6 @@ private fun SettingsScreenContentPreview_Customized() {
     PicklyTheme(darkTheme = true) {
         SettingsScreenContent(
             uiState = SettingsUiState(
-                resultSaveLocationPolicy = ResultSaveLocationPolicy.AlwaysCreateNewFolder,
                 duplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
                 isRecommendationEnabled = true,
                 themeMode = ThemeMode.Dark
@@ -40,7 +37,6 @@ private fun SettingsScreenContentPreview_Customized() {
             cacheSizeText = "128MB",
             onComingSoon = {},
             onClearCache = {},
-            onSetResultSaveLocationPolicy = {},
             onSetDuplicateFilenamePolicy = {},
             onSetRecommendationEnabled = {},
             onSetThemeMode = {}

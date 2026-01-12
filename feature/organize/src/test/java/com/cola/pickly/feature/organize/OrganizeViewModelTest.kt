@@ -4,7 +4,6 @@ import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.data.photo.PhotoActionReport
 import com.cola.pickly.core.data.photo.PhotoActionRepository
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
-import com.cola.pickly.core.data.settings.ResultSaveLocationPolicy
 import com.cola.pickly.core.data.settings.Settings
 import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.model.WeeklyPhoto
@@ -59,9 +58,7 @@ class OrganizeViewModelTest {
         )
         val settingsRepo = FakeSettingsRepository(
             Settings(
-                resultSaveLocationPolicy = ResultSaveLocationPolicy.RememberLastUsedFolder,
-                duplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
-                lastUsedSaveFolder = "DCIM/Pickly"
+                duplicateFilenamePolicy = DuplicateFilenamePolicy.Skip
             )
         )
         val actionRepo = ControlledPhotoActionRepository()
@@ -97,9 +94,7 @@ class OrganizeViewModelTest {
         )
         val settingsRepo = FakeSettingsRepository(
             Settings(
-                resultSaveLocationPolicy = ResultSaveLocationPolicy.RememberLastUsedFolder,
-                duplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
-                lastUsedSaveFolder = "DCIM/Pickly"
+                duplicateFilenamePolicy = DuplicateFilenamePolicy.Skip
             )
         )
         val actionRepo = ControlledPhotoActionRepository()
@@ -137,9 +132,7 @@ class OrganizeViewModelTest {
         )
         val settingsRepo = FakeSettingsRepository(
             Settings(
-                resultSaveLocationPolicy = ResultSaveLocationPolicy.RememberLastUsedFolder,
-                duplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
-                lastUsedSaveFolder = "DCIM/Pickly"
+                duplicateFilenamePolicy = DuplicateFilenamePolicy.Skip
             )
         )
         val actionRepo = ControlledPhotoActionRepository()
@@ -229,16 +222,8 @@ private class FakeSettingsRepository(initial: Settings) : SettingsRepository {
     private val state = MutableStateFlow(initial)
     override val settings: Flow<Settings> = state
 
-    override suspend fun setResultSaveLocationPolicy(policy: ResultSaveLocationPolicy) {
-        state.value = state.value.copy(resultSaveLocationPolicy = policy)
-    }
-
     override suspend fun setDuplicateFilenamePolicy(policy: DuplicateFilenamePolicy) {
         state.value = state.value.copy(duplicateFilenamePolicy = policy)
-    }
-
-    override suspend fun setLastUsedSaveFolder(relativePath: String) {
-        state.value = state.value.copy(lastUsedSaveFolder = relativePath)
     }
 
     override suspend fun setRecommendationEnabled(enabled: Boolean) {

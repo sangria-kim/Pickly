@@ -11,11 +11,7 @@ import kotlinx.coroutines.flow.Flow
 interface SettingsRepository {
     val settings: Flow<Settings>
 
-    suspend fun setResultSaveLocationPolicy(policy: ResultSaveLocationPolicy)
-
     suspend fun setDuplicateFilenamePolicy(policy: DuplicateFilenamePolicy)
-
-    suspend fun setLastUsedSaveFolder(relativePath: String)
 
     suspend fun setRecommendationEnabled(enabled: Boolean)
 
