@@ -44,12 +44,10 @@ class MainViewModel @Inject constructor(
     }
 
     private fun checkPermission() {
-        val requiredPermissions = getRequiredPermissions()
-        val isGranted = requiredPermissions.all { permission ->
-            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-        }
+        val permission = getRequiredPermission()
+        val status = ContextCompat.checkSelfPermission(context, permission)
 
-        if (isGranted) {
+        if (status == PackageManager.PERMISSION_GRANTED) {
             _uiState.value = MainUiState.Ready
         } else {
             _uiState.update {
@@ -61,11 +59,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun onPermissionResult(result: Map<String, Boolean>) {
-        val isGranted = getRequiredPermissions().all { permission ->
-            result[permission] == true
-        }
-
+    fun onPermissionResult(isGranted: Boolean) {
         if (isGranted) {
             _uiState.value = MainUiState.Ready
         } else {
@@ -75,20 +69,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun getRequiredPermissions(): List<String> {
-        return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                listOf(Manifest.permission.READ_MEDIA_IMAGES)
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-            else -> {
-                listOf(
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                )
-            }
+    fun getRequiredPermission(): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
         }
     }
 }
