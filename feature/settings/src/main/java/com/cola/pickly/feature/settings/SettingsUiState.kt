@@ -10,7 +10,7 @@ import com.cola.pickly.core.data.settings.ThemeMode
  * - 실제 영속 저장은 SettingsRepository 구현체 교체로 확장합니다.
  */
 data class SettingsUiState(
-    val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.AutoRename,
+    val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
     val isRecommendationEnabled: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.System,
     val isCacheSizeLoading: Boolean = true,

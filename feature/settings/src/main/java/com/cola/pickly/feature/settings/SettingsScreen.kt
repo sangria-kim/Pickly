@@ -168,14 +168,6 @@ internal fun SettingsScreenContent(
                 onClick = { onSetDuplicateFilenamePolicy(DuplicateFilenamePolicy.Skip) }
             )
         }
-        item { SettingsDivider() }
-        item {
-            SettingsRadioItem(
-                title = stringResource(R.string.settings_option_duplicate_autorename),
-                selected = uiState.duplicateFilenamePolicy == DuplicateFilenamePolicy.AutoRename,
-                onClick = { onSetDuplicateFilenamePolicy(DuplicateFilenamePolicy.AutoRename) }
-            )
-        }
 
         // B. 사진 추천
         item { SettingsSectionHeader(stringResource(R.string.settings_section_recommendation)) }

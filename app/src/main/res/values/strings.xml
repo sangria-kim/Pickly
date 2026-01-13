@@ -34,7 +34,6 @@
     <string name="settings_group_duplicate_filename">동일 파일명 처리</string>
     <string name="settings_option_duplicate_overwrite">덮어쓰기</string>
     <string name="settings_option_duplicate_skip">건너뛰기</string>
-    <string name="settings_option_duplicate_autorename">자동 이름 변경</string>
 
     <string name="settings_section_recommendation">사진 추천</string>
     <string name="settings_option_recommendation_enabled">사진 추천 기능</string>

@@ -12,8 +12,7 @@ package com.cola.pickly.core.data.settings
  */
 enum class DuplicateFilenamePolicy {
     Overwrite,
-    Skip,
-    AutoRename
+    Skip
 }
 
 /**
@@ -35,7 +34,7 @@ enum class ThemeMode {
  * 나머지 기본값은 명세에 명확한 디폴트가 없어, 안전한(데이터 손실 방지) 쪽으로 설정합니다.
  */
 data class Settings(
-    val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.AutoRename,
+    val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
     val isRecommendationEnabled: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.System
 )

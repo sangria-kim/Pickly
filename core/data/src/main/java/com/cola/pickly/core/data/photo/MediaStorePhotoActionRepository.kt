@@ -205,9 +205,6 @@ class MediaStorePhotoActionRepository @Inject constructor(
                 displayName
             }
             DuplicateFilenamePolicy.Skip -> null
-            DuplicateFilenamePolicy.AutoRename -> {
-                generateAutoRenamedName(destinationRelativePath, displayName)
-            }
         }
     }
 
@@ -248,23 +245,6 @@ class MediaStorePhotoActionRepository @Inject constructor(
             }
         }
         return null
-    }
-
-    private fun generateAutoRenamedName(relativePath: String, displayName: String): String {
-        val dotIndex = displayName.lastIndexOf('.')
-        val base = if (dotIndex != -1) displayName.substring(0, dotIndex) else displayName
-        val ext = if (dotIndex != -1) displayName.substring(dotIndex) else ""
-
-        var counter = 1
-        var candidate: String
-        do {
-            candidate = "$base ($counter)$ext"
-            val existing = findExisting(relativePath, candidate)
-            if (existing == null) return candidate
-            counter++
-        } while (counter < 1000)
-
-        return "$base (${System.currentTimeMillis()})$ext"
     }
 
     private data class PhotoInfo(

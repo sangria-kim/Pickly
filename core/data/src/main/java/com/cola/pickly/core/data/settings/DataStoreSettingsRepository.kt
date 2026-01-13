@@ -23,7 +23,7 @@ class DataStoreSettingsRepository @Inject constructor(
 
     override val settings: Flow<Settings> = dataStore.data.map { prefs ->
         Settings(
-            duplicateFilenamePolicy = prefs.getEnum(KEY_DUPLICATE_FILENAME, DuplicateFilenamePolicy.AutoRename),
+            duplicateFilenamePolicy = prefs.getEnum(KEY_DUPLICATE_FILENAME, DuplicateFilenamePolicy.Skip),
             isRecommendationEnabled = prefs[KEY_RECOMMENDATION_ENABLED] ?: false,
             themeMode = prefs.getEnum(KEY_THEME_MODE, ThemeMode.System)
         )
@@ -43,6 +43,10 @@ class DataStoreSettingsRepository @Inject constructor(
 
     private fun <T : Enum<T>> Preferences.getEnum(key: Preferences.Key<String>, default: T): T {
         val raw = this[key] ?: return default
+        // 기존 AutoRename 데이터를 Skip으로 마이그레이션
+        if (key == KEY_DUPLICATE_FILENAME && raw == "AutoRename") {
+            return DuplicateFilenamePolicy.Skip as T
+        }
         return runCatching { java.lang.Enum.valueOf(default.declaringJavaClass, raw) }.getOrDefault(default)
     }
 
