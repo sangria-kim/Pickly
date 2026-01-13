@@ -70,7 +70,7 @@ fun OrganizeScreen(
 
     LaunchedEffect(selectedFolder) {
         selectedFolder?.let { (id, name) ->
-            viewModel.updateSelectedFolder(folderId = id, folderName = name)
+            viewModel.selectFolder(folderId = id, folderName = name)
         }
     }
 
@@ -247,7 +247,7 @@ fun OrganizeScreen(
                 isLoading = isLoading,
                 onClose = { showFolderSheet = false },
                 onFolderClick = { folder ->
-                    viewModel.updateSelectedFolder(folderId = folder.id, folderName = folder.name)
+                    viewModel.selectFolder(folderId = folder.id, folderName = folder.name)
                     showFolderSheet = false
                 }
             )

@@ -6,6 +6,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cola.pickly.core.domain.repository.PhotoRepository
+import com.cola.pickly.core.domain.refresh.PhotoDataRefreshNotifier
+import com.cola.pickly.core.domain.refresh.RefreshReason
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.WeeklyPhoto
 import com.cola.pickly.feature.organize.components.FilterOption
@@ -25,6 +27,7 @@ import javax.inject.Inject
 @HiltViewModel
 class OrganizeViewModel @Inject constructor(
     private val photoRepository: PhotoRepository,
+    private val photoDataRefreshNotifier: PhotoDataRefreshNotifier,
     private val shareSelectedPhotosUseCase: ShareSelectedPhotosUseCase,
     private val moveSelectedPhotosUseCase: MoveSelectedPhotosUseCase,
     private val copySelectedPhotosUseCase: CopySelectedPhotosUseCase,
@@ -69,41 +72,69 @@ class OrganizeViewModel @Inject constructor(
     private val _isActionInProgress = MutableStateFlow(false)
     val isActionInProgress: StateFlow<Boolean> = _isActionInProgress.asStateFlow()
 
+    private var selectedFolder: SelectedFolder? = null
+
     private var pendingAction: PendingAction? = null
 
+    /**
+     * (공식 API) 폴더 선택 = 선택 상태 저장 + 해당 폴더 로드.
+     * UI는 여기만 호출하면 됩니다.
+     */
+    fun selectFolder(folderId: String, folderName: String) {
+        selectedFolder = SelectedFolder(folderId = folderId, folderName = folderName)
+        viewModelScope.launch { loadFolder(folderId = folderId, folderName = folderName) }
+    }
+
+    /**
+     * (호환) 기존 호출부가 남아있어도 동작하도록 유지합니다.
+     * 점진적으로 UI에서는 selectFolder()만 사용하도록 정리합니다.
+     */
     fun updateSelectedFolder(folderId: String, folderName: String) {
-        viewModelScope.launch {
-            _uiState.value = OrganizeUiState.Loading
-            try {
-                // 선택된 폴더의 사진 목록 로드 (Bucket ID 기반)
-                val photos = photoRepository.getPhotosByBucketId(folderId)
-                
-                if (photos.isEmpty()) {
-                    _uiState.value = OrganizeUiState.EmptyFolder(
-                        folderId = folderId,
-                        folderName = folderName
-                    )
-                } else {
-                    // 전역 selectionMap에서 현재 폴더의 사진들에 대한 상태 복원
-                    val currentFolderSelectionMap = photos
-                        .mapNotNull { photo ->
-                            _globalSelectionMap.value[photo.id]?.let { state ->
-                                photo.id to state
-                            }
+        selectFolder(folderId = folderId, folderName = folderName)
+    }
+
+    /**
+     * (공식 API) 현재 선택된 폴더를 다시 로드합니다.
+     * 이동/삭제처럼 \"원본 폴더의 사진 개수\"가 바뀌는 액션 완료 시점에만 호출합니다.
+     */
+    fun refreshCurrentFolder() {
+        val current = selectedFolder ?: return
+        viewModelScope.launch { loadFolder(folderId = current.folderId, folderName = current.folderName) }
+    }
+
+    private suspend fun loadFolder(folderId: String, folderName: String) {
+        _uiState.value = OrganizeUiState.Loading
+        try {
+            // 선택된 폴더의 사진 목록 로드 (Bucket ID 기반)
+            val photos = photoRepository.getPhotosByBucketId(folderId)
+
+            if (photos.isEmpty()) {
+                _uiState.value = OrganizeUiState.EmptyFolder(
+                    folderId = folderId,
+                    folderName = folderName
+                )
+            } else {
+                // 전역 selectionMap에서 현재 폴더의 사진들에 대한 상태 복원
+                val currentFolderSelectionMap = photos
+                    .mapNotNull { photo ->
+                        _globalSelectionMap.value[photo.id]?.let { state ->
+                            photo.id to state
                         }
-                        .toMap()
-                    
-                    _uiState.value = OrganizeUiState.GridReady(
-                        folderId = folderId,
-                        folderName = folderName,
-                        photos = photos,
-                        selectionMap = currentFolderSelectionMap
-                    )
-                }
-            } catch (e: Exception) {
-                // 에러 발생 시 처리
-                _uiState.value = OrganizeUiState.NoFolderSelected
+                    }
+                    .toMap()
+
+                _uiState.value = OrganizeUiState.GridReady(
+                    folderId = folderId,
+                    folderName = folderName,
+                    photos = photos,
+                    // refresh 시에는 선택을 유지하지 않습니다(멀티선택 종료 정책)
+                    selectedIds = emptySet(),
+                    selectionMap = currentFolderSelectionMap
+                )
             }
+        } catch (e: Exception) {
+            // 에러 발생 시 처리
+            _uiState.value = OrganizeUiState.NoFolderSelected
         }
     }
 
@@ -278,6 +309,10 @@ class OrganizeViewModel @Inject constructor(
                         )
                     }
                     emitReportMessage("복사", report)
+                    // 복사 성공분이 있을 때만 폴더 목록(특히 Pickly 폴더 count/썸네일) 갱신 트리거
+                    if (report.successCount > 0) {
+                        photoDataRefreshNotifier.notify(RefreshReason.CopyCommitted)
+                    }
                     exitMultiSelectMode()
                 } catch (e: Exception) {
                     handleActionError(e, "복사 중 오류가 발생했어요.")
@@ -339,6 +374,10 @@ class OrganizeViewModel @Inject constructor(
                         _snackbarMessages.emit("원본 삭제 승인이 없어 이동이 완료되지 않았어요. Pickly 폴더에는 복사만 완료됐어요.")
                         // 복사 결과를 함께 안내
                         emitReportMessage("복사", action.copiedReport)
+                        // 복사는 완료됐을 수 있으므로(Pickly 폴더에 추가), 폴더 목록 갱신 트리거
+                        if (action.copiedReport.successCount > 0) {
+                            photoDataRefreshNotifier.notify(RefreshReason.CopyCommitted)
+                        }
                         exitMultiSelectMode()
                     }
                     is PendingAction.SoftDelete -> {
@@ -354,6 +393,15 @@ class OrganizeViewModel @Inject constructor(
                 is PendingAction.MoveFinalize -> {
                     // createDeleteRequest는 시스템이 실제 삭제를 수행합니다.
                     emitReportMessage("이동", action.copiedReport)
+                    // 원본 삭제가 커밋되었다고 보고, 폴더 목록 + 현재 폴더 그리드 갱신 트리거
+                    if (action.deleteIds.isNotEmpty()) {
+                        removeFromGlobalSelection(action.deleteIds)
+                        photoDataRefreshNotifier.notify(RefreshReason.MoveCommitted)
+                        refreshCurrentFolder()
+                    } else if (action.copiedReport.successCount > 0) {
+                        // 삭제 대상은 없지만 복사본은 생겼을 수 있으므로 폴더 목록 갱신
+                        photoDataRefreshNotifier.notify(RefreshReason.CopyCommitted)
+                    }
                     exitMultiSelectMode()
                 }
                 is PendingAction.SoftDelete -> runSoftDelete(action.photoIds)
@@ -369,6 +417,8 @@ class OrganizeViewModel @Inject constructor(
             // 복사 성공한 항목만 삭제 승인 요청
             val idsToDelete = report.successIds
             if (idsToDelete.isNotEmpty()) {
+                // Pickly 폴더에는 복사가 이미 반영되므로 폴더 목록 갱신 트리거(원본 삭제 전 단계)
+                photoDataRefreshNotifier.notify(RefreshReason.CopyCommitted)
                 val intentSender = runCatching {
                     moveSelectedPhotosUseCase.createDeleteRequestIntentSender(idsToDelete)
                 }.getOrNull()
@@ -385,6 +435,10 @@ class OrganizeViewModel @Inject constructor(
 
             // 삭제 승인 요청이 필요 없거나 생성 실패: 복사 결과로 안내
             emitReportMessage("복사", report)
+            // 원본은 삭제되지 않았으므로, 폴더 목록만 갱신 트리거(복사 성공분 있을 때)
+            if (report.successCount > 0) {
+                photoDataRefreshNotifier.notify(RefreshReason.CopyCommitted)
+            }
             exitMultiSelectMode()
         } catch (e: Exception) {
             // 이동 실패 케이스만 에러 로그 남김
@@ -406,12 +460,24 @@ class OrganizeViewModel @Inject constructor(
                 )
             }
             emitReportMessage("삭제", report)
+            // 실제 삭제/휴지통 이동 성공분이 있을 때만 갱신 트리거 + 현재 폴더 리프레시
+            if (report.successCount > 0) {
+                photoDataRefreshNotifier.notify(RefreshReason.DeleteCommitted)
+                refreshCurrentFolder()
+            }
             exitMultiSelectMode()
         } catch (e: Exception) {
             handleActionError(e, "삭제 중 오류가 발생했어요.")
         } finally {
             _isActionInProgress.value = false
         }
+    }
+
+    private fun removeFromGlobalSelection(photoIds: List<Long>) {
+        if (photoIds.isEmpty()) return
+        val newGlobalMap = _globalSelectionMap.value.toMutableMap()
+        photoIds.forEach { id -> newGlobalMap.remove(id) }
+        _globalSelectionMap.value = newGlobalMap
     }
 
     private suspend fun emitReportMessage(prefix: String, report: com.cola.pickly.core.data.photo.PhotoActionReport) {
@@ -462,6 +528,11 @@ class OrganizeViewModel @Inject constructor(
         ) : PendingAction
         data class SoftDelete(val photoIds: List<Long>) : PendingAction
     }
+
+    private data class SelectedFolder(
+        val folderId: String,
+        val folderName: String
+    )
 
     private companion object {
         private const val TAG = "OrganizeViewModel"

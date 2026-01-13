@@ -1,6 +1,8 @@
 package com.cola.pickly.feature.organize
 
 import com.cola.pickly.core.domain.repository.PhotoRepository
+import com.cola.pickly.core.domain.refresh.PhotoDataRefreshNotifier
+import com.cola.pickly.core.domain.refresh.RefreshReason
 import com.cola.pickly.core.data.photo.PhotoActionReport
 import com.cola.pickly.core.data.photo.PhotoActionRepository
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
@@ -15,7 +17,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -179,11 +184,21 @@ private fun newViewModel(
 ): OrganizeViewModel {
     return OrganizeViewModel(
         photoRepository = photoRepository,
+        photoDataRefreshNotifier = FakePhotoDataRefreshNotifier(),
         shareSelectedPhotosUseCase = ShareSelectedPhotosUseCase(actionRepository),
         moveSelectedPhotosUseCase = MoveSelectedPhotosUseCase(actionRepository, settingsRepository),
         copySelectedPhotosUseCase = CopySelectedPhotosUseCase(actionRepository, settingsRepository),
         softDeleteSelectedPhotosUseCase = SoftDeleteSelectedPhotosUseCase(actionRepository)
     )
+}
+
+private class FakePhotoDataRefreshNotifier : PhotoDataRefreshNotifier {
+    private val _refreshEvents = MutableSharedFlow<RefreshReason>(extraBufferCapacity = 1)
+    override val refreshEvents: SharedFlow<RefreshReason> = _refreshEvents.asSharedFlow()
+
+    override suspend fun notify(reason: RefreshReason) {
+        _refreshEvents.emit(reason)
+    }
 }
 
 private class FakePhotoRepository(
