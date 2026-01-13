@@ -1,6 +1,11 @@
 package com.cola.pickly.feature.organize
 
+import android.app.Activity
+import android.content.IntentSender
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -77,6 +82,13 @@ fun OrganizeScreen(
 
     val context = LocalContext.current
 
+    val storageAccessLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+            viewModel.onStorageAccessResult(result.resultCode == Activity.RESULT_OK)
+        }
+
+    var pendingMoveIntentSender by remember { mutableStateOf<IntentSender?>(null) }
+
     LaunchedEffect(Unit) {
         viewModel.shareEvents.collectLatest { uris ->
             if (uris.isEmpty()) return@collectLatest
@@ -92,6 +104,20 @@ fun OrganizeScreen(
                     context.getString(R.string.bulk_action_share)
                 )
             )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.storageAccessRequests.collectLatest { intentSender ->
+            storageAccessLauncher.launch(
+                IntentSenderRequest.Builder(intentSender).build()
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.moveStorageAccessRequests.collectLatest { intentSender ->
+            pendingMoveIntentSender = intentSender
         }
     }
 
@@ -266,6 +292,47 @@ fun OrganizeScreen(
                             selectedCount
                         )
                     )
+                }
+            )
+        }
+
+        if (pendingMoveIntentSender != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    if (!isActionInProgress) {
+                        pendingMoveIntentSender = null
+                        viewModel.onStorageAccessResult(false)
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val sender = pendingMoveIntentSender
+                            pendingMoveIntentSender = null
+                            if (sender != null) {
+                                storageAccessLauncher.launch(
+                                    IntentSenderRequest.Builder(sender).build()
+                                )
+                            }
+                        },
+                        enabled = !isActionInProgress
+                    ) {
+                        Text(text = stringResource(R.string.organize_move_consent_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            pendingMoveIntentSender = null
+                            viewModel.onStorageAccessResult(false)
+                        },
+                        enabled = !isActionInProgress
+                    ) {
+                        Text(text = stringResource(R.string.delete_confirm_cancel))
+                    }
+                },
+                text = {
+                    Text(text = stringResource(R.string.organize_move_consent_message))
                 }
             )
         }

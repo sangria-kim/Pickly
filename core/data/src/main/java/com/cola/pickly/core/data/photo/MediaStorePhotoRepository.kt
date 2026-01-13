@@ -64,7 +64,11 @@ class MediaStorePhotoRepository @Inject constructor(
 
     override suspend fun getPhotosByBucketId(bucketId: String): List<WeeklyPhoto> = withContext(Dispatchers.IO) {
         val photos = mutableListOf<WeeklyPhoto>()
-        val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        }
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DATA,
@@ -212,6 +216,7 @@ class MediaStorePhotoRepository @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "MediaStorePhotoRepo"
         const val DEFAULT_RELATIVE_PATH = "DCIM/Camera"
     }
 }

@@ -3,6 +3,7 @@ package com.cola.pickly.core.data.photo
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.ContentValues
+import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -18,9 +19,32 @@ class MediaStorePhotoActionRepository @Inject constructor(
 ) : PhotoActionRepository {
 
     override suspend fun getShareUris(photoIds: List<Long>): List<Uri> = withContext(Dispatchers.IO) {
+        val collection = imagesCollection()
         photoIds.map { id ->
-            ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+            ContentUris.withAppendedId(collection, id)
         }
+    }
+
+    override suspend fun createWriteRequestIntentSender(photoIds: List<Long>): IntentSender? = withContext(Dispatchers.IO) {
+        if (photoIds.isEmpty()) return@withContext null
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return@withContext null
+
+        val collection = imagesCollection()
+        val uris = photoIds.map { id ->
+            ContentUris.withAppendedId(collection, id)
+        }
+        MediaStore.createWriteRequest(contentResolver, uris).intentSender
+    }
+
+    override suspend fun createDeleteRequestIntentSender(photoIds: List<Long>): IntentSender? = withContext(Dispatchers.IO) {
+        if (photoIds.isEmpty()) return@withContext null
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return@withContext null
+
+        val collection = imagesCollection()
+        val uris = photoIds.map { id ->
+            ContentUris.withAppendedId(collection, id)
+        }
+        MediaStore.createDeleteRequest(contentResolver, uris).intentSender
     }
 
     override suspend fun movePhotos(
@@ -29,42 +53,57 @@ class MediaStorePhotoActionRepository @Inject constructor(
         policy: DuplicateFilenamePolicy
     ): PhotoActionReport = withContext(Dispatchers.IO) {
         val destPath = normalizeRelativePath(destinationRelativePath)
+        val collection = imagesCollection()
         var success = 0
         var skipped = 0
         var failed = 0
         val errors = mutableListOf<String>()
+        val successIds = mutableListOf<Long>()
+        val skippedIds = mutableListOf<Long>()
+        val failedIds = mutableListOf<Long>()
 
-        photoIds.forEach { id ->
+        photoIds.forEachIndexed { index, id ->
             val info = queryPhotoInfo(id)
             if (info == null) {
                 failed++
-                errors.add("정보 조회 실패: $id")
-                return@forEach
+                val errorMsg = "정보 조회 실패: $id (collection=$collection)"
+                errors.add(errorMsg)
+                failedIds.add(id)
+                return@forEachIndexed
             }
 
             val targetName = resolveTargetName(destPath, info.displayName, policy)
             if (targetName == null) {
                 skipped++
-                return@forEach
+                skippedIds.add(id)
+                return@forEachIndexed
             }
 
             val inserted = insertDestUri(destPath, targetName, info.mimeType)
             if (inserted == null) {
                 failed++
-                errors.add("삽입 실패: $targetName")
-                return@forEach
+                val errorMsg = "삽입 실패: $targetName"
+                errors.add(errorMsg)
+                failedIds.add(id)
+                return@forEachIndexed
             }
 
             try {
                 copyStream(info.uri, inserted)
-                // 원본 삭제
-                contentResolver.delete(info.uri, null, null)
+                
+                // 주의: createDeleteRequest(IntentSender) 승인 후 시스템이 실제 삭제를 수행할 수 있으므로,
+                // '이동'에서는 여기서 원본을 delete 하지 않습니다.
                 success++
+                successIds.add(id)
             } catch (e: Exception) {
                 // 실패 시 생성된 항목 정리
-                contentResolver.delete(inserted, null, null)
+                val cleaned = runCatching { 
+                    val result = contentResolver.delete(inserted, null, null)
+                    result
+                }.getOrNull()
                 failed++
-                errors.add(e.message ?: "이동 실패: $targetName")
+                failedIds.add(id)
+                errors.add("${e.javaClass.simpleName}: ${e.message ?: "이동 실패: $targetName"}")
             }
         }
 
@@ -72,7 +111,10 @@ class MediaStorePhotoActionRepository @Inject constructor(
             successCount = success,
             skippedCount = skipped,
             failedCount = failed,
-            errors = errors
+            errors = errors,
+            successIds = successIds,
+            skippedIds = skippedIds,
+            failedIds = failedIds
         )
     }
 
@@ -82,22 +124,28 @@ class MediaStorePhotoActionRepository @Inject constructor(
         policy: DuplicateFilenamePolicy
     ): PhotoActionReport = withContext(Dispatchers.IO) {
         val destPath = normalizeRelativePath(destinationRelativePath)
+        val collection = imagesCollection()
         var success = 0
         var skipped = 0
         var failed = 0
         val errors = mutableListOf<String>()
+        val successIds = mutableListOf<Long>()
+        val skippedIds = mutableListOf<Long>()
+        val failedIds = mutableListOf<Long>()
 
         photoIds.forEach { id ->
             val info = queryPhotoInfo(id)
             if (info == null) {
                 failed++
-                errors.add("정보 조회 실패: $id")
+                errors.add("정보 조회 실패: $id (collection=$collection)")
+                failedIds.add(id)
                 return@forEach
             }
 
             val targetName = resolveTargetName(destPath, info.displayName, policy)
             if (targetName == null) {
                 skipped++
+                skippedIds.add(id)
                 return@forEach
             }
 
@@ -105,15 +153,18 @@ class MediaStorePhotoActionRepository @Inject constructor(
             if (inserted == null) {
                 failed++
                 errors.add("삽입 실패: $targetName")
+                failedIds.add(id)
                 return@forEach
             }
 
             try {
                 copyStream(info.uri, inserted)
                 success++
+                successIds.add(id)
             } catch (e: Exception) {
-                contentResolver.delete(inserted, null, null)
+                val cleaned = runCatching { contentResolver.delete(inserted, null, null) }.getOrNull()
                 failed++
+                failedIds.add(id)
                 errors.add(e.message ?: "복사 실패: $targetName")
             }
         }
@@ -122,7 +173,10 @@ class MediaStorePhotoActionRepository @Inject constructor(
             successCount = success,
             skippedCount = skipped,
             failedCount = failed,
-            errors = errors
+            errors = errors,
+            successIds = successIds,
+            skippedIds = skippedIds,
+            failedIds = failedIds
         )
     }
 
@@ -130,9 +184,10 @@ class MediaStorePhotoActionRepository @Inject constructor(
         var success = 0
         var failed = 0
         val errors = mutableListOf<String>()
+        val collection = imagesCollection()
 
         photoIds.forEach { id ->
-            val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+            val uri = ContentUris.withAppendedId(collection, id)
             try {
                 val affected = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     val values = ContentValues().apply {
@@ -168,27 +223,125 @@ class MediaStorePhotoActionRepository @Inject constructor(
     private fun normalizeRelativePath(path: String): String =
         if (path.endsWith("/")) path else "$path/"
 
-    private fun queryPhotoInfo(id: Long): PhotoInfo? {
-        val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-        val projection = arrayOf(
-            MediaStore.Images.Media.DISPLAY_NAME,
-            MediaStore.Images.Media.MIME_TYPE,
-            MediaStore.Images.Media.RELATIVE_PATH
-        )
-
-        contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-            val nameIdx = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
-            val mimeIdx = cursor.getColumnIndex(MediaStore.Images.Media.MIME_TYPE)
-            val pathIdx = cursor.getColumnIndex(MediaStore.Images.Media.RELATIVE_PATH)
-
-            if (cursor.moveToFirst()) {
-                val name = cursor.getString(nameIdx) ?: return null
-                val mime = cursor.getString(mimeIdx) ?: "image/*"
-                val relative = cursor.getString(pathIdx)
-                return PhotoInfo(uri, name, mime, relative)
-            }
+    private fun imagesCollection(): Uri =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         }
+
+    private fun queryPhotoInfo(id: Long): PhotoInfo? {
+        // 우선 Images 컬렉션에서 조회
+        val imagesCollection = imagesCollection()
+        queryPhotoInfoFromCollection(id, imagesCollection)?.let { return it }
+
+        // 실패 시 Files 컬렉션(이미지 타입)에서 조회
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val filesCollection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            queryPhotoInfoFromFilesCollection(id, filesCollection)?.let { return it }
+        }
+
+        // 최종적으로 internal 볼륨도 시도
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val internal = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_INTERNAL)
+            queryPhotoInfoFromCollection(id, internal)?.let { return it }
+        }
+
         return null
+    }
+
+    private fun queryPhotoInfoFromCollection(id: Long, collection: Uri): PhotoInfo? {
+        val uri = ContentUris.withAppendedId(collection, id)
+
+        val projection = buildList {
+            add(MediaStore.Images.Media.DISPLAY_NAME)
+            add(MediaStore.Images.Media.MIME_TYPE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(MediaStore.Images.Media.RELATIVE_PATH)
+            }
+        }.toTypedArray()
+
+        val selection = "${MediaStore.Images.Media._ID} = ?"
+        val selectionArgs = arrayOf(id.toString())
+
+        return try {
+            contentResolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) {
+                    return null
+                }
+
+                val nameIdx = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+                val mimeIdx = cursor.getColumnIndex(MediaStore.Images.Media.MIME_TYPE)
+                val pathIdx = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    cursor.getColumnIndex(MediaStore.Images.Media.RELATIVE_PATH)
+                } else {
+                    -1
+                }
+
+                val name = cursor.getString(nameIdx)
+                if (name == null) {
+                    return null
+                }
+                
+                val mime = cursor.getString(mimeIdx) ?: "image/*"
+                val relative = if (pathIdx != -1 && !cursor.isNull(pathIdx)) cursor.getString(pathIdx) else null
+
+                PhotoInfo(uri, name, mime, relative)
+            } ?: run {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun queryPhotoInfoFromFilesCollection(id: Long, filesCollection: Uri): PhotoInfo? {
+        val uri = ContentUris.withAppendedId(filesCollection, id)
+
+        val projection = buildList {
+            add(MediaStore.Files.FileColumns.DISPLAY_NAME)
+            add(MediaStore.Files.FileColumns.MIME_TYPE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(MediaStore.Files.FileColumns.RELATIVE_PATH)
+            }
+        }.toTypedArray()
+
+        val selection = "${MediaStore.Files.FileColumns._ID} = ? AND ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}"
+        val selectionArgs = arrayOf(id.toString())
+
+        return try {
+            contentResolver.query(filesCollection, projection, selection, selectionArgs, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) {
+                    return null
+                }
+
+                val nameIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                val mimeIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.MIME_TYPE)
+                val pathIdx = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    cursor.getColumnIndex(MediaStore.Files.FileColumns.RELATIVE_PATH)
+                } else {
+                    -1
+                }
+
+                val name = cursor.getString(nameIdx)
+                if (name == null) {
+                    return null
+                }
+                
+                val mime = cursor.getString(mimeIdx) ?: "image/*"
+                val relative = if (pathIdx != -1 && !cursor.isNull(pathIdx)) cursor.getString(pathIdx) else null
+
+                // Files 컬렉션에서 찾았으므로 Images 컬렉션 URI로 변환
+                val imagesCollection = imagesCollection()
+                val imagesUri = ContentUris.withAppendedId(imagesCollection, id)
+
+                PhotoInfo(imagesUri, name, mime, relative)
+            } ?: run {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun resolveTargetName(
@@ -209,21 +362,41 @@ class MediaStorePhotoActionRepository @Inject constructor(
     }
 
     private fun insertDestUri(relativePath: String, displayName: String, mimeType: String): Uri? {
+        val collection = imagesCollection()
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Images.Media.MIME_TYPE, mimeType)
             put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
         }
-        return contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+
+        return try {
+            val inserted = contentResolver.insert(collection, values)
+            inserted
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun copyStream(from: Uri, to: Uri) {
-        val input = contentResolver.openInputStream(from) ?: error("입력 스트림 없음")
-        val output = contentResolver.openOutputStream(to) ?: error("출력 스트림 없음")
+        val input = contentResolver.openInputStream(from) ?: error("입력 스트림 없음: $from")
+        val output = contentResolver.openOutputStream(to) ?: error("출력 스트림 없음: $to")
 
         input.use { src ->
             output.use { dst ->
                 src.copyTo(dst)
+            }
+        }
+
+        // Q+에서 IS_PENDING을 0으로 업데이트하여 갤러리 반영 트리거
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            runCatching {
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.IS_PENDING, 0)
+                }
+                contentResolver.update(to, values, null, null)
             }
         }
     }
@@ -231,8 +404,9 @@ class MediaStorePhotoActionRepository @Inject constructor(
     private fun findExisting(relativePath: String, displayName: String): Uri? {
         val selection = "${MediaStore.Images.Media.RELATIVE_PATH} = ? AND ${MediaStore.Images.Media.DISPLAY_NAME} = ?"
         val args = arrayOf(relativePath, displayName)
+        val collection = imagesCollection()
         contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            collection,
             arrayOf(MediaStore.Images.Media._ID),
             selection,
             args,
@@ -241,7 +415,7 @@ class MediaStorePhotoActionRepository @Inject constructor(
             if (cursor.moveToFirst()) {
                 val idIdx = cursor.getColumnIndex(MediaStore.Images.Media._ID)
                 val id = cursor.getLong(idIdx)
-                return ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                return ContentUris.withAppendedId(collection, id)
             }
         }
         return null
@@ -253,4 +427,9 @@ class MediaStorePhotoActionRepository @Inject constructor(
         val mimeType: String,
         val relativePath: String?
     )
+
+    private companion object {
+        // 실패 분석을 위한 최소 로그만 유지합니다(실패 시점/예외 원인 파악용).
+        private const val TAG = "MediaStorePhotoActionRepo"
+    }
 }

@@ -1,6 +1,8 @@
 package com.cola.pickly.feature.organize
 
+import android.content.IntentSender
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cola.pickly.core.domain.repository.PhotoRepository
@@ -29,6 +31,16 @@ class OrganizeViewModel @Inject constructor(
     private val softDeleteSelectedPhotosUseCase: SoftDeleteSelectedPhotosUseCase
 ) : ViewModel() {
 
+    private fun logD(message: String) {
+        runCatching { Log.d(TAG, message) }
+    }
+
+    private fun logE(message: String, throwable: Throwable? = null) {
+        runCatching {
+            if (throwable != null) Log.e(TAG, message, throwable) else Log.e(TAG, message)
+        }
+    }
+
     /**
      * 전역 selectionMap (모든 폴더의 사진 선택 상태 관리)
      * 폴더를 변경해도 이 맵은 유지되어 선택 상태가 보존됩니다.
@@ -42,6 +54,12 @@ class OrganizeViewModel @Inject constructor(
     private val _shareEvents = MutableSharedFlow<List<Uri>>(extraBufferCapacity = 1)
     val shareEvents: SharedFlow<List<Uri>> = _shareEvents
 
+    private val _storageAccessRequests = MutableSharedFlow<IntentSender>(extraBufferCapacity = 1)
+    val storageAccessRequests: SharedFlow<IntentSender> = _storageAccessRequests
+
+    private val _moveStorageAccessRequests = MutableSharedFlow<IntentSender>(extraBufferCapacity = 1)
+    val moveStorageAccessRequests: SharedFlow<IntentSender> = _moveStorageAccessRequests
+
     private val _showDeleteConfirm = MutableStateFlow(false)
     val showDeleteConfirm: StateFlow<Boolean> = _showDeleteConfirm.asStateFlow()
 
@@ -50,6 +68,8 @@ class OrganizeViewModel @Inject constructor(
 
     private val _isActionInProgress = MutableStateFlow(false)
     val isActionInProgress: StateFlow<Boolean> = _isActionInProgress.asStateFlow()
+
+    private var pendingAction: PendingAction? = null
 
     fun updateSelectedFolder(folderId: String, folderName: String) {
         viewModelScope.launch {
@@ -226,25 +246,16 @@ class OrganizeViewModel @Inject constructor(
      */
     fun moveSelectedPhotos() {
         val currentState = _uiState.value
-        if (_isActionInProgress.value) return
+        if (_isActionInProgress.value) {
+            return
+        }
         if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
             viewModelScope.launch {
-                try {
-                    _isActionInProgress.value = true
-                    val report = moveSelectedPhotosUseCase(currentState.selectedIds.toList())
-                    runCatching {
-                        android.util.Log.d(
-                            "OrganizeViewModel",
-                            "이동 완료 success=${report.successCount}, skipped=${report.skippedCount}, failed=${report.failedCount}"
-                        )
-                    }
-                    emitReportMessage("이동", report)
-                    exitMultiSelectMode()
-                } catch (e: Exception) {
-                    handleActionError(e, "이동 중 오류가 발생했어요.")
-                } finally {
-                    _isActionInProgress.value = false
-                }
+                val photoIds = currentState.selectedIds.toList()
+                // 주의: createDeleteRequest는 승인 즉시 시스템이 실제 삭제를 수행할 수 있어
+                // 복사 전에 삭제 승인을 받으면 원본이 먼저 지워질 수 있습니다.
+                // 따라서 '이동'은 복사를 먼저 수행한 뒤, 복사 성공분에 대해서만 삭제 승인을 요청합니다.
+                runMove(photoIds)
             }
         }
     }
@@ -296,24 +307,110 @@ class OrganizeViewModel @Inject constructor(
         if (_isActionInProgress.value) return
         if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
             viewModelScope.launch {
-                try {
-                    _isActionInProgress.value = true
-                    _showDeleteConfirm.value = false
-                    val report = softDeleteSelectedPhotosUseCase(currentState.selectedIds.toList())
-                    runCatching {
-                        android.util.Log.d(
-                            "OrganizeViewModel",
-                            "삭제 완료 success=${report.successCount}, failed=${report.failedCount}"
-                        )
+                _showDeleteConfirm.value = false
+                val photoIds = currentState.selectedIds.toList()
+                logD("deleteSelectedPhotos selected=${photoIds.size} ids(sample)=${photoIds.take(3)}")
+
+                val intentSender = runCatching {
+                    softDeleteSelectedPhotosUseCase.createWriteRequestIntentSender(photoIds)
+                }.getOrNull()
+
+                if (intentSender != null) {
+                    logD("deleteSelectedPhotos emit storageAccessRequests intentSender=$intentSender")
+                    pendingAction = PendingAction.SoftDelete(photoIds)
+                    _storageAccessRequests.emit(intentSender)
+                    return@launch
+                }
+
+                runSoftDelete(photoIds)
+            }
+        }
+    }
+
+    fun onStorageAccessResult(isApproved: Boolean) {
+        val action = pendingAction ?: return
+        pendingAction = null
+        logD("onStorageAccessResult approved=$isApproved action=$action")
+
+        if (!isApproved) {
+            viewModelScope.launch {
+                when (action) {
+                    is PendingAction.MoveFinalize -> {
+                        _snackbarMessages.emit("원본 삭제 승인이 없어 이동이 완료되지 않았어요. Pickly 폴더에는 복사만 완료됐어요.")
+                        // 복사 결과를 함께 안내
+                        emitReportMessage("복사", action.copiedReport)
+                        exitMultiSelectMode()
                     }
-                    emitReportMessage("삭제", report)
-                    exitMultiSelectMode()
-                } catch (e: Exception) {
-                    handleActionError(e, "삭제 중 오류가 발생했어요.")
-                } finally {
-                    _isActionInProgress.value = false
+                    is PendingAction.SoftDelete -> {
+                        _snackbarMessages.emit("저장소 접근 권한이 필요해요. 설정에서 권한을 허용한 뒤 다시 시도해주세요.")
+                    }
                 }
             }
+            return
+        }
+
+        viewModelScope.launch {
+            when (action) {
+                is PendingAction.MoveFinalize -> {
+                    // createDeleteRequest는 시스템이 실제 삭제를 수행합니다.
+                    emitReportMessage("이동", action.copiedReport)
+                    exitMultiSelectMode()
+                }
+                is PendingAction.SoftDelete -> runSoftDelete(action.photoIds)
+            }
+        }
+    }
+
+    private suspend fun runMove(photoIds: List<Long>) {
+        try {
+            _isActionInProgress.value = true
+            val report = moveSelectedPhotosUseCase(photoIds)
+
+            // 복사 성공한 항목만 삭제 승인 요청
+            val idsToDelete = report.successIds
+            if (idsToDelete.isNotEmpty()) {
+                val intentSender = runCatching {
+                    moveSelectedPhotosUseCase.createDeleteRequestIntentSender(idsToDelete)
+                }.getOrNull()
+
+                if (intentSender != null) {
+                    pendingAction = PendingAction.MoveFinalize(
+                        copiedReport = report,
+                        deleteIds = idsToDelete
+                    )
+                    _moveStorageAccessRequests.emit(intentSender)
+                    return
+                }
+            }
+
+            // 삭제 승인 요청이 필요 없거나 생성 실패: 복사 결과로 안내
+            emitReportMessage("복사", report)
+            exitMultiSelectMode()
+        } catch (e: Exception) {
+            // 이동 실패 케이스만 에러 로그 남김
+            logE("moveSelectedPhotos failed size=${photoIds.size}", e)
+            handleActionError(e, "이동 중 오류가 발생했어요.")
+        } finally {
+            _isActionInProgress.value = false
+        }
+    }
+
+    private suspend fun runSoftDelete(photoIds: List<Long>) {
+        try {
+            _isActionInProgress.value = true
+            val report = softDeleteSelectedPhotosUseCase(photoIds)
+            runCatching {
+                android.util.Log.d(
+                    "OrganizeViewModel",
+                    "삭제 완료 success=${report.successCount}, failed=${report.failedCount}"
+                )
+            }
+            emitReportMessage("삭제", report)
+            exitMultiSelectMode()
+        } catch (e: Exception) {
+            handleActionError(e, "삭제 중 오류가 발생했어요.")
+        } finally {
+            _isActionInProgress.value = false
         }
     }
 
@@ -356,5 +453,17 @@ class OrganizeViewModel @Inject constructor(
             }
         }
         _snackbarMessages.emit(message)
+    }
+
+    private sealed interface PendingAction {
+        data class MoveFinalize(
+            val copiedReport: com.cola.pickly.core.data.photo.PhotoActionReport,
+            val deleteIds: List<Long>
+        ) : PendingAction
+        data class SoftDelete(val photoIds: List<Long>) : PendingAction
+    }
+
+    private companion object {
+        private const val TAG = "OrganizeViewModel"
     }
 }

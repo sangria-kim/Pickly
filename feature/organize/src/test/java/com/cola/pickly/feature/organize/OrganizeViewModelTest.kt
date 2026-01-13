@@ -201,6 +201,10 @@ private class ControlledPhotoActionRepository : PhotoActionRepository {
 
     override suspend fun getShareUris(photoIds: List<Long>) = emptyList<android.net.Uri>()
 
+    override suspend fun createWriteRequestIntentSender(photoIds: List<Long>): android.content.IntentSender? = null
+
+    override suspend fun createDeleteRequestIntentSender(photoIds: List<Long>): android.content.IntentSender? = null
+
     override suspend fun movePhotos(
         photoIds: List<Long>,
         destinationRelativePath: String,
