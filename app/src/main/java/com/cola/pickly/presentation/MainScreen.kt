@@ -35,15 +35,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.cola.pickly.R
-import com.cola.pickly.core.model.WeekId
 import com.cola.pickly.feature.archive.ArchiveScreen
 import com.cola.pickly.feature.organize.OrganizeScreen
 import com.cola.pickly.feature.organize.OrganizeViewModel
 import com.cola.pickly.feature.organize.components.BulkActionBar
 import com.cola.pickly.feature.settings.SettingsScreen
 import com.cola.pickly.core.model.PhotoSelectionState
-import com.cola.pickly.feature.weekly.WeeklyListScreen
-import com.cola.pickly.feature.weekly.WeeklyListViewModel
 import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.theme.BottomNavSelected
 import com.cola.pickly.core.ui.theme.BottomNavUnselected
@@ -109,9 +106,6 @@ fun PicklyBottomNavigation(
 @Composable
 fun MainScreen(
     mainViewModel: MainViewModel,
-    weeklyListViewModel: WeeklyListViewModel,
-    onNavigateToDetail: (WeekId) -> Unit,
-    onNavigateToFolderSelect: () -> Unit,
     onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null

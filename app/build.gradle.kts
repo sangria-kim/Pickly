@@ -53,7 +53,6 @@ dependencies {
     // --- Feature Modules ---
     implementation(project(":feature:settings"))
     implementation(project(":feature:archive"))
-    implementation(project(":feature:weekly"))
     implementation(project(":feature:organize"))
     
     // --- Splash Screen ---

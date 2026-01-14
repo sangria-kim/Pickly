@@ -17,7 +17,6 @@ import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.compose.ui.window.DialogProperties
-import com.cola.pickly.core.model.WeekId
 import com.cola.pickly.presentation.MainScreen
 import com.cola.pickly.presentation.MainViewModel
 import com.cola.pickly.presentation.splash.SplashScreen
@@ -25,7 +24,6 @@ import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.presentation.viewer.ViewerUiState
 import com.cola.pickly.presentation.viewer.ViewerViewModel
 import com.cola.pickly.presentation.viewer.ViewerScreen
-import com.cola.pickly.feature.weekly.WeeklyDetailScreen
 
 @Composable
 fun PicklyNavGraph(
@@ -59,17 +57,6 @@ fun PicklyNavGraph(
 
             MainScreen(
                 mainViewModel = mainViewModel,
-                weeklyListViewModel = hiltViewModel(),
-                onNavigateToDetail = { weekId ->
-                    navController.navigate("weekly_detail/${weekId}")
-                },
-                onNavigateToFolderSelect = {
-                    // 이제 S-03은 MainScreen(OrganizeScreen) 내부의 Dialog로 처리되므로 
-                    // 네비게이션 액션은 필요 없거나, 필요하다면 Dialog를 띄우는 이벤트를 전달해야 합니다.
-                    // 현재 MainScreen의 onNavigateToFolderSelect는 OrganizeScreen 내부에서 처리되도록 변경되었으므로
-                    // 여기서는 빈 람다 혹은 로깅 정도만 처리하면 됩니다.
-                    // (OrganizeScreen 내부에서 showFolderSheet 상태로 처리됨)
-                },
                 onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly ->
                     // viewer 라우트로 이동하기 전에 selectionMap을 현재 backStackEntry의 savedStateHandle에 저장
                     // viewer composable에서 previousBackStackEntry의 savedStateHandle을 통해 읽어옴
@@ -85,28 +72,6 @@ fun PicklyNavGraph(
                 selectionUpdates = selectionUpdates
             )
         }
-        composable(
-            route = "weekly_detail/{weekId}",
-            arguments = listOf(navArgument("weekId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val weekIdString = backStackEntry.arguments?.getString("weekId") ?: return@composable
-            
-            val parts = weekIdString.split("-W")
-            if (parts.size == 2) {
-                val year = parts[0].toIntOrNull() ?: 0
-                val weekOfYear = parts[1].toIntOrNull() ?: 0
-                val weekId = WeekId(year, weekOfYear)
-
-                WeeklyDetailScreen(
-                    viewModel = hiltViewModel(),
-                    weekId = weekId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-        }
-
-        // FolderSelectScreen 라우트 제거됨 (S-03)
-
         dialog(
             route = "viewer/{folderId}/{photoId}?selectedOnly={selectedOnly}",
             arguments = listOf(
