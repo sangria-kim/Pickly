@@ -21,6 +21,7 @@ import com.cola.pickly.presentation.MainScreen
 import com.cola.pickly.presentation.MainViewModel
 import com.cola.pickly.presentation.splash.SplashScreen
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.presentation.viewer.ViewerUiState
 import com.cola.pickly.presentation.viewer.ViewerViewModel
 import com.cola.pickly.presentation.viewer.ViewerScreen
@@ -57,14 +58,14 @@ fun PicklyNavGraph(
 
             MainScreen(
                 mainViewModel = mainViewModel,
-                onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly ->
+                onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext ->
                     // viewer 라우트로 이동하기 전에 selectionMap을 현재 backStackEntry의 savedStateHandle에 저장
                     // viewer composable에서 previousBackStackEntry의 savedStateHandle을 통해 읽어옴
                     navController.currentBackStackEntry?.savedStateHandle?.set(
                         "initial_selection_map_for_viewer",
                         selectionMap
                     )
-                    navController.navigate("viewer/$folderId/$photoId?selectedOnly=$selectedOnly")
+                    navController.navigate("viewer/$folderId/$photoId?selectedOnly=$selectedOnly&context=${viewerContext.name}")
                 },
                 selectedFolder = if (selectedFolderId != null && selectedFolderName != null) {
                     selectedFolderId to selectedFolderName
@@ -73,19 +74,31 @@ fun PicklyNavGraph(
             )
         }
         dialog(
-            route = "viewer/{folderId}/{photoId}?selectedOnly={selectedOnly}",
+            route = "viewer/{folderId}/{photoId}?selectedOnly={selectedOnly}&context={context}",
             arguments = listOf(
                 navArgument("folderId") { type = NavType.StringType },
                 navArgument("photoId") { type = NavType.LongType },
                 navArgument("selectedOnly") {
                     type = NavType.BoolType
                     defaultValue = false
+                },
+                navArgument("context") {
+                    type = NavType.StringType
+                    defaultValue = ViewerContext.SELECT.name
                 }
             ),
             dialogProperties = DialogProperties(
                 usePlatformDefaultWidth = false
             )
         ) { backStackEntry ->
+            // Context 파라미터 읽기
+            val contextName = backStackEntry.arguments?.getString("context") ?: ViewerContext.SELECT.name
+            val viewerContext = try {
+                ViewerContext.valueOf(contextName)
+            } catch (e: IllegalArgumentException) {
+                ViewerContext.SELECT
+            }
+            
             // 이전 화면(main)에서 전달된 initial_selection_map을 읽음
             val selectionMapFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
             
@@ -117,6 +130,7 @@ fun PicklyNavGraph(
                         photos = state.photos,
                         initialIndex = state.initialIndex,
                         selectionMap = state.selectionMap,
+                        viewerContext = viewerContext,
                         onBackClick = handleBack,
                         onSelectClick = { photoId ->
                             viewerViewModel.toggleSelection(photoId)

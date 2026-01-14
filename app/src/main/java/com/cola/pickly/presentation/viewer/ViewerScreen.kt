@@ -25,6 +25,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.model.WeeklyPhoto
 import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerTopOverlay
@@ -35,9 +36,10 @@ fun ViewerScreen(
     photos: List<WeeklyPhoto>,
     initialIndex: Int,
     selectionMap: Map<Long, PhotoSelectionState>,
+    viewerContext: ViewerContext,
     onBackClick: () -> Unit,
-    onSelectClick: (Long) -> Unit,
-    onRejectClick: (Long) -> Unit
+    onSelectClick: (Long) -> Unit = {},
+    onRejectClick: (Long) -> Unit = {}
 ) {
     var isOverlayVisible by remember { mutableStateOf(true) }
     var isZoomed by remember { mutableStateOf(false) }
@@ -121,23 +123,25 @@ fun ViewerScreen(
             )
         }
 
-        // Bottom Overlay
-        AnimatedVisibility(
-            visible = isOverlayVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            ViewerBottomOverlay(
-                isSelected = isSelected,
-                isRejected = isRejected,
-                onSelectClick = { 
-                    currentPhoto?.let { onSelectClick(it.id) } 
-                },
-                onRejectClick = { 
-                    currentPhoto?.let { onRejectClick(it.id) } 
-                }
-            )
+        // Bottom Overlay - SELECT Context에서만 표시
+        if (viewerContext == ViewerContext.SELECT) {
+            AnimatedVisibility(
+                visible = isOverlayVisible,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                ViewerBottomOverlay(
+                    isSelected = isSelected,
+                    isRejected = isRejected,
+                    onSelectClick = { 
+                        currentPhoto?.let { onSelectClick(it.id) } 
+                    },
+                    onRejectClick = { 
+                        currentPhoto?.let { onRejectClick(it.id) } 
+                    }
+                )
+            }
         }
     }
 }

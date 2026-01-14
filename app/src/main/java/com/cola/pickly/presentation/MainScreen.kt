@@ -41,6 +41,7 @@ import com.cola.pickly.feature.organize.OrganizeViewModel
 import com.cola.pickly.feature.organize.components.BulkActionBar
 import com.cola.pickly.feature.settings.SettingsScreen
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.theme.BottomNavSelected
 import com.cola.pickly.core.ui.theme.BottomNavUnselected
@@ -106,7 +107,7 @@ fun PicklyBottomNavigation(
 @Composable
 fun MainScreen(
     mainViewModel: MainViewModel,
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, ViewerContext) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null
 ) {
@@ -154,7 +155,9 @@ fun MainScreen(
             composable(MainTab.Organize.route) {
                 OrganizeScreen(
                     viewModel = organizeViewModel,
-                    onNavigateToPhotoDetail = onNavigateToPhotoDetail,
+                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly ->
+                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.SELECT)
+                    },
                     selectedFolder = selectedFolder,
                     selectionUpdates = selectionUpdates,
                     onMultiSelectModeChanged = { isMultiSelect ->
@@ -178,7 +181,9 @@ fun MainScreen(
                 val globalSelectionMap by organizeViewModel.globalSelectionMap.collectAsStateWithLifecycle()
                 ArchiveScreen(
                     globalSelectionMap = globalSelectionMap,
-                    onNavigateToPhotoDetail = onNavigateToPhotoDetail,
+                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly ->
+                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.ARCHIVE)
+                    },
                     onNavigateToOrganize = {
                         // Tab 1 (정리하기)로 이동
                         navController.navigate(MainTab.Organize.route) {
