@@ -42,6 +42,7 @@ fun ViewerScreen(
     onRejectClick: (Long) -> Unit = {}
 ) {
     var isOverlayVisible by remember { mutableStateOf(true) }
+    var isInfoVisible by remember { mutableStateOf(false) } // State for info overlay
     var isZoomed by remember { mutableStateOf(false) }
 
     Box(
@@ -73,6 +74,7 @@ fun ViewerScreen(
                 onZoomStateChanged = { scale ->
                     isZoomed = scale > 1f
                     isOverlayVisible = scale == 1f
+                    if (isZoomed) isInfoVisible = false // Hide info when zoomed
                 }
             )
         }
@@ -119,8 +121,47 @@ fun ViewerScreen(
             ViewerTopOverlay(
                 currentIndex = pagerState.currentPage,
                 totalCount = photos.size,
-                onBackClick = onBackClick
+                isInfoVisible = isInfoVisible,
+                onBackClick = onBackClick,
+                onInfoClick = { isInfoVisible = !isInfoVisible }
             )
+        }
+
+        // Info Overlay
+        if (isInfoVisible && isOverlayVisible && currentPhoto != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 80.dp, end = 16.dp) // Position below top overlay
+                    .background(Color.Black.copy(alpha = 0.7f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                 androidx.compose.foundation.layout.Column(
+                     horizontalAlignment = Alignment.End
+                 ) {
+                     val formatter = remember { java.time.format.DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm") }
+                     val dateString = remember(currentPhoto.takenAt) {
+                         java.time.Instant.ofEpochMilli(currentPhoto.takenAt)
+                             .atZone(java.time.ZoneId.systemDefault())
+                             .format(formatter)
+                     }
+                     val filename = remember(currentPhoto.filePath) {
+                         currentPhoto.filePath.substringAfterLast("/")
+                     }
+
+                     androidx.compose.material3.Text(
+                         text = dateString,
+                         style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                         color = Color.White
+                     )
+                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
+                     androidx.compose.material3.Text(
+                         text = filename,
+                         style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                         color = Color.Gray
+                     )
+                 }
+            }
         }
 
         // Bottom Overlay - SELECT Context에서만 표시

@@ -24,8 +24,9 @@ import androidx.compose.ui.unit.dp
 fun ViewerTopOverlay(
     currentIndex: Int,
     totalCount: Int,
+    isInfoVisible: Boolean,
     onBackClick: () -> Unit,
-    onInfoClick: () -> Unit = {}
+    onInfoClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -58,7 +59,7 @@ fun ViewerTopOverlay(
             modifier = Modifier.align(Alignment.Center)
         )
         
-        // Info Button (Placeholder as per screenshot)
+        // Info Button
         IconButton(
             onClick = onInfoClick,
             modifier = Modifier.align(Alignment.CenterEnd)
@@ -66,7 +67,7 @@ fun ViewerTopOverlay(
             Icon(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = "Info",
-                tint = Color.White
+                tint = if (isInfoVisible) Color(0xFF2ED3B7) else Color.White
             )
         }
     }
