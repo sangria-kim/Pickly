@@ -52,4 +52,9 @@
     <string name="settings_privacy_policy">개인정보 처리방침</string>
     <string name="settings_open_source_licenses">오픈소스 라이선스</string>
     <string name="settings_snackbar_coming_soon">준비 중입니다.</string>
+
+    <!-- Exit Dialog -->
+    <string name="exit_dialog_message">Pickly를 종료할까요?</string>
+    <string name="exit_dialog_exit">나가기</string>
+    <string name="exit_dialog_stay">계속 사용</string>
 </resources>

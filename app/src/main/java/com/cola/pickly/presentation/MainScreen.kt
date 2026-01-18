@@ -1,5 +1,7 @@
 package com.cola.pickly.presentation
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,12 +11,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -35,6 +40,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.cola.pickly.R
+import com.cola.pickly.core.ui.R as CoreUiR
 import com.cola.pickly.feature.archive.ArchiveScreen
 import com.cola.pickly.feature.organize.OrganizeScreen
 import com.cola.pickly.feature.organize.OrganizeViewModel
@@ -118,7 +124,11 @@ fun MainScreen(
     
     // Multi Select Mode 상태 관리
     var isMultiSelectMode by remember { mutableStateOf(false) }
-    
+
+    // 종료 다이얼로그 상태 관리
+    var showExitDialog by remember { mutableStateOf(false) }
+    val activity = LocalContext.current as? Activity
+
     // Bulk Action 콜백 상태 관리
     var onShareClick: (() -> Unit)? by remember { mutableStateOf(null) }
     var onMoveClick: (() -> Unit)? by remember { mutableStateOf(null) }
@@ -127,6 +137,11 @@ fun MainScreen(
     
     // 액션 진행 상태 관찰
     val isActionInProgress by organizeViewModel.isActionInProgress.collectAsStateWithLifecycle()
+
+    // Multi Select Mode가 아닐 때만 종료 다이얼로그 표시
+    BackHandler(enabled = !isMultiSelectMode) {
+        showExitDialog = true
+    }
 
     Scaffold(
         containerColor = BackgroundWhite, // 전체 배경색 흰색 적용
@@ -200,6 +215,26 @@ fun MainScreen(
                 SettingsScreen()
             }
         }
+    }
+
+    // 종료 확인 다이얼로그
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text(text = stringResource(CoreUiR.string.exit_dialog_stay))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { activity?.finish() }) {
+                    Text(text = stringResource(CoreUiR.string.exit_dialog_exit))
+                }
+            },
+            text = {
+                Text(text = stringResource(CoreUiR.string.exit_dialog_message))
+            }
+        )
     }
 }
 
