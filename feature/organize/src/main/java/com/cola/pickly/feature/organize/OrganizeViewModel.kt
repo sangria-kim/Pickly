@@ -66,6 +66,9 @@ class OrganizeViewModel @Inject constructor(
     private val _showDeleteConfirm = MutableStateFlow(false)
     val showDeleteConfirm: StateFlow<Boolean> = _showDeleteConfirm.asStateFlow()
 
+    private val _showMoveConfirm = MutableStateFlow(false)
+    val showMoveConfirm: StateFlow<Boolean> = _showMoveConfirm.asStateFlow()
+
     private val _snackbarMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessages: SharedFlow<String> = _snackbarMessages
 
@@ -273,7 +276,21 @@ class OrganizeViewModel @Inject constructor(
     }
 
     /**
-     * 선택된 사진 이동
+     * 선택된 사진 이동 확인 다이얼로그 표시
+     */
+    fun requestMoveConfirmation() {
+        val currentState = _uiState.value
+        if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
+            _showMoveConfirm.value = true
+        }
+    }
+
+    fun dismissMoveConfirmation() {
+        _showMoveConfirm.value = false
+    }
+
+    /**
+     * 선택된 사진 이동 실행 (확인 후 호출)
      */
     fun moveSelectedPhotos() {
         val currentState = _uiState.value
@@ -281,6 +298,7 @@ class OrganizeViewModel @Inject constructor(
             return
         }
         if (currentState is OrganizeUiState.GridReady && currentState.selectedIds.isNotEmpty()) {
+            _showMoveConfirm.value = false
             viewModelScope.launch {
                 val photoIds = currentState.selectedIds.toList()
                 // 주의: createDeleteRequest는 승인 즉시 시스템이 실제 삭제를 수행할 수 있어

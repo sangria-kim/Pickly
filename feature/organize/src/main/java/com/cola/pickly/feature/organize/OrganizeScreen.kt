@@ -1,7 +1,6 @@
 package com.cola.pickly.feature.organize
 
 import android.app.Activity
-import android.content.IntentSender
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -27,14 +26,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
-import com.cola.pickly.core.model.PhotoFolder
 import com.cola.pickly.feature.organize.FolderSelectUiState
 import com.cola.pickly.feature.organize.FolderSelectViewModel
 import com.cola.pickly.feature.organize.components.FolderSelectScreen
@@ -62,6 +58,7 @@ fun OrganizeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
     val showDeleteConfirm by viewModel.showDeleteConfirm.collectAsStateWithLifecycle()
+    val showMoveConfirm by viewModel.showMoveConfirm.collectAsStateWithLifecycle()
     val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val selectedCount = (uiState as? OrganizeUiState.GridReady)?.selectedCount ?: 0
@@ -86,8 +83,6 @@ fun OrganizeScreen(
         rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
             viewModel.onStorageAccessResult(result.resultCode == Activity.RESULT_OK)
         }
-
-    var pendingMoveIntentSender by remember { mutableStateOf<IntentSender?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.shareEvents.collectLatest { uris ->
@@ -117,7 +112,9 @@ fun OrganizeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.moveStorageAccessRequests.collectLatest { intentSender ->
-            pendingMoveIntentSender = intentSender
+            storageAccessLauncher.launch(
+                IntentSenderRequest.Builder(intentSender).build()
+            )
         }
     }
 
@@ -142,7 +139,7 @@ fun OrganizeScreen(
     // Bulk Action 콜백 설정
     LaunchedEffect(Unit) {
         onShareClick?.invoke { if (!isActionInProgress) viewModel.shareSelectedPhotos() }
-        onMoveClick?.invoke { if (!isActionInProgress) viewModel.moveSelectedPhotos() }
+        onMoveClick?.invoke { if (!isActionInProgress) viewModel.requestMoveConfirmation() }
         onCopyClick?.invoke { if (!isActionInProgress) viewModel.copySelectedPhotos() }
         onDeleteClick?.invoke { if (!isActionInProgress) viewModel.requestDeleteConfirmation() }
     }
@@ -253,68 +250,16 @@ fun OrganizeScreen(
             )
         }
 
-        if (showDeleteConfirm) {
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = { 
-                    if (!isActionInProgress) {
-                        viewModel.dismissDeleteConfirmation()
-                    }
-                },
-                confirmButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = { viewModel.deleteSelectedPhotos() },
-                        enabled = !isActionInProgress
-                    ) {
-                        androidx.compose.material3.Text(
-                            text = stringResource(R.string.delete_confirm_button)
-                        )
-                    }
-                },
-                dismissButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = { viewModel.dismissDeleteConfirmation() },
-                        enabled = !isActionInProgress
-                    ) {
-                        androidx.compose.material3.Text(
-                            text = stringResource(R.string.delete_confirm_cancel)
-                        )
-                    }
-                },
-                title = { 
-                    androidx.compose.material3.Text(
-                        text = stringResource(R.string.delete_confirm_title)
-                    )
-                },
-                text = { 
-                    androidx.compose.material3.Text(
-                        text = stringResource(
-                            R.string.delete_confirm_message,
-                            selectedCount
-                        )
-                    )
-                }
-            )
-        }
-
-        if (pendingMoveIntentSender != null) {
+        if (showMoveConfirm) {
             AlertDialog(
                 onDismissRequest = {
                     if (!isActionInProgress) {
-                        pendingMoveIntentSender = null
-                        viewModel.onStorageAccessResult(false)
+                        viewModel.dismissMoveConfirmation()
                     }
                 },
                 confirmButton = {
                     TextButton(
-                        onClick = {
-                            val sender = pendingMoveIntentSender
-                            pendingMoveIntentSender = null
-                            if (sender != null) {
-                                storageAccessLauncher.launch(
-                                    IntentSenderRequest.Builder(sender).build()
-                                )
-                            }
-                        },
+                        onClick = { viewModel.moveSelectedPhotos() },
                         enabled = !isActionInProgress
                     ) {
                         Text(text = stringResource(R.string.organize_move_consent_confirm))
@@ -322,10 +267,7 @@ fun OrganizeScreen(
                 },
                 dismissButton = {
                     TextButton(
-                        onClick = {
-                            pendingMoveIntentSender = null
-                            viewModel.onStorageAccessResult(false)
-                        },
+                        onClick = { viewModel.dismissMoveConfirmation() },
                         enabled = !isActionInProgress
                     ) {
                         Text(text = stringResource(R.string.delete_confirm_cancel))
@@ -336,5 +278,49 @@ fun OrganizeScreen(
                 }
             )
         }
+
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = {
+                    if (!isActionInProgress) {
+                        viewModel.dismissDeleteConfirmation()
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.deleteSelectedPhotos() },
+                        enabled = !isActionInProgress
+                    ) {
+                        Text(
+                            text = stringResource(R.string.delete_confirm_button)
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissDeleteConfirmation() },
+                        enabled = !isActionInProgress
+                    ) {
+                        Text(
+                            text = stringResource(R.string.delete_confirm_cancel)
+                        )
+                    }
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.delete_confirm_title)
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(
+                            R.string.delete_confirm_message,
+                            selectedCount
+                        )
+                    )
+                }
+            )
+        }
+
     }
 }
