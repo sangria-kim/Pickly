@@ -9,16 +9,16 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 
 @Composable
 fun OrganizeGridScreen(
-    photos: List<WeeklyPhoto>,
+    photos: List<Photo>,
     selectedIds: Set<Long>,
     selectionMap: Map<Long, PhotoSelectionState> = emptyMap(),
     isMultiSelectMode: Boolean = false,
-    onPhotoClick: (WeeklyPhoto) -> Unit,
+    onPhotoClick: (Photo) -> Unit,
     onToggleSelection: (Long) -> Unit
 ) {
     LazyVerticalGrid(

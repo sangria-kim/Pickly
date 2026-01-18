@@ -1,6 +1,6 @@
 package com.cola.pickly.feature.archive
 
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 
 /**
  * S-06 아카이브 화면의 UI 상태
@@ -23,7 +23,7 @@ sealed interface ArchiveUiState {
      *                     키: 폴더명, 값: 해당 폴더의 채택된 사진 리스트
      */
     data class ArchiveReady(
-        val folderGroups: Map<String, List<WeeklyPhoto>>
+        val folderGroups: Map<String, List<Photo>>
     ) : ArchiveUiState {
         /**
          * 폴더 개수

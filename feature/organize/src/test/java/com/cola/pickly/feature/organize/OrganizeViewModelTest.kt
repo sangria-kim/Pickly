@@ -8,7 +8,7 @@ import com.cola.pickly.core.data.photo.PhotoActionRepository
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
 import com.cola.pickly.core.data.settings.Settings
 import com.cola.pickly.core.data.settings.SettingsRepository
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.feature.organize.domain.usecase.CopySelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.MoveSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.ShareSelectedPhotosUseCase
@@ -50,7 +50,7 @@ class OrganizeViewModelTest {
         val photoRepo = FakePhotoRepository(
             bucketPhotos = mapOf(
                 "bucket1" to listOf(
-                    WeeklyPhoto(
+                    Photo(
                         id = 1L,
                         filePath = "/tmp/1.jpg",
                         takenAt = 0L,
@@ -86,7 +86,7 @@ class OrganizeViewModelTest {
         val photoRepo = FakePhotoRepository(
             bucketPhotos = mapOf(
                 "bucket1" to listOf(
-                    WeeklyPhoto(
+                    Photo(
                         id = 1L,
                         filePath = "/tmp/1.jpg",
                         takenAt = 0L,
@@ -124,7 +124,7 @@ class OrganizeViewModelTest {
         val photoRepo = FakePhotoRepository(
             bucketPhotos = mapOf(
                 "bucket1" to listOf(
-                    WeeklyPhoto(
+                    Photo(
                         id = 1L,
                         filePath = "/tmp/1.jpg",
                         takenAt = 0L,
@@ -202,13 +202,13 @@ private class FakePhotoDataRefreshNotifier : PhotoDataRefreshNotifier {
 }
 
 private class FakePhotoRepository(
-    private val bucketPhotos: Map<String, List<WeeklyPhoto>> = emptyMap()
+    private val bucketPhotos: Map<String, List<Photo>> = emptyMap()
 ) : PhotoRepository {
-    override suspend fun getPhotosInFolder(folderRelativePath: String): List<WeeklyPhoto> = emptyList()
-    override suspend fun getPhotosByBucketId(bucketId: String): List<WeeklyPhoto> = bucketPhotos[bucketId].orEmpty()
-    override suspend fun getRecentPhotos(): List<WeeklyPhoto> = emptyList()
+    override suspend fun getPhotosInFolder(folderRelativePath: String): List<Photo> = emptyList()
+    override suspend fun getPhotosByBucketId(bucketId: String): List<Photo> = bucketPhotos[bucketId].orEmpty()
+    override suspend fun getRecentPhotos(): List<Photo> = emptyList()
     override suspend fun getFolders(): List<com.cola.pickly.core.model.PhotoFolder> = emptyList()
-    override suspend fun getAllPhotos(): List<WeeklyPhoto> = emptyList()
+    override suspend fun getAllPhotos(): List<Photo> = emptyList()
 }
 
 private class ControlledPhotoActionRepository : PhotoActionRepository {

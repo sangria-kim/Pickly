@@ -19,11 +19,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 
 @Composable
 fun DebugOverlay(
-    photo: WeeklyPhoto,
+    photo: Photo,
     debugOptions: AppDebugConfig,
     modifier: Modifier = Modifier
 ) {

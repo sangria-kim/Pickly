@@ -14,7 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.feature.archive.components.ArchiveEmptyScreen
 import com.cola.pickly.feature.archive.components.ArchiveSection

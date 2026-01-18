@@ -1,6 +1,6 @@
 package com.cola.pickly.feature.organize
 
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 
 sealed interface OrganizeUiState {
@@ -20,7 +20,7 @@ sealed interface OrganizeUiState {
     data class GridReady(
         val folderId: String,
         val folderName: String,
-        val photos: List<WeeklyPhoto>,
+        val photos: List<Photo>,
         val selectedIds: Set<Long> = emptySet(),
         val selectionMap: Map<Long, PhotoSelectionState> = emptyMap()
     ) : OrganizeUiState {

@@ -26,14 +26,17 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.ViewerContext
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerTopOverlay
 import com.cola.pickly.presentation.viewer.components.ZoomableImage
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun ViewerScreen(
-    photos: List<WeeklyPhoto>,
+    photos: List<Photo>,
     initialIndex: Int,
     selectionMap: Map<Long, PhotoSelectionState>,
     viewerContext: ViewerContext,

@@ -10,7 +10,7 @@ import android.util.Size
 import androidx.exifinterface.media.ExifInterface
 import com.cola.pickly.core.model.FaceBoundingBox
 import com.cola.pickly.core.model.RecommendationScore
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceLandmark
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +30,7 @@ class PhotoQualityAnalyzer(
     /**
      * 사진을 분석하여 품질 점수를 반환합니다.
      */
-    suspend fun analyze(photo: WeeklyPhoto): RecommendationScore = withContext(Dispatchers.Default) {
+    suspend fun analyze(photo: Photo): RecommendationScore = withContext(Dispatchers.Default) {
         try {
             // 1. 비트맵 로드 (최적화를 위해 리사이징 + EXIF 회전 적용)
             val loadResult = loadBitmap(photo.filePath)

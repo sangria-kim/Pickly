@@ -11,7 +11,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import java.io.File
 
 /**
@@ -24,7 +24,7 @@ import java.io.File
  */
 @Composable
 fun ArchivePhotoItem(
-    photo: WeeklyPhoto,
+    photo: Photo,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {

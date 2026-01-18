@@ -9,7 +9,7 @@ import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.domain.refresh.PhotoDataRefreshNotifier
 import com.cola.pickly.core.domain.refresh.RefreshReason
 import com.cola.pickly.core.model.PhotoSelectionState
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.feature.organize.components.FilterOption
 import com.cola.pickly.feature.organize.domain.usecase.MoveSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.ShareSelectedPhotosUseCase

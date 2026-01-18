@@ -6,7 +6,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import com.cola.pickly.core.model.PhotoFolder
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.domain.repository.PhotoRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,11 +23,11 @@ class MediaStorePhotoRepository @Inject constructor(
 
     override suspend fun getPhotosInFolder(
         folderRelativePath: String
-    ): List<WeeklyPhoto> = withContext(Dispatchers.IO) {
+    ): List<Photo> = withContext(Dispatchers.IO) {
         // 기존 구현과 동일하게 DATA 또는 RELATIVE_PATH LIKE 검색
         // 다만 getPhotosByBucketId가 더 정확하므로 보통은 BucketId 사용을 권장.
         // 여기서는 기존 로직 유지.
-        val photos = mutableListOf<WeeklyPhoto>()
+        val photos = mutableListOf<Photo>()
 
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -62,8 +62,8 @@ class MediaStorePhotoRepository @Inject constructor(
         photos
     }
 
-    override suspend fun getPhotosByBucketId(bucketId: String): List<WeeklyPhoto> = withContext(Dispatchers.IO) {
-        val photos = mutableListOf<WeeklyPhoto>()
+    override suspend fun getPhotosByBucketId(bucketId: String): List<Photo> = withContext(Dispatchers.IO) {
+        val photos = mutableListOf<Photo>()
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
         } else {
@@ -86,7 +86,7 @@ class MediaStorePhotoRepository @Inject constructor(
         photos
     }
 
-    override suspend fun getRecentPhotos(): List<WeeklyPhoto> =
+    override suspend fun getRecentPhotos(): List<Photo> =
         getPhotosInFolder(DEFAULT_RELATIVE_PATH)
 
     override suspend fun getFolders(): List<PhotoFolder> = withContext(Dispatchers.IO) {
@@ -138,8 +138,8 @@ class MediaStorePhotoRepository @Inject constructor(
         folderMap.values.toList().sortedBy { it.name }
     }
 
-    override suspend fun getAllPhotos(): List<WeeklyPhoto> = withContext(Dispatchers.IO) {
-        val photos = mutableListOf<WeeklyPhoto>()
+    override suspend fun getAllPhotos(): List<Photo> = withContext(Dispatchers.IO) {
+        val photos = mutableListOf<Photo>()
         val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
@@ -163,7 +163,7 @@ class MediaStorePhotoRepository @Inject constructor(
         selection: String?,
         selectionArgs: Array<String>?,
         sortOrder: String,
-        destination: MutableList<WeeklyPhoto>
+        destination: MutableList<Photo>
     ) {
         contentResolver.query(
             collection,
@@ -198,7 +198,7 @@ class MediaStorePhotoRepository @Inject constructor(
                 val height = if (heightColumn != -1 && !cursor.isNull(heightColumn)) cursor.getInt(heightColumn) else null
 
                 destination.add(
-                    WeeklyPhoto(
+                    Photo(
                         id = id,
                         filePath = filePath,
                         takenAt = takenAtMillis,

@@ -1,6 +1,6 @@
 package com.cola.pickly.core.domain.usecase
 
-import com.cola.pickly.core.model.WeeklyGroup
+import com.cola.pickly.core.model.Photo
 
 /**
  * V2: 품질 점수 기반 추천 UseCase.
@@ -13,5 +13,5 @@ import com.cola.pickly.core.model.WeeklyGroup
  * 이 UseCase는 data 모듈에서 구현됩니다.
  */
 interface PickBestPhotosUseCase {
-    suspend operator fun invoke(groups: List<WeeklyGroup>): List<WeeklyGroup>
+    suspend operator fun invoke(photos: List<Photo>): List<Photo>
 }

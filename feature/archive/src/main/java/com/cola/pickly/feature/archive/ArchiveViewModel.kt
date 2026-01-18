@@ -2,7 +2,7 @@ package com.cola.pickly.feature.archive
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.model.PhotoSelectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -84,7 +84,7 @@ class ArchiveViewModel @Inject constructor(
      * @param photos 그룹핑할 사진 목록
      * @return 폴더명을 키로 하는 Map
      */
-    private fun groupPhotosByFolder(photos: List<WeeklyPhoto>): Map<String, List<WeeklyPhoto>> {
+    private fun groupPhotosByFolder(photos: List<Photo>): Map<String, List<Photo>> {
         return photos.groupBy { photo ->
             extractFolderName(photo.filePath)
         }

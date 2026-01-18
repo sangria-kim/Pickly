@@ -18,7 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.ui.theme.TextPrimary
 import kotlin.math.floor
 
@@ -33,8 +33,8 @@ import kotlin.math.floor
 @Composable
 fun ArchiveSection(
     folderName: String,
-    photos: List<WeeklyPhoto>,
-    onPhotoClick: (WeeklyPhoto) -> Unit,
+    photos: List<Photo>,
+    onPhotoClick: (Photo) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current

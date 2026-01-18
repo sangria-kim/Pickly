@@ -27,14 +27,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.cola.pickly.core.model.WeeklyPhoto
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.ui.theme.TealAccent
 import java.io.File
 
 @Composable
 fun PhotoGridItem(
-    photo: WeeklyPhoto,
+    photo: Photo,
     isSelected: Boolean,
     selectionState: PhotoSelectionState? = null,
     isMultiSelectMode: Boolean = false,
