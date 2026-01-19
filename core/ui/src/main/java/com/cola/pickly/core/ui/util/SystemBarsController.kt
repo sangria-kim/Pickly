@@ -9,27 +9,20 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 @Composable
-fun ImmersiveMode(isOverlayVisible: Boolean) {
+fun FullImmersiveMode() {
     val view = LocalView.current
     val window = (view.context as? Activity)?.window ?: return
 
-    DisposableEffect(isOverlayVisible) {
+    DisposableEffect(Unit) {
         val controller = WindowCompat.getInsetsController(window, view)
 
-        if (isOverlayVisible) {
-            controller.show(WindowInsetsCompat.Type.systemBars())
-        } else {
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
+        // systemBars를 항상 숨김
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-        onDispose { }
-    }
-
-    DisposableEffect(Unit) {
         onDispose {
-            val controller = WindowCompat.getInsetsController(window, view)
+            // 화면 종료 시 원래 상태로 복원
             controller.show(WindowInsetsCompat.Type.systemBars())
         }
     }
