@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.WindowCompat
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cola.pickly.presentation.MainUiState
@@ -33,12 +32,6 @@ class MainActivity : ComponentActivity() {
         
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        // 상태바 숨기기
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
-        }
 
         // 초기화 로직 시작
         mainViewModel.init()

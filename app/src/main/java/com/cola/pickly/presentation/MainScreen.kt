@@ -4,9 +4,11 @@ import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
@@ -145,6 +147,7 @@ fun MainScreen(
 
     Scaffold(
         containerColor = BackgroundWhite, // 전체 배경색 흰색 적용
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         // Bottom Area: Normal Mode일 때 Bottom Navigation Bar, Multi Select Mode일 때 Bulk Action Bar
         bottomBar = {
             if (isMultiSelectMode) {

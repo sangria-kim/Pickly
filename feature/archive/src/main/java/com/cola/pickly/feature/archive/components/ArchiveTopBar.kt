@@ -1,7 +1,7 @@
 package com.cola.pickly.feature.archive.components
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.DropdownMenu
@@ -39,7 +39,7 @@ fun ArchiveTopBar(
     var showFilterMenu by remember { mutableStateOf(false) }
 
     TopAppBar(
-        windowInsets = WindowInsets(0, 0, 0, 0), // 상단 여백 제거 (상태바 패딩 제거)
+        modifier = Modifier.statusBarsPadding(),
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = BackgroundWhite,
             titleContentColor = TextPrimary,

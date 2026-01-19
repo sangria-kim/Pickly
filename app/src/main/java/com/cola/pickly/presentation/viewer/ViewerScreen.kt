@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -18,10 +19,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.model.Photo
+import com.cola.pickly.core.ui.util.ImmersiveMode
 import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerTopOverlay
 import com.cola.pickly.presentation.viewer.components.ZoomableImage
@@ -36,14 +39,26 @@ fun ViewerScreen(
     onSelectClick: (Long) -> Unit = {},
     onRejectClick: (Long) -> Unit = {}
 ) {
-    var isOverlayVisible by remember { mutableStateOf(true) }
+    var isOverlayVisible by remember { mutableStateOf(false) }
     var isInfoVisible by remember { mutableStateOf(false) } // State for info overlay
     var isZoomed by remember { mutableStateOf(false) }
+    var overlayStateBeforeZoom by remember { mutableStateOf(false) }
+
+    ImmersiveMode(isOverlayVisible = isOverlayVisible)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color.Black)
+            .pointerInput(isZoomed) {
+                detectTapGestures(
+                    onTap = {
+                        if (!isZoomed) {
+                            isOverlayVisible = !isOverlayVisible
+                        }
+                    }
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
         val pagerState = rememberPagerState(
@@ -67,9 +82,18 @@ fun ViewerScreen(
             ZoomableImage(
                 imagePath = photo.filePath,
                 onZoomStateChanged = { scale ->
+                    val wasZoomed = isZoomed
                     isZoomed = scale > 1f
-                    isOverlayVisible = scale == 1f
-                    if (isZoomed) isInfoVisible = false // Hide info when zoomed
+
+                    if (!wasZoomed && isZoomed) {
+                        // 줌 시작: 현재 오버레이 상태 저장 후 숨김
+                        overlayStateBeforeZoom = isOverlayVisible
+                        isOverlayVisible = false
+                        isInfoVisible = false
+                    } else if (wasZoomed && !isZoomed) {
+                        // 줌 해제: 이전 오버레이 상태 복원
+                        isOverlayVisible = overlayStateBeforeZoom
+                    }
                 }
             )
         }

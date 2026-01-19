@@ -5,8 +5,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -53,7 +53,7 @@ fun OrganizeTopBar(
     val contentColor = if (isMultiSelectMode) Color.White else TextPrimary
 
     TopAppBar(
-        windowInsets = WindowInsets(0, 0, 0, 0), // 상단 여백 제거 (상태바 패딩 제거)
+        modifier = Modifier.statusBarsPadding(),
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = containerColor,
             titleContentColor = contentColor,
