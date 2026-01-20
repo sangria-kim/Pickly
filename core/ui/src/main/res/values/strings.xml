@@ -11,6 +11,9 @@
     <string name="filter_all">전체</string>
     <string name="filter_selected">선택됨</string>
     <string name="filter_not_selected">선택 안됨</string>
+    <string name="filter_select_all">전체 선택</string>
+    <string name="filter_accepted">채택</string>
+    <string name="filter_rejected">제외</string>
     <string name="empty_folder_guide">정리할 폴더를 선택해주세요</string>
     <string name="photo_count_format">%d장</string>
     <string name="selected_count_format">%d개 선택됨</string>

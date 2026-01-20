@@ -10,7 +10,6 @@ import com.cola.pickly.core.domain.refresh.PhotoDataRefreshNotifier
 import com.cola.pickly.core.domain.refresh.RefreshReason
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.Photo
-import com.cola.pickly.feature.organize.components.FilterOption
 import com.cola.pickly.feature.organize.domain.usecase.MoveSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.ShareSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.CopySelectedPhotosUseCase
@@ -147,45 +146,78 @@ class OrganizeViewModel @Inject constructor(
     }
 
     /**
-     * 필터 변경 핸들러
-     * 
+     * 전체 선택 토글
+     *
      * Wireframe.md S-02 참고:
-     * - 필터 선택은 Multi Select Mode 진입 트리거
-     * - 필터 조건에 맞는 사진들을 selectedIds에 추가 (기존 선택 유지)
-     * - 필터는 토글이 아닌 추가 선택 방식
+     * - Tri-state 체크박스로 동작
+     * - 모두 선택되어 있으면 → 전체 해제
+     * - 하나라도 선택 안 되어 있으면 → 전체 선택
      */
-    fun onFilterChanged(option: FilterOption) {
+    fun toggleSelectAll() {
         val currentState = _uiState.value
         if (currentState !is OrganizeUiState.GridReady) return
 
-        val photosToSelect = when (option) {
-            FilterOption.ALL -> {
-                // 전체 사진 선택
-                currentState.photos.map { it.id }.toSet()
-            }
-            FilterOption.SELECTED -> {
-                // 채택된 사진 선택 (selectionMap에서 Selected 상태인 사진)
-                currentState.selectionMap
-                    .filter { it.value == PhotoSelectionState.Selected }
-                    .keys
-                    .toSet()
-            }
-            FilterOption.NOT_SELECTED -> {
-                // 제외된 사진 선택 (selectionMap에서 Rejected 상태인 사진)
-                currentState.selectionMap
-                    .filter { it.value == PhotoSelectionState.Rejected }
-                    .keys
-                    .toSet()
-            }
+        val allPhotoIds = currentState.photos.map { it.id }.toSet()
+
+        // 모두 선택되어 있으면 → 전체 해제
+        // 하나라도 선택 안 되어 있으면 → 전체 선택
+        val newSelectedIds = if (currentState.selectedIds.containsAll(allPhotoIds)) {
+            currentState.selectedIds - allPhotoIds
+        } else {
+            currentState.selectedIds + allPhotoIds
         }
 
-        // 기존 선택과 합집합 (중복 제거)
-        val newSelectedIds = currentState.selectedIds union photosToSelect
+        _uiState.value = currentState.copy(selectedIds = newSelectedIds)
+    }
 
-        // 선택된 사진이 1장 이상이면 Multi Select Mode 활성화
-        if (newSelectedIds.isNotEmpty()) {
-            _uiState.value = currentState.copy(selectedIds = newSelectedIds)
+    /**
+     * 채택 사진 선택 토글
+     *
+     * Wireframe.md S-02 참고:
+     * - 채택 사진이 모두 선택되어 있으면 → 선택 해제
+     * - 하나라도 선택 안 되어 있으면 → 모두 선택
+     */
+    fun toggleAcceptedSelection() {
+        val currentState = _uiState.value
+        if (currentState !is OrganizeUiState.GridReady) return
+
+        val acceptedPhotoIds = currentState.selectionMap
+            .filter { it.value == PhotoSelectionState.Selected }
+            .keys
+            .toSet()
+
+        val newSelectedIds = if (currentState.selectedIds.containsAll(acceptedPhotoIds)) {
+            currentState.selectedIds - acceptedPhotoIds  // OFF: 제거
+        } else {
+            currentState.selectedIds + acceptedPhotoIds  // ON: 추가
         }
+
+        _uiState.value = currentState.copy(selectedIds = newSelectedIds)
+    }
+
+    /**
+     * 제외 사진 선택 토글
+     *
+     * Wireframe.md S-02 참고:
+     * - 제외 사진이 모두 선택되어 있으면 → 선택 해제
+     * - 하나라도 선택 안 되어 있으면 → 모두 선택
+     */
+    fun toggleRejectedSelection() {
+        val currentState = _uiState.value
+        if (currentState !is OrganizeUiState.GridReady) return
+
+        val rejectedPhotoIds = currentState.selectionMap
+            .filter { it.value == PhotoSelectionState.Rejected }
+            .keys
+            .toSet()
+
+        val newSelectedIds = if (currentState.selectedIds.containsAll(rejectedPhotoIds)) {
+            currentState.selectedIds - rejectedPhotoIds
+        } else {
+            currentState.selectedIds + rejectedPhotoIds
+        }
+
+        _uiState.value = currentState.copy(selectedIds = newSelectedIds)
     }
     fun toggleSelection(photoId: Long) {
         val currentState = _uiState.value

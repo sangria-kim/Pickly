@@ -163,8 +163,13 @@ fun OrganizeScreen(
                         selectedFolderName = state.folderName,
                         isMultiSelectMode = state.isMultiSelectMode,
                         selectedCount = state.selectedCount,
+                        photos = state.photos,
+                        selectedIds = state.selectedIds,
+                        selectionMap = state.selectionMap,
                         onFolderSelectClick = { showFolderSheet = true },
-                        onFilterClick = { viewModel.onFilterChanged(it) },
+                        onSelectAllToggle = { viewModel.toggleSelectAll() },
+                        onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
+                        onRejectedToggle = { viewModel.toggleRejectedSelection() },
                         onCancelSelection = { viewModel.exitMultiSelectMode() }
                     )
                 }
@@ -173,8 +178,13 @@ fun OrganizeScreen(
                         selectedFolderName = state.folderName,
                         isMultiSelectMode = false,
                         selectedCount = 0,
+                        photos = emptyList(),
+                        selectedIds = emptySet(),
+                        selectionMap = emptyMap(),
                         onFolderSelectClick = { showFolderSheet = true },
-                        onFilterClick = { viewModel.onFilterChanged(it) },
+                        onSelectAllToggle = { viewModel.toggleSelectAll() },
+                        onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
+                        onRejectedToggle = { viewModel.toggleRejectedSelection() },
                         onCancelSelection = { viewModel.exitMultiSelectMode() }
                     )
                 }
@@ -183,8 +193,13 @@ fun OrganizeScreen(
                         selectedFolderName = null,
                         isMultiSelectMode = false,
                         selectedCount = 0,
+                        photos = emptyList(),
+                        selectedIds = emptySet(),
+                        selectionMap = emptyMap(),
                         onFolderSelectClick = { showFolderSheet = true },
-                        onFilterClick = { viewModel.onFilterChanged(it) },
+                        onSelectAllToggle = { viewModel.toggleSelectAll() },
+                        onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
+                        onRejectedToggle = { viewModel.toggleRejectedSelection() },
                         onCancelSelection = { viewModel.exitMultiSelectMode() }
                     )
                 }
