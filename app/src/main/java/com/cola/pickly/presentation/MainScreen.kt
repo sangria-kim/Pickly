@@ -54,7 +54,7 @@ import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.theme.BottomNavSelected
 import com.cola.pickly.core.ui.theme.BottomNavUnselected
-
+import com.cola.pickly.core.ui.theme.TealAccent
 sealed class MainTab(
     val route: String,
     @StringRes val labelResId: Int,
@@ -102,8 +102,8 @@ fun PicklyBottomNavigation(
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    selectedIconColor = TealAccent,
+                    selectedTextColor = TealAccent,
                     unselectedIconColor = MaterialTheme.colorScheme.outline,
                     unselectedTextColor = MaterialTheme.colorScheme.outline,
                     indicatorColor = Color.Transparent // 선택 시 배경색(Indicator) 제거

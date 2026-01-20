@@ -8,10 +8,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.cola.pickly.core.ui.theme.TealAccent
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
@@ -74,7 +78,13 @@ fun SettingsRadioItem(
             }
             .clickable(onClick = onClick),
         leadingContent = {
-            RadioButton(selected = selected, onClick = null)
+            RadioButton(
+                selected = selected,
+                onClick = null,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = TealAccent
+                )
+            )
         },
         headlineContent = { Text(text = title, color = primaryColor) },
         supportingContent = subtitle?.let {
@@ -101,7 +111,15 @@ fun SettingsSwitchItem(
             { Text(text = it, color = secondaryColor) }
         },
         trailingContent = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = TealAccent,
+                    checkedBorderColor = TealAccent
+                )
+            )
         }
     )
 }

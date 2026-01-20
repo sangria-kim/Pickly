@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -101,12 +102,12 @@ fun OrganizeTopBar(
 
     // Multi Select Mode일 때는 배경색을 앱 대표 색상으로 변경
     val containerColor = if (isMultiSelectMode)
-        MaterialTheme.colorScheme.primary
+        TealAccent
     else
         MaterialTheme.colorScheme.surface
 
     val contentColor = if (isMultiSelectMode)
-        MaterialTheme.colorScheme.onPrimary
+        Color.White
     else
         MaterialTheme.colorScheme.onSurface
 
@@ -230,7 +231,10 @@ private fun FilterCheckboxItem(
         Checkbox(
             checked = checked,
             onCheckedChange = { onToggle() },
-            enabled = enabled
+            enabled = enabled,
+            colors = CheckboxDefaults.colors(
+                checkedColor = TealAccent
+            )
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
@@ -262,7 +266,10 @@ private fun FilterTriStateCheckboxItem(
     ) {
         TriStateCheckbox(
             state = state,
-            onClick = onToggle
+            onClick = onToggle,
+            colors = CheckboxDefaults.colors(
+                checkedColor = TealAccent
+            )
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
