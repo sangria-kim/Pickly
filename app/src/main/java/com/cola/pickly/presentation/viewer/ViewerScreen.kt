@@ -39,7 +39,7 @@ fun ViewerScreen(
     onSelectClick: (Long) -> Unit = {},
     onRejectClick: (Long) -> Unit = {}
 ) {
-    var isOverlayVisible by remember { mutableStateOf(false) }
+    var isOverlayVisible by remember { mutableStateOf(true) }
     var isInfoVisible by remember { mutableStateOf(false) } // State for info overlay
     var isZoomed by remember { mutableStateOf(false) }
     var overlayStateBeforeZoom by remember { mutableStateOf(false) }
