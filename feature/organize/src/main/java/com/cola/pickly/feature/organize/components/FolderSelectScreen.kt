@@ -48,7 +48,7 @@ fun FolderSelectScreen(
                     .fillMaxWidth() // 좌우 패딩 제거
                     .heightIn(max = 500.dp), // 높이를 스크린샷 비율에 맞춰 제한
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), // 상단만 둥글게
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp) // 내부 패딩 확대
@@ -58,7 +58,7 @@ fun FolderSelectScreen(
                         text = "폴더 선택",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF121212) // #121212
+                            color = MaterialTheme.colorScheme.onSurface
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -85,7 +85,7 @@ fun FolderSelectScreen(
                                 .heightIn(min = 200.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "표시할 폴더가 없습니다.", color = Color(0xFF121212))
+                            Text(text = "표시할 폴더가 없습니다.", color = MaterialTheme.colorScheme.onSurface)
                         }
                     } else {
                         LazyColumn(
@@ -112,7 +112,7 @@ fun FolderSelectScreen(
                             Text(
                                 text = "취소",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF757575) // #757575
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

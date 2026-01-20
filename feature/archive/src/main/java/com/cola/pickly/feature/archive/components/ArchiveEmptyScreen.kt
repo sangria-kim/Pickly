@@ -21,7 +21,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
-import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.theme.TealAccent
 import com.cola.pickly.core.ui.theme.TextSecondary
 
@@ -40,7 +39,7 @@ fun ArchiveEmptyScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundWhite),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(

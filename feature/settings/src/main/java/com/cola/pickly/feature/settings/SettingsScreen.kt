@@ -87,14 +87,13 @@ fun SettingsScreen(
             TopAppBar(
                 modifier = Modifier.statusBarsPadding(),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = BackgroundWhite,
-                    titleContentColor = TextPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 title = {
                     Text(
                         text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
             )

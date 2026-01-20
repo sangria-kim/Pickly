@@ -100,8 +100,15 @@ fun OrganizeTopBar(
     }
 
     // Multi Select Mode일 때는 배경색을 앱 대표 색상으로 변경
-    val containerColor = if (isMultiSelectMode) TealAccent else BackgroundWhite
-    val contentColor = if (isMultiSelectMode) Color.White else TextPrimary
+    val containerColor = if (isMultiSelectMode)
+        MaterialTheme.colorScheme.primary
+    else
+        MaterialTheme.colorScheme.surface
+
+    val contentColor = if (isMultiSelectMode)
+        MaterialTheme.colorScheme.onPrimary
+    else
+        MaterialTheme.colorScheme.onSurface
 
     TopAppBar(
         modifier = Modifier.statusBarsPadding(),
@@ -172,7 +179,7 @@ fun OrganizeTopBar(
                     DropdownMenu(
                         expanded = showFilterMenu,
                         onDismissRequest = { showFilterMenu = false },
-                        containerColor = BackgroundWhite
+                        containerColor = MaterialTheme.colorScheme.surface
                     ) {
                         // 전체 선택 (Tri-state)
                         FilterTriStateCheckboxItem(
@@ -229,7 +236,10 @@ private fun FilterCheckboxItem(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = if (enabled) TextPrimary else TextPrimary.copy(alpha = 0.38f)
+            color = if (enabled)
+                MaterialTheme.colorScheme.onSurface
+            else
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         )
     }
 }
@@ -258,7 +268,7 @@ private fun FilterTriStateCheckboxItem(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = TextPrimary
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

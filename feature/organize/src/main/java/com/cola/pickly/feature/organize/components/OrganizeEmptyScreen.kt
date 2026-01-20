@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
-import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.theme.Gray100
 import com.cola.pickly.core.ui.theme.Gray300
 import com.cola.pickly.core.ui.theme.Gray50
@@ -40,7 +39,7 @@ fun OrganizeEmptyScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundWhite) // 배경색 흰색 적용
+            .background(MaterialTheme.colorScheme.background)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null, // Ripple 제거

@@ -41,15 +41,14 @@ fun ArchiveTopBar(
     TopAppBar(
         modifier = Modifier.statusBarsPadding(),
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = BackgroundWhite,
-            titleContentColor = TextPrimary,
-            actionIconContentColor = TextPrimary
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurface
         ),
         title = {
             Text(
                 text = stringResource(R.string.archive_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary
+                style = MaterialTheme.typography.titleMedium
             )
         },
         actions = {
@@ -58,18 +57,17 @@ fun ArchiveTopBar(
                 IconButton(onClick = { showFilterMenu = true }) {
                     Icon(
                         Icons.Default.FilterList,
-                        contentDescription = "Filter",
-                        tint = TextPrimary
+                        contentDescription = "Filter"
                     )
                 }
                 DropdownMenu(
                     expanded = showFilterMenu,
                     onDismissRequest = { showFilterMenu = false },
-                    containerColor = BackgroundWhite
+                    containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     // V1에서는 "폴더별" 옵션만 제공 (향후 확장 가능)
                     DropdownMenuItem(
-                        text = { Text("폴더별", color = TextPrimary) },
+                        text = { Text("폴더별", color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             onFilterClick()
                             showFilterMenu = false

@@ -58,12 +58,12 @@ fun FolderItem(
             Text(
                 text = folder.name,
                 style = MaterialTheme.typography.titleMedium,
-                color = Color(0xFF121212) // #121212
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = stringResource(R.string.photo_count_format, folder.count),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF121212) // #121212
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

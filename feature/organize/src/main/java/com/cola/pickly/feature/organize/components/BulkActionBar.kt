@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -51,8 +52,8 @@ fun BulkActionBar(
 ) {
     NavigationBar(
         modifier = Modifier.height(104.dp),
-        containerColor = BackgroundWhite,
-        contentColor = BottomNavUnselected
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.outline
     ) {
         BulkAction.actions.forEach { action ->
             val onClickHandler = when (action) {
@@ -69,13 +70,13 @@ fun BulkActionBar(
                 onClick = if (isActionInProgress) { {} } else onClickHandler,
                 enabled = !isActionInProgress,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = BottomNavSelected,
-                    selectedTextColor = BottomNavSelected,
-                    unselectedIconColor = BottomNavUnselected,
-                    unselectedTextColor = BottomNavUnselected,
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.outline,
+                    unselectedTextColor = MaterialTheme.colorScheme.outline,
                     indicatorColor = Color.Transparent,
-                    disabledIconColor = BottomNavUnselected.copy(alpha = 0.38f),
-                    disabledTextColor = BottomNavUnselected.copy(alpha = 0.38f)
+                    disabledIconColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f),
+                    disabledTextColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
                 )
             )
         }

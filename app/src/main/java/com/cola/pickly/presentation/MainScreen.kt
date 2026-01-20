@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -79,8 +80,8 @@ fun PicklyBottomNavigation(
 ) {
     NavigationBar(
         modifier = Modifier.height(104.dp),
-        containerColor = BackgroundWhite,
-        contentColor = BottomNavUnselected
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.outline
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
@@ -101,10 +102,10 @@ fun PicklyBottomNavigation(
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = BottomNavSelected,
-                    selectedTextColor = BottomNavSelected,
-                    unselectedIconColor = BottomNavUnselected,
-                    unselectedTextColor = BottomNavUnselected,
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.outline,
+                    unselectedTextColor = MaterialTheme.colorScheme.outline,
                     indicatorColor = Color.Transparent // 선택 시 배경색(Indicator) 제거
                 )
             )
@@ -146,7 +147,7 @@ fun MainScreen(
     }
 
     Scaffold(
-        containerColor = BackgroundWhite, // 전체 배경색 흰색 적용
+        containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         // Bottom Area: Normal Mode일 때 Bottom Navigation Bar, Multi Select Mode일 때 Bulk Action Bar
         bottomBar = {
