@@ -92,18 +92,22 @@ class MediaStorePhotoRepository @Inject constructor(
     override suspend fun getFolders(): List<PhotoFolder> = withContext(Dispatchers.IO) {
         val folderMap = mutableMapOf<String, PhotoFolder>()
 
-        val projection = arrayOf(
+        val projection = mutableListOf(
             MediaStore.Images.Media.BUCKET_ID,
             MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DATE_TAKEN
         )
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            projection.add(MediaStore.Images.Media.RELATIVE_PATH)
+        }
+
         val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
 
         contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            projection,
+            projection.toTypedArray(),
             null,
             null,
             sortOrder
@@ -111,11 +115,21 @@ class MediaStorePhotoRepository @Inject constructor(
             val bucketIdCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
             val bucketNameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val relativePathCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                cursor.getColumnIndex(MediaStore.Images.Media.RELATIVE_PATH)
+            } else {
+                -1
+            }
 
             while (cursor.moveToNext()) {
                 val bucketId = cursor.getString(bucketIdCol) ?: continue
                 val bucketName = cursor.getString(bucketNameCol) ?: "Unknown"
                 val photoId = cursor.getLong(idCol)
+                val relativePath = if (relativePathCol != -1 && !cursor.isNull(relativePathCol)) {
+                    cursor.getString(relativePathCol) ?: DEFAULT_RELATIVE_PATH
+                } else {
+                    DEFAULT_RELATIVE_PATH
+                }
 
                 if (folderMap.containsKey(bucketId)) {
                     val current = folderMap[bucketId]!!
@@ -130,7 +144,8 @@ class MediaStorePhotoRepository @Inject constructor(
                         id = bucketId,
                         name = bucketName,
                         count = 1,
-                        thumbnailUri = thumbnailUri
+                        thumbnailUri = thumbnailUri,
+                        relativePath = relativePath
                     )
                 }
             }

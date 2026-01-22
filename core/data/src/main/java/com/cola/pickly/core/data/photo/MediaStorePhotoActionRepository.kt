@@ -52,6 +52,29 @@ class MediaStorePhotoActionRepository @Inject constructor(
         destinationRelativePath: String,
         policy: DuplicateFilenamePolicy
     ): PhotoActionReport = withContext(Dispatchers.IO) {
+        // Android 11+ (API 30+)에서는 RELATIVE_PATH 직접 업데이트를 먼저 시도
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val updateReport = tryMoveByUpdate(photoIds, destinationRelativePath, policy)
+
+            // 실패한 항목만 copy+delete 전략으로 폴백
+            val fallbackIds = updateReport.failedIds
+            if (fallbackIds.isNotEmpty()) {
+                val fallbackReport = movePhotosByCopyDelete(fallbackIds, destinationRelativePath, policy)
+                return@withContext mergeReports(updateReport, fallbackReport)
+            }
+
+            return@withContext updateReport
+        } else {
+            // Android 10 이하에서는 copy+delete 전략만 사용
+            return@withContext movePhotosByCopyDelete(photoIds, destinationRelativePath, policy)
+        }
+    }
+
+    private suspend fun tryMoveByUpdate(
+        photoIds: List<Long>,
+        destinationRelativePath: String,
+        policy: DuplicateFilenamePolicy
+    ): PhotoActionReport = withContext(Dispatchers.IO) {
         val destPath = normalizeRelativePath(destinationRelativePath)
         val collection = imagesCollection()
         var success = 0
@@ -62,21 +85,94 @@ class MediaStorePhotoActionRepository @Inject constructor(
         val skippedIds = mutableListOf<Long>()
         val failedIds = mutableListOf<Long>()
 
-        photoIds.forEachIndexed { index, id ->
+        photoIds.forEach { id ->
+            val info = queryPhotoInfo(id)
+            if (info == null) {
+                failed++
+                errors.add("정보 조회 실패: $id")
+                failedIds.add(id)
+                return@forEach
+            }
+
+            // 중복 확인 및 정책 적용
+            val targetName = resolveTargetName(destPath, info.displayName, policy)
+            if (targetName == null) {
+                skipped++
+                skippedIds.add(id)
+                return@forEach
+            }
+
+            try {
+                val uri = ContentUris.withAppendedId(collection, id)
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.RELATIVE_PATH, destPath)
+                    if (targetName != info.displayName) {
+                        put(MediaStore.Images.Media.DISPLAY_NAME, targetName)
+                    }
+                }
+
+                val affected = contentResolver.update(uri, values, null, null)
+                if (affected > 0) {
+                    success++
+                    successIds.add(id)
+                } else {
+                    failed++
+                    failedIds.add(id)
+                    errors.add("업데이트 실패: $id")
+                }
+            } catch (e: SecurityException) {
+                // 권한 부족 시 폴백 대상으로 처리
+                failed++
+                failedIds.add(id)
+                errors.add("권한 부족: $id")
+            } catch (e: Exception) {
+                failed++
+                failedIds.add(id)
+                errors.add("${e.javaClass.simpleName}: ${e.message ?: "업데이트 실패: $id"}")
+            }
+        }
+
+        PhotoActionReport(
+            successCount = success,
+            skippedCount = skipped,
+            failedCount = failed,
+            errors = errors,
+            successIds = successIds,
+            skippedIds = skippedIds,
+            failedIds = failedIds
+        )
+    }
+
+    private suspend fun movePhotosByCopyDelete(
+        photoIds: List<Long>,
+        destinationRelativePath: String,
+        policy: DuplicateFilenamePolicy
+    ): PhotoActionReport = withContext(Dispatchers.IO) {
+        val destPath = normalizeRelativePath(destinationRelativePath)
+        val collection = imagesCollection()
+        var success = 0
+        var skipped = 0
+        var failed = 0
+        val errors = mutableListOf<String>()
+        val successIds = mutableListOf<Long>()
+        val skippedIds = mutableListOf<Long>()
+        val failedIds = mutableListOf<Long>()
+
+        photoIds.forEach { id ->
             val info = queryPhotoInfo(id)
             if (info == null) {
                 failed++
                 val errorMsg = "정보 조회 실패: $id (collection=$collection)"
                 errors.add(errorMsg)
                 failedIds.add(id)
-                return@forEachIndexed
+                return@forEach
             }
 
             val targetName = resolveTargetName(destPath, info.displayName, policy)
             if (targetName == null) {
                 skipped++
                 skippedIds.add(id)
-                return@forEachIndexed
+                return@forEach
             }
 
             val inserted = insertDestUri(destPath, targetName, info.mimeType)
@@ -85,19 +181,19 @@ class MediaStorePhotoActionRepository @Inject constructor(
                 val errorMsg = "삽입 실패: $targetName"
                 errors.add(errorMsg)
                 failedIds.add(id)
-                return@forEachIndexed
+                return@forEach
             }
 
             try {
                 copyStream(info.uri, inserted)
-                
+
                 // 주의: createDeleteRequest(IntentSender) 승인 후 시스템이 실제 삭제를 수행할 수 있으므로,
                 // '이동'에서는 여기서 원본을 delete 하지 않습니다.
                 success++
                 successIds.add(id)
             } catch (e: Exception) {
                 // 실패 시 생성된 항목 정리
-                val cleaned = runCatching { 
+                val cleaned = runCatching {
                     val result = contentResolver.delete(inserted, null, null)
                     result
                 }.getOrNull()
@@ -115,6 +211,40 @@ class MediaStorePhotoActionRepository @Inject constructor(
             successIds = successIds,
             skippedIds = skippedIds,
             failedIds = failedIds
+        )
+    }
+
+    private fun mergeReports(first: PhotoActionReport, second: PhotoActionReport): PhotoActionReport {
+        // 1. 폴백으로 성공한 항목 식별
+        val fallbackSuccessIds = first.failedIds.intersect(second.successIds.toSet())
+
+        // 2. 최종 successIds 계산 (중복 제거)
+        val finalSuccessIds = (first.successIds + second.successIds).distinct()
+
+        // 3. 최종 failedIds 계산
+        //    - first의 실패 중 폴백으로 성공하지 못한 것들
+        //    - second의 실패 (폴백에서도 실패)
+        val finalFailedIds = (first.failedIds - fallbackSuccessIds) + second.failedIds
+
+        // 4. 최종 skippedIds 계산 (중복 제거)
+        val finalSkippedIds = (first.skippedIds + second.skippedIds).distinct()
+
+        // 5. 에러 메시지 필터링
+        //    - 에러 메시지 포맷: "설명: ID" (예: "권한 부족: 123")
+        //    - 폴백으로 성공한 ID의 에러는 제거
+        val finalErrors = first.errors.filter { error ->
+            val failedIdInError = error.substringAfterLast(": ", "").toLongOrNull()
+            failedIdInError == null || failedIdInError !in fallbackSuccessIds
+        } + second.errors
+
+        return PhotoActionReport(
+            successCount = finalSuccessIds.size,
+            skippedCount = finalSkippedIds.size,
+            failedCount = finalFailedIds.size,
+            errors = finalErrors,
+            successIds = finalSuccessIds,
+            skippedIds = finalSkippedIds,
+            failedIds = finalFailedIds
         )
     }
 

@@ -15,22 +15,20 @@ class MoveSelectedPhotosUseCase @Inject constructor(
         return photoActionRepository.createDeleteRequestIntentSender(photoIds)
     }
 
-    suspend operator fun invoke(photoIds: List<Long>): PhotoActionReport {
+    suspend operator fun invoke(
+        photoIds: List<Long>,
+        destinationRelativePath: String
+    ): PhotoActionReport {
         if (photoIds.isEmpty()) return PhotoActionReport(successCount = 0)
 
         val settings = settingsRepository.settings.first()
-        val destination = DESTINATION_RELATIVE_PATH
 
         val report = photoActionRepository.movePhotos(
             photoIds = photoIds,
-            destinationRelativePath = destination,
+            destinationRelativePath = destinationRelativePath,
             policy = settings.duplicateFilenamePolicy
         )
 
         return report
-    }
-
-    private companion object {
-        const val DESTINATION_RELATIVE_PATH = "DCIM/Pickly"
     }
 }

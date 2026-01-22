@@ -22,9 +22,9 @@ fun SplashScreen(
     navController: NavController,
     viewModel: MainViewModel = hiltViewModel()
 ) {
-    val requestPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            viewModel.onPermissionResult(isGranted)
+    val requestPermissionsLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grantedMap ->
+            viewModel.onPermissionResult(grantedMap)
         }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -45,9 +45,9 @@ fun SplashScreen(
         if (!initializingState.isChecking) {
             when (initializingState.permissionState) {
                 PermissionState.NotDetermined -> {
-                    val permission = viewModel.getRequiredPermission()
+                    val permissions = viewModel.getRequiredPermissions()
                     LaunchedEffect(Unit) {
-                        requestPermissionLauncher.launch(permission)
+                        requestPermissionsLauncher.launch(permissions.toTypedArray())
                     }
                 }
                 PermissionState.Granted -> {

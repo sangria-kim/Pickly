@@ -36,7 +36,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import com.cola.pickly.feature.organize.FolderSelectUiState
 import com.cola.pickly.feature.organize.FolderSelectViewModel
+import com.cola.pickly.feature.organize.components.CreateFolderDialog
 import com.cola.pickly.feature.organize.components.FolderSelectScreen
+import com.cola.pickly.feature.organize.components.FolderSelectMode
 import com.cola.pickly.feature.organize.components.OrganizeEmptyScreen
 import com.cola.pickly.feature.organize.components.OrganizeGridScreen
 import com.cola.pickly.feature.organize.components.OrganizeTopBar
@@ -61,12 +63,14 @@ fun OrganizeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
     val showDeleteConfirm by viewModel.showDeleteConfirm.collectAsStateWithLifecycle()
-    val showMoveConfirm by viewModel.showMoveConfirm.collectAsStateWithLifecycle()
+    val destinationMode by viewModel.destinationSelectionMode.collectAsStateWithLifecycle()
     val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val selectedCount = (uiState as? OrganizeUiState.GridReady)?.selectedCount ?: 0
-    
+
     var showFolderSheet by rememberSaveable { mutableStateOf(false) }
+    var showDestinationSelectSheet by rememberSaveable { mutableStateOf(false) }
+    var showCreateFolderDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(selectedFolder) {
         selectedFolder?.let { (id, name) ->
@@ -142,8 +146,18 @@ fun OrganizeScreen(
     // Bulk Action 콜백 설정
     LaunchedEffect(Unit) {
         onShareClick?.invoke { if (!isActionInProgress) viewModel.shareSelectedPhotos() }
-        onMoveClick?.invoke { if (!isActionInProgress) viewModel.requestMoveConfirmation() }
-        onCopyClick?.invoke { if (!isActionInProgress) viewModel.copySelectedPhotos() }
+        onMoveClick?.invoke {
+            if (!isActionInProgress) {
+                viewModel.requestDestinationForMove()
+                showDestinationSelectSheet = true
+            }
+        }
+        onCopyClick?.invoke {
+            if (!isActionInProgress) {
+                viewModel.requestDestinationForCopy()
+                showDestinationSelectSheet = true
+            }
+        }
         onDeleteClick?.invoke { if (!isActionInProgress) viewModel.requestDeleteConfirmation() }
     }
     
@@ -269,31 +283,42 @@ fun OrganizeScreen(
             )
         }
 
-        if (showMoveConfirm) {
-            AlertDialog(
-                onDismissRequest = {
-                    if (!isActionInProgress) {
-                        viewModel.dismissMoveConfirmation()
-                    }
+        if (showDestinationSelectSheet) {
+            val folders = if (folderSelectState is FolderSelectUiState.Success) {
+                (folderSelectState as FolderSelectUiState.Success).folders
+            } else {
+                emptyList()
+            }
+
+            val isLoading = folderSelectState is FolderSelectUiState.Loading
+
+            FolderSelectScreen(
+                folders = folders,
+                isLoading = isLoading,
+                mode = FolderSelectMode.DestinationSelection,
+                onClose = {
+                    showDestinationSelectSheet = false
+                    viewModel.cancelDestinationSelection()
                 },
-                confirmButton = {
-                    TextButton(
-                        onClick = { viewModel.moveSelectedPhotos() },
-                        enabled = !isActionInProgress
-                    ) {
-                        Text(text = stringResource(R.string.organize_move_consent_confirm))
+                onFolderClick = { folder ->
+                    when (destinationMode) {
+                        is OrganizeViewModel.DestinationSelectionMode.Move -> viewModel.moveToDestination(folder)
+                        is OrganizeViewModel.DestinationSelectionMode.Copy -> viewModel.copyToDestination(folder)
+                        null -> {}
                     }
+                    showDestinationSelectSheet = false
                 },
-                dismissButton = {
-                    TextButton(
-                        onClick = { viewModel.dismissMoveConfirmation() },
-                        enabled = !isActionInProgress
-                    ) {
-                        Text(text = stringResource(R.string.delete_confirm_cancel))
-                    }
-                },
-                text = {
-                    Text(text = stringResource(R.string.organize_move_consent_message))
+                onCreateFolderClick = { showCreateFolderDialog = true }
+            )
+        }
+
+        if (showCreateFolderDialog) {
+            CreateFolderDialog(
+                onDismiss = { showCreateFolderDialog = false },
+                onConfirm = { folderName ->
+                    showCreateFolderDialog = false
+                    showDestinationSelectSheet = false
+                    viewModel.createFolderAndExecute(folderName)
                 }
             )
         }

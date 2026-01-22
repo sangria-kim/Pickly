@@ -10,22 +10,20 @@ class CopySelectedPhotosUseCase @Inject constructor(
     private val photoActionRepository: PhotoActionRepository,
     private val settingsRepository: SettingsRepository
 ) {
-    suspend operator fun invoke(photoIds: List<Long>): PhotoActionReport {
+    suspend operator fun invoke(
+        photoIds: List<Long>,
+        destinationRelativePath: String
+    ): PhotoActionReport {
         if (photoIds.isEmpty()) return PhotoActionReport(successCount = 0)
 
         val settings = settingsRepository.settings.first()
-        val destination = DESTINATION_RELATIVE_PATH
 
         val report = photoActionRepository.copyPhotos(
             photoIds = photoIds,
-            destinationRelativePath = destination,
+            destinationRelativePath = destinationRelativePath,
             policy = settings.duplicateFilenamePolicy
         )
 
         return report
-    }
-
-    private companion object {
-        const val DESTINATION_RELATIVE_PATH = "DCIM/Pickly"
     }
 }

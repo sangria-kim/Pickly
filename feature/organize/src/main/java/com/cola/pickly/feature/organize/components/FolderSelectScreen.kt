@@ -1,8 +1,10 @@
 package com.cola.pickly.feature.organize.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -27,12 +29,19 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.cola.pickly.core.model.PhotoFolder
 
+enum class FolderSelectMode {
+    FolderSelection,      // "폴더 선택"
+    DestinationSelection  // "목적지 폴더 선택" + "만들기" 버튼
+}
+
 @Composable
 fun FolderSelectScreen(
     folders: List<PhotoFolder>,
     isLoading: Boolean = false,
+    mode: FolderSelectMode = FolderSelectMode.FolderSelection,
     onClose: () -> Unit,
-    onFolderClick: (PhotoFolder) -> Unit
+    onFolderClick: (PhotoFolder) -> Unit,
+    onCreateFolderClick: (() -> Unit)? = null
 ) {
     Dialog(
         onDismissRequest = onClose,
@@ -54,17 +63,34 @@ fun FolderSelectScreen(
                     modifier = Modifier.padding(20.dp) // 내부 패딩 확대
                 ) {
                     // Header
-                    Text(
-                        text = "폴더 선택",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 16.dp),
-                        textAlign = TextAlign.Start
-                    )
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = when (mode) {
+                                FolderSelectMode.FolderSelection -> "폴더 선택"
+                                FolderSelectMode.DestinationSelection -> "목적지 폴더 선택"
+                            },
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+
+                        if (mode == FolderSelectMode.DestinationSelection && onCreateFolderClick != null) {
+                            TextButton(onClick = onCreateFolderClick) {
+                                Text(
+                                    text = "만들기",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
 
                     // List
                     if (isLoading) {

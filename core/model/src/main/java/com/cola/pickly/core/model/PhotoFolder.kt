@@ -4,5 +4,6 @@ data class PhotoFolder(
     val id: String,
     val name: String,
     val count: Int,
-    val thumbnailUri: String
+    val thumbnailUri: String,
+    val relativePath: String
 )
