@@ -91,6 +91,8 @@ fun OrganizeScreen(
             viewModel.onStorageAccessResult(result.resultCode == Activity.RESULT_OK)
         }
 
+    val shareTitle = stringResource(R.string.bulk_action_share)
+
     LaunchedEffect(Unit) {
         viewModel.shareEvents.collectLatest { uris ->
             if (uris.isEmpty()) return@collectLatest
@@ -103,7 +105,7 @@ fun OrganizeScreen(
             context.startActivity(
                 Intent.createChooser(
                     intent,
-                    context.getString(R.string.bulk_action_share)
+                    shareTitle
                 )
             )
         }
