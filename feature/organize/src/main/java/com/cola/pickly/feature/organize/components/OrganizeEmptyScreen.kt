@@ -1,34 +1,26 @@
 package com.cola.pickly.feature.organize.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
-import com.cola.pickly.core.ui.theme.Gray100
-import com.cola.pickly.core.ui.theme.Gray300
-import com.cola.pickly.core.ui.theme.Gray50
 import com.cola.pickly.core.ui.theme.TealAccent
 import com.cola.pickly.core.ui.theme.TextSecondary
 
@@ -39,73 +31,49 @@ fun OrganizeEmptyScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null, // Ripple 제거
-                onClick = onFolderSelectClick
-            ),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 32.dp)
         ) {
-            // Icon Stack
-            Box(
-                contentAlignment = Alignment.Center
-            ) {
-                // Background Icon Box
-                Box(
-                    modifier = Modifier
-                        .size(128.dp) // w-32 h-32 -> 128.dp
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(Gray100, Gray50)
-                            ),
-                            shape = RoundedCornerShape(16.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Image,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp), // w-16 h-16 -> 64.dp
-                        tint = Gray300
-                    )
-                }
-
-                // Foreground Accent Icon Box
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(x = 8.dp, y = 8.dp) // -bottom-2 -right-2 -> offset
-                        .size(48.dp) // w-12 h-12 -> 48.dp
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(TealAccent.copy(alpha = 0.2f), TealAccent.copy(alpha = 0.1f))
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Image,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp), // w-6 h-6 -> 24.dp
-                        tint = TealAccent
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp)) // gap-6 -> 24.dp
-
+            // Title
             Text(
-                text = stringResource(R.string.empty_folder_guide),
+                text = stringResource(R.string.organize_empty_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Subtitle
+            Text(
+                text = stringResource(R.string.organize_empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
-                modifier = Modifier.padding(horizontal = 32.dp)
+                textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // CTA Button
+            Button(
+                onClick = onFolderSelectClick,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = TealAccent,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.organize_empty_cta),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }

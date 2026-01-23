@@ -15,6 +15,9 @@
     <string name="filter_accepted">채택</string>
     <string name="filter_rejected">제외</string>
     <string name="empty_folder_guide">정리할 폴더를 선택해주세요</string>
+    <string name="organize_empty_title">아직 정리할 폴더가 없어요</string>
+    <string name="organize_empty_subtitle">정리할 폴더를 먼저 선택해주세요</string>
+    <string name="organize_empty_cta">폴더 선택하러 가기</string>
     <string name="photo_count_format">%d장</string>
     <string name="selected_count_format">%d개 선택됨</string>
     <string name="bulk_action_share">공유</string>
