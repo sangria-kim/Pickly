@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.model.Photo
-import com.cola.pickly.core.ui.util.FullImmersiveMode
+import com.cola.pickly.core.ui.util.ViewerSystemBarsPolicy
 import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerTopOverlay
 import com.cola.pickly.presentation.viewer.components.ZoomableImage
@@ -44,7 +44,7 @@ fun ViewerScreen(
     var isZoomed by remember { mutableStateOf(false) }
     var overlayStateBeforeZoom by remember { mutableStateOf(false) }
 
-    FullImmersiveMode()
+    ViewerSystemBarsPolicy()
 
     Box(
         modifier = Modifier
