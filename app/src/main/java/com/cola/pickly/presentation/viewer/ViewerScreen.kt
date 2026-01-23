@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -119,7 +120,8 @@ fun ViewerScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 80.dp, end = 16.dp) // Position below top overlay
+                    .statusBarsPadding()
+                    .padding(top = 72.dp, end = 16.dp) // Position below top overlay (approx 72dp height)
                     .background(Color.Black.copy(alpha = 0.7f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {

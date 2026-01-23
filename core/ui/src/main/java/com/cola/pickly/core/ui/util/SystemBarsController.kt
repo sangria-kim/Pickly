@@ -11,34 +11,36 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.graphics.toArgb
 
 
+import androidx.compose.ui.graphics.luminance
+
 @Composable
 fun ViewerSystemBarsPolicy() {
     val view = LocalView.current
     val window = (view.context as? Activity)?.window ?: return
-    val colorScheme = androidx.compose.material3.MaterialTheme.colorScheme
-    // Use surface color for navigation bar to match app background (bottom nav)
-    val navBarColor = colorScheme.surface.toArgb()
+    
+    // Check actual theme darkness using background luminance
+    // This handles cases where App Theme overrides System Theme
+    val backgroundColor = androidx.compose.material3.MaterialTheme.colorScheme.background
+    val isDarkTheme = backgroundColor.luminance() < 0.5f
 
     DisposableEffect(Unit) {
         val controller = WindowCompat.getInsetsController(window, view)
         
-        // Apply Viewer Policy:
-        // 1. Hide Status Bar
-        controller.hide(WindowInsetsCompat.Type.statusBars())
-        // 2. Show Navigation Bar
-        controller.show(WindowInsetsCompat.Type.navigationBars())
-        // 3. Set Navigation Bar Color to App Background
-        window.navigationBarColor = navBarColor
+        // Viewer Policy:
+        // 1. Status Bar: Visible + Transparent (Theme defaults)
+        // 2. Navigation Bar: Visible + Transparent (Theme defaults)
+        // 3. Icons: Viewer is dark (black background), so we need Light Icons (white).
+        //    isAppearanceLightStatusBars = false (Light icons)
+        //    isAppearanceLightNavigationBars = false (Light icons)
         
-        // Ensure transient bars behavior for status bar swipe
-        controller.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.isAppearanceLightStatusBars = false
+        controller.isAppearanceLightNavigationBars = false
 
         onDispose {
-            // Restore to Common Policy (Transparent)
-            controller.show(WindowInsetsCompat.Type.statusBars())
-            controller.show(WindowInsetsCompat.Type.navigationBars())
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            // Restore to Theme defaults (Common Policy)
+            // PicklyTheme logic: isAppearanceLightStatusBars = !darkTheme
+            controller.isAppearanceLightStatusBars = !isDarkTheme
+            controller.isAppearanceLightNavigationBars = !isDarkTheme
         }
     }
 }
