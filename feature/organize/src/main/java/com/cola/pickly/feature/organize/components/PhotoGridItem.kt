@@ -134,26 +134,38 @@ fun PhotoGridItem(
         selectionState?.let { state ->
             when (state) {
                 PhotoSelectionState.Selected -> {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Accepted",
-                        tint = TealAccent,
+                    Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(6.dp)
-                            .size(18.dp)
-                    )
+                            .size(24.dp)
+                            .background(TealAccent, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Accepted",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
                 PhotoSelectionState.Rejected -> {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Rejected",
-                        tint = Color(0xFFFF5252),
+                    Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(6.dp)
-                            .size(18.dp)
-                    )
+                            .size(24.dp)
+                            .background(Color(0xFFFF5252), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Rejected",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
                 PhotoSelectionState.None -> {
                     // 아이콘 표시 없음
