@@ -52,7 +52,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
 
     // Coil (for cache management)
-    implementation("io.coil-kt:coil:2.7.0")
+    implementation(libs.coil)
 }
 
 kapt {

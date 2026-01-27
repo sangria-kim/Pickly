@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
@@ -51,9 +50,6 @@ import com.cola.pickly.feature.organize.components.BulkActionBar
 import com.cola.pickly.feature.settings.SettingsScreen
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.ViewerContext
-import com.cola.pickly.core.ui.theme.BackgroundWhite
-import com.cola.pickly.core.ui.theme.BottomNavSelected
-import com.cola.pickly.core.ui.theme.BottomNavUnselected
 import com.cola.pickly.core.ui.theme.TealAccent
 sealed class MainTab(
     val route: String,
@@ -239,12 +235,5 @@ fun MainScreen(
                 Text(text = stringResource(CoreUiR.string.exit_dialog_message))
             }
         )
-    }
-}
-
-@Composable
-fun PlaceholderScreen(text: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = text)
     }
 }

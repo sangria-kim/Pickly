@@ -20,9 +20,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
-import com.cola.pickly.core.ui.theme.BackgroundWhite
-import com.cola.pickly.core.ui.theme.BottomNavSelected
-import com.cola.pickly.core.ui.theme.BottomNavUnselected
 
 sealed class BulkAction(
     @StringRes val labelResId: Int,

@@ -43,7 +43,6 @@ import com.cola.pickly.feature.organize.components.OrganizeEmptyScreen
 import com.cola.pickly.feature.organize.components.OrganizeGridScreen
 import com.cola.pickly.feature.organize.components.OrganizeTopBar
 import com.cola.pickly.core.model.PhotoSelectionState
-import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.R
 import android.content.Intent
 

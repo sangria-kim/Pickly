@@ -56,11 +56,11 @@ dependencies {
     implementation(project(":feature:organize"))
     
     // --- Splash Screen ---
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation(libs.androidx.core.splashscreen)
 
     // --- Coil ---
-    implementation("io.coil-kt:coil:2.7.0")
-    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation(libs.coil)
+    implementation(libs.coil.compose)
 
     // --- Compose BOM ---
     implementation(platform(libs.androidx.compose.bom))
@@ -71,11 +71,11 @@ dependencies {
     implementation(libs.androidx.activity.compose) // compose + activity-ktx 연동
 
     // --- Lifecycle Compose (collectAsStateWithLifecycle) ---
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // --- Navigation Compose ---
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation(libs.androidx.navigation.compose)
 
     // --- Compose UI ---
     implementation(platform(libs.androidx.compose.bom))
@@ -84,13 +84,13 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.text)
-    implementation("androidx.compose.material:material-icons-extended-android:1.6.7")
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.foundation)
 
     // --- Hilt ---
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation(libs.androidx.hilt.navigation.compose)
 
     // --- Debug / Test ---
     debugImplementation(libs.androidx.compose.ui.tooling)

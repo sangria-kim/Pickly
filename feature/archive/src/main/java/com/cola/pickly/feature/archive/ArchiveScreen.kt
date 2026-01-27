@@ -23,7 +23,6 @@ import com.cola.pickly.feature.archive.components.ArchiveEmptyScreen
 import com.cola.pickly.feature.archive.components.ArchiveSection
 import com.cola.pickly.feature.archive.components.ArchiveTopBar
 import com.cola.pickly.core.model.PhotoSelectionState
-import com.cola.pickly.core.ui.theme.BackgroundWhite
 
 /**
  * S-06 아카이브 화면

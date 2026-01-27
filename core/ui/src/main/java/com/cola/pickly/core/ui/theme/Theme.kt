@@ -29,12 +29,12 @@ private val DarkColorScheme = darkColorScheme(
 private val LightColorScheme = lightColorScheme(
     primary = TealAccent,
     onPrimary = Color.White,
-    background = BackgroundWhite,
+    background = Color.White,
     onBackground = TextPrimary,
-    surface = BackgroundWhite,
+    surface = Color.White,
     onSurface = TextPrimary,
     onSurfaceVariant = TextSecondary,
-    outline = BottomNavUnselected
+    outline = Color(0xFFBDBDBD)
 )
 
 @Composable

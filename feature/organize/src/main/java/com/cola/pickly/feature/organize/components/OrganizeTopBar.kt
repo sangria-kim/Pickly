@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.ui.R
-import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.theme.TealAccent
 import com.cola.pickly.core.ui.theme.TextPrimary
 

@@ -2,10 +2,10 @@ package com.cola.pickly.feature.settings
 
 import android.content.pm.PackageManager
 import android.os.Build
+import java.util.Locale
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,7 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cola.pickly.core.ui.R
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
 import com.cola.pickly.core.data.settings.ThemeMode
-import com.cola.pickly.core.ui.theme.BackgroundWhite
 import com.cola.pickly.core.ui.theme.TextPrimary
 import com.cola.pickly.feature.settings.components.SettingsActionItem
 import com.cola.pickly.feature.settings.components.SettingsDivider
@@ -259,9 +258,9 @@ private fun formatBytes(bytes: Long): String {
     val mb = kb / unit
     val gb = mb / unit
     return when {
-        gb >= 1 -> String.format("%.1fGB", gb)
-        mb >= 1 -> String.format("%.1fMB", mb)
-        kb >= 1 -> String.format("%.1fKB", kb)
+        gb >= 1 -> String.format(Locale.ROOT, "%.1fGB", gb)
+        mb >= 1 -> String.format(Locale.ROOT, "%.1fMB", mb)
+        kb >= 1 -> String.format(Locale.ROOT, "%.1fKB", kb)
         else -> "${bytes}B"
     }
 }
