@@ -499,8 +499,8 @@ class OrganizeViewModel @Inject constructor(
                 }
             }
 
-            // 삭제 승인 요청이 필요 없거나 생성 실패: 복사 결과로 안내
-            emitReportMessage("복사", report)
+            // 삭제 승인 요청이 필요 없거나 생성 실패: 이동 결과로 안내
+            emitReportMessage("이동", report)
             // 원본은 삭제되지 않았으므로, 폴더 목록만 갱신 트리거(복사 성공분 있을 때)
             if (report.successCount > 0) {
                 photoDataRefreshNotifier.notify(RefreshReason.CopyCommitted)
@@ -569,26 +569,41 @@ class OrganizeViewModel @Inject constructor(
         _globalSelectionMap.value = newGlobalMap
     }
 
-    private suspend fun emitReportMessage(prefix: String, report: com.cola.pickly.core.data.photo.PhotoActionReport) {
+    private suspend fun emitReportMessage(actionType: String, report: com.cola.pickly.core.data.photo.PhotoActionReport) {
         // 권한 관련 오류가 있는지 확인
-        val hasPermissionError = report.errors.any { 
-            it.contains("권한") || it.contains("permission", ignoreCase = true) || 
+        val hasPermissionError = report.errors.any {
+            it.contains("권한") || it.contains("permission", ignoreCase = true) ||
             it.contains("SecurityException", ignoreCase = true)
         }
-        
+
         if (hasPermissionError && report.failedCount > 0) {
             // 권한 오류가 있는 경우 사용자 친화적인 메시지 표시
             _snackbarMessages.emit("저장소 접근 권한이 필요해요. 설정에서 권한을 허용한 뒤 다시 시도해주세요.")
             return
         }
-        
-        val errors = report.errors.takeIf { it.isNotEmpty() }?.joinToString(limit = 1)
-        val message = buildString {
-            append("$prefix 완료: ${report.successCount} 성공")
-            if (report.skippedCount > 0) append(", ${report.skippedCount} 건너뜀")
-            if (report.failedCount > 0) append(", ${report.failedCount} 실패")
-            if (!errors.isNullOrBlank()) append(" (${errors})")
+
+        // 전체 실패 판정: failedCount > 0 또는 successCount == 0
+        val isFailure = report.failedCount > 0 || report.successCount == 0
+
+        val message = when (actionType) {
+            "이동" -> if (isFailure) {
+                "이동을 완료하지 못했어요. 다시 시도해주세요."
+            } else {
+                "사진 ${report.successCount}개 이동을 완료했어요."
+            }
+            "복사" -> if (isFailure) {
+                "복사를 완료하지 못했어요. 다시 시도해주세요."
+            } else {
+                "사진 ${report.successCount}개 복사를 완료했어요."
+            }
+            "삭제" -> if (isFailure) {
+                "삭제를 완료하지 못했어요. 다시 시도해주세요."
+            } else {
+                "사진 ${report.successCount}개를 휴지통으로 이동했어요."
+            }
+            else -> "$actionType 완료: ${report.successCount} 성공"
         }
+
         _snackbarMessages.emit(message)
     }
 

@@ -351,11 +351,6 @@ fun OrganizeScreen(
                         )
                     }
                 },
-                title = {
-                    Text(
-                        text = stringResource(R.string.delete_confirm_title)
-                    )
-                },
                 text = {
                     Text(
                         text = stringResource(

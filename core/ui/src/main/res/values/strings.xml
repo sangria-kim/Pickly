@@ -26,9 +26,8 @@
     <string name="bulk_action_delete">삭제</string>
     <string name="organize_move_consent_message">선택한 사진을 Pickly 폴더로 정리합니다.</string>
     <string name="organize_move_consent_confirm">정리하기</string>
-    <string name="delete_confirm_title">삭제하시겠어요?</string>
-    <string name="delete_confirm_message">선택한 %d개의 사진을 휴지통으로 이동합니다.</string>
-    <string name="delete_confirm_button">삭제</string>
+    <string name="delete_confirm_message">선택한 사진 %d장을 휴지통으로 이동할까요?</string>
+    <string name="delete_confirm_button">휴지통으로 이동</string>
     <string name="delete_confirm_cancel">취소</string>
     
     <!-- Settings Screen -->
