@@ -2,6 +2,7 @@ package com.cola.pickly.feature.organize
 
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.RejectReason
 
 sealed interface OrganizeUiState {
     // 초기 상태: 폴더가 선택되지 않음
@@ -22,7 +23,9 @@ sealed interface OrganizeUiState {
         val folderName: String,
         val photos: List<Photo>,
         val selectedIds: Set<Long> = emptySet(),
-        val selectionMap: Map<Long, PhotoSelectionState> = emptyMap()
+        val selectionMap: Map<Long, PhotoSelectionState> = emptyMap(),
+        val autoRejectCandidates: Map<Long, RejectReason> = emptyMap(), // 스마트 제외 후보 ID와 제외 사유
+        val isAnalyzing: Boolean = false // 스마트 제외 분석 진행 중 여부
     ) : OrganizeUiState {
         /**
          * Multi Select Mode 활성화 여부

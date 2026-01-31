@@ -11,6 +11,7 @@ import androidx.exifinterface.media.ExifInterface
 import com.cola.pickly.core.model.FaceBoundingBox
 import com.cola.pickly.core.model.RecommendationScore
 import com.cola.pickly.core.model.Photo
+import com.cola.pickly.core.model.RejectReason
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceLandmark
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +47,7 @@ class PhotoQualityAnalyzer(
                 return@withContext RecommendationScore(
                     isCutoff = true,
                     cutoffReason = "Severe shaking (Blurry)",
+                    rejectReason = RejectReason.BLURRY,
                     rawSharpness = sharpnessRaw // Raw 값 저장
                 )
             }
@@ -60,6 +62,7 @@ class PhotoQualityAnalyzer(
                     faceCount = 0,
                     isCutoff = true,
                     cutoffReason = "No face detected",
+                    rejectReason = RejectReason.NO_FACE,
                     rawSharpness = sharpnessRaw
                 )
             }
@@ -76,6 +79,7 @@ class PhotoQualityAnalyzer(
                     faceCount = allDetectedFaces.size, // 검출은 됐으나 너무 작음
                     isCutoff = true,
                     cutoffReason = "Faces too small ( < 5% )",
+                    rejectReason = RejectReason.TOO_SMALL,
                     rawSharpness = sharpnessRaw,
                     // 작은 얼굴들이라도 박스는 표시해줌
                     allFaceBoundingBoxes = getScaledFaceBoundingBoxes(allDetectedFaces, originalSize, bitmap.width, bitmap.height)
@@ -100,6 +104,7 @@ class PhotoQualityAnalyzer(
                     faceCount = validFaces.size,
                     isCutoff = true,
                     cutoffReason = "Face cropped at edges",
+                    rejectReason = RejectReason.CROPPED,
                     rawSharpness = sharpnessRaw,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),
@@ -119,6 +124,7 @@ class PhotoQualityAnalyzer(
                     faceCount = validFaces.size,
                     isCutoff = true,
                     cutoffReason = "Face occluded (Nose/Mouth hidden)",
+                    rejectReason = RejectReason.OCCLUDED,
                     rawSharpness = sharpnessRaw,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),
@@ -141,6 +147,7 @@ class PhotoQualityAnalyzer(
                     faceCount = validFaces.size,
                     isCutoff = true,
                     cutoffReason = "Eyes closed",
+                    rejectReason = RejectReason.EYES_CLOSED,
                     rawSharpness = sharpnessRaw,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),

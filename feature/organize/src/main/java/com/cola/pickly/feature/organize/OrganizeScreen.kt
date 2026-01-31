@@ -62,6 +62,8 @@ fun OrganizeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
     val showDeleteConfirm by viewModel.showDeleteConfirm.collectAsStateWithLifecycle()
+    val showAutoRejectDialog by viewModel.showAutoRejectDialog.collectAsStateWithLifecycle()
+    val showInterruptDialog by viewModel.showInterruptDialog.collectAsStateWithLifecycle()
     val destinationMode by viewModel.destinationSelectionMode.collectAsStateWithLifecycle()
     val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -182,11 +184,17 @@ fun OrganizeScreen(
                         photos = state.photos,
                         selectedIds = state.selectedIds,
                         selectionMap = state.selectionMap,
-                        onFolderSelectClick = { showFolderSheet = true },
+                        isAnalyzing = state.isAnalyzing,
+                        onFolderSelectClick = {
+                            viewModel.requestInterruptConfirmation {
+                                showFolderSheet = true
+                            }
+                        },
                         onSelectAllToggle = { viewModel.toggleSelectAll() },
                         onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
                         onRejectedToggle = { viewModel.toggleRejectedSelection() },
-                        onCancelSelection = { viewModel.exitMultiSelectMode() }
+                        onCancelSelection = { viewModel.exitMultiSelectMode() },
+                        onAutoRejectClick = { viewModel.handleAutoRejectIconClick() }
                     )
                 }
                 is OrganizeUiState.EmptyFolder -> {
@@ -197,7 +205,11 @@ fun OrganizeScreen(
                         photos = emptyList(),
                         selectedIds = emptySet(),
                         selectionMap = emptyMap(),
-                        onFolderSelectClick = { showFolderSheet = true },
+                        onFolderSelectClick = {
+                            viewModel.requestInterruptConfirmation {
+                                showFolderSheet = true
+                            }
+                        },
                         onSelectAllToggle = { viewModel.toggleSelectAll() },
                         onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
                         onRejectedToggle = { viewModel.toggleRejectedSelection() },
@@ -212,7 +224,11 @@ fun OrganizeScreen(
                         photos = emptyList(),
                         selectedIds = emptySet(),
                         selectionMap = emptyMap(),
-                        onFolderSelectClick = { showFolderSheet = true },
+                        onFolderSelectClick = {
+                            viewModel.requestInterruptConfirmation {
+                                showFolderSheet = true
+                            }
+                        },
                         onSelectAllToggle = { viewModel.toggleSelectAll() },
                         onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
                         onRejectedToggle = { viewModel.toggleRejectedSelection() },
@@ -250,8 +266,12 @@ fun OrganizeScreen(
                         selectedIds = state.selectedIds,
                         selectionMap = state.selectionMap,
                         isMultiSelectMode = state.isMultiSelectMode,
+                        isAnalyzing = state.isAnalyzing,
+                        autoRejectCandidates = state.autoRejectCandidates,
                         onPhotoClick = { photo ->
-                            onNavigateToPhotoDetail(state.folderId, photo.id, state.selectionMap, false)
+                            viewModel.requestInterruptConfirmation {
+                                onNavigateToPhotoDetail(state.folderId, photo.id, state.selectionMap, false)
+                            }
                         },
                         onToggleSelection = { photoId ->
                             viewModel.toggleSelection(photoId)
@@ -358,6 +378,58 @@ fun OrganizeScreen(
                             selectedCount
                         )
                     )
+                }
+            )
+        }
+
+        if (showAutoRejectDialog) {
+            val isAnalyzing = (uiState as? OrganizeUiState.GridReady)?.isAnalyzing ?: false
+            AlertDialog(
+                onDismissRequest = {
+                    if (!isAnalyzing) {
+                        viewModel.dismissAutoRejectDialog()
+                    }
+                },
+                text = { Text(text = "아쉬운 사진을 자동으로 제외할까요?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.dismissAutoRejectDialog()
+                            viewModel.startAutoRejectAnalysis()
+                        },
+                        enabled = !isAnalyzing
+                    ) {
+                        Text(text = "제외하기")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissAutoRejectDialog() },
+                        enabled = !isAnalyzing
+                    ) {
+                        Text(text = "취소")
+                    }
+                }
+            )
+        }
+
+        if (showInterruptDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissInterruptDialog() },
+                text = { Text(text = "분석을 중단하고 계속할까요?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.confirmInterrupt() }
+                    ) {
+                        Text(text = "중단하고 계속")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissInterruptDialog() }
+                    ) {
+                        Text(text = "계속 분석")
+                    }
                 }
             )
         }

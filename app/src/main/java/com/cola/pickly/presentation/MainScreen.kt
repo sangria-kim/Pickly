@@ -72,8 +72,11 @@ sealed class MainTab(
 @Composable
 fun PicklyBottomNavigation(
     navController: NavHostController,
+    organizeViewModel: OrganizeViewModel,
     tabs: List<MainTab> = MainTab.tabs
 ) {
+    val organizeUiState by organizeViewModel.uiState.collectAsStateWithLifecycle()
+
     NavigationBar(
         modifier = Modifier.height(104.dp),
         containerColor = MaterialTheme.colorScheme.surface,
@@ -89,12 +92,26 @@ fun PicklyBottomNavigation(
                 label = { Text(stringResource(tab.labelResId)) },
                 selected = isSelected,
                 onClick = {
-                    navController.navigate(tab.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                    // 분석 중이면 중단 확인 다이얼로그 표시
+                    val isAnalyzing = (organizeUiState as? com.cola.pickly.feature.organize.OrganizeUiState.GridReady)?.isAnalyzing ?: false
+                    if (isAnalyzing) {
+                        organizeViewModel.requestInterruptConfirmation {
+                            navController.navigate(tab.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
-                        launchSingleTop = true
-                        restoreState = true
+                    } else {
+                        navController.navigate(tab.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(
@@ -158,7 +175,7 @@ fun MainScreen(
                 )
             } else {
                 // Normal Mode: Bottom Navigation Bar 표시
-                PicklyBottomNavigation(navController = navController)
+                PicklyBottomNavigation(navController = navController, organizeViewModel = organizeViewModel)
             }
         }
     ) { innerPadding ->

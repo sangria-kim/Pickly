@@ -16,12 +16,15 @@ import com.cola.pickly.feature.organize.domain.usecase.MoveSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.ShareSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.CopySelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.SoftDeleteSelectedPhotosUseCase
+import com.cola.pickly.feature.organize.domain.usecase.AnalyzePhotosForAutoRejectUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -32,7 +35,8 @@ class OrganizeViewModel @Inject constructor(
     private val shareSelectedPhotosUseCase: ShareSelectedPhotosUseCase,
     private val moveSelectedPhotosUseCase: MoveSelectedPhotosUseCase,
     private val copySelectedPhotosUseCase: CopySelectedPhotosUseCase,
-    private val softDeleteSelectedPhotosUseCase: SoftDeleteSelectedPhotosUseCase
+    private val softDeleteSelectedPhotosUseCase: SoftDeleteSelectedPhotosUseCase,
+    private val analyzePhotosForAutoRejectUseCase: AnalyzePhotosForAutoRejectUseCase
 ) : ViewModel() {
 
     private fun logD(message: String) {
@@ -76,9 +80,19 @@ class OrganizeViewModel @Inject constructor(
     private val _isActionInProgress = MutableStateFlow(false)
     val isActionInProgress: StateFlow<Boolean> = _isActionInProgress.asStateFlow()
 
+    private val _showAutoRejectDialog = MutableStateFlow(false)
+    val showAutoRejectDialog: StateFlow<Boolean> = _showAutoRejectDialog.asStateFlow()
+
+    private val _showInterruptDialog = MutableStateFlow(false)
+    val showInterruptDialog: StateFlow<Boolean> = _showInterruptDialog.asStateFlow()
+
     private var selectedFolder: SelectedFolder? = null
 
     private var pendingAction: PendingAction? = null
+
+    private var analysisJob: Job? = null
+
+    private var pendingNavigation: (() -> Unit)? = null
 
     /**
      * (공식 API) 폴더 선택 = 선택 상태 저장 + 해당 폴더 로드.
@@ -567,6 +581,140 @@ class OrganizeViewModel @Inject constructor(
         val newGlobalMap = _globalSelectionMap.value.toMutableMap()
         photoIds.forEach { id -> newGlobalMap.remove(id) }
         _globalSelectionMap.value = newGlobalMap
+    }
+
+    /**
+     * 스마트 제외 확인 다이얼로그 표시
+     */
+    fun showAutoRejectConfirmDialog() {
+        _showAutoRejectDialog.value = true
+    }
+
+    /**
+     * 스마트 제외 확인 다이얼로그 닫기
+     */
+    fun dismissAutoRejectDialog() {
+        _showAutoRejectDialog.value = false
+    }
+
+    /**
+     * ✨ 아이콘 클릭 핸들러 (시작/취소 토글)
+     */
+    fun handleAutoRejectIconClick() {
+        val currentState = _uiState.value
+        if (currentState is OrganizeUiState.GridReady && currentState.isAnalyzing) {
+            // 분석 중이면 취소
+            cancelAutoRejectAnalysis()
+        } else {
+            // 분석 중이 아니면 확인 다이얼로그 표시
+            showAutoRejectConfirmDialog()
+        }
+    }
+
+    /**
+     * 스마트 제외 분석 취소
+     */
+    fun cancelAutoRejectAnalysis() {
+        analysisJob?.cancel()
+        analysisJob = null
+
+        val currentState = _uiState.value
+        if (currentState is OrganizeUiState.GridReady) {
+            _uiState.update {
+                currentState.copy(isAnalyzing = false)
+            }
+        }
+
+        viewModelScope.launch {
+            _snackbarMessages.emit("분석을 중단했어요.")
+        }
+    }
+
+    /**
+     * 중단 확인 다이얼로그 표시
+     */
+    fun requestInterruptConfirmation(navigation: () -> Unit) {
+        val currentState = _uiState.value
+        if (currentState is OrganizeUiState.GridReady && currentState.isAnalyzing) {
+            pendingNavigation = navigation
+            _showInterruptDialog.value = true
+        } else {
+            navigation()
+        }
+    }
+
+    /**
+     * 중단 확인 다이얼로그 닫기
+     */
+    fun dismissInterruptDialog() {
+        _showInterruptDialog.value = false
+        pendingNavigation = null
+    }
+
+    /**
+     * 중단 확인 (분석 중단 + 화면 전환)
+     */
+    fun confirmInterrupt() {
+        _showInterruptDialog.value = false
+        cancelAutoRejectAnalysis()
+        pendingNavigation?.invoke()
+        pendingNavigation = null
+    }
+
+    /**
+     * 스마트 제외 분석 시작
+     */
+    fun startAutoRejectAnalysis() {
+        val currentState = _uiState.value
+        if (currentState !is OrganizeUiState.GridReady) return
+        if (currentState.isAnalyzing) return
+
+        analysisJob = viewModelScope.launch {
+            try {
+                // 분석 시작
+                _uiState.update {
+                    currentState.copy(isAnalyzing = true)
+                }
+
+                // 1회성 스낵바: 취소 방법 안내
+                _snackbarMessages.emit("분석 중… ✨을 다시 누르면 취소할 수 있어요.")
+
+                val result = analyzePhotosForAutoRejectUseCase(currentState.photos)
+
+                logD("Auto-reject analysis: ${result.candidates.size}/${result.totalAnalyzed} photos, ${result.analysisDurationMs}ms")
+
+                // 분석 완료
+                _uiState.update { state ->
+                    if (state is OrganizeUiState.GridReady) {
+                        state.copy(
+                            isAnalyzing = false,
+                            autoRejectCandidates = result.candidates
+                        )
+                    } else state
+                }
+
+                // 결과 안내 메시지
+                val message = when {
+                    result.candidates.isEmpty() -> "후보로 표시할 사진이 없어요."
+                    else -> "아쉬운 사진 후보를 표시했어요."
+                }
+                _snackbarMessages.emit(message)
+
+            } catch (e: Exception) {
+                logE("Auto-reject analysis failed", e)
+                _uiState.update { state ->
+                    if (state is OrganizeUiState.GridReady) {
+                        state.copy(isAnalyzing = false)
+                    } else state
+                }
+                // 취소된 경우 에러 메시지를 표시하지 않음
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    _snackbarMessages.emit("분석을 완료하지 못했어요. 다시 시도해주세요.")
+                }
+            } finally {
+                analysisJob = null
+            }
+        }
     }
 
     private suspend fun emitReportMessage(actionType: String, report: com.cola.pickly.core.data.photo.PhotoActionReport) {

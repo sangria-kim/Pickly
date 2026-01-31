@@ -20,7 +20,8 @@ data class RecommendationScore(
     // 메타 정보
     val faceCount: Int = 0,             // 검출된 얼굴 수
     val isCutoff: Boolean = false,      // 컷오프(추천 제외) 여부
-    val cutoffReason: String? = null,   // 컷오프 사유
+    val cutoffReason: String? = null,   // 컷오프 사유 (디버깅용)
+    val rejectReason: RejectReason? = null, // 제외 사유 (UI 표시용)
     
     // 디버깅용 Raw Data (Cutoff 판단 근거)
     val rawSharpness: Double = 0.0,     // Laplacian Variance

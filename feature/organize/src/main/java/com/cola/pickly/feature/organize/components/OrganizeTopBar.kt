@@ -4,22 +4,28 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -51,11 +57,13 @@ fun OrganizeTopBar(
     photos: List<Photo> = emptyList(),
     selectedIds: Set<Long> = emptySet(),
     selectionMap: Map<Long, PhotoSelectionState> = emptyMap(),
+    isAnalyzing: Boolean = false,
     onFolderSelectClick: () -> Unit,
     onSelectAllToggle: () -> Unit,
     onAcceptedToggle: () -> Unit,
     onRejectedToggle: () -> Unit,
-    onCancelSelection: () -> Unit = {}
+    onCancelSelection: () -> Unit = {},
+    onAutoRejectClick: () -> Unit = {}
 ) {
     var showFilterMenu by remember { mutableStateOf(false) }
 
@@ -110,13 +118,14 @@ fun OrganizeTopBar(
     else
         MaterialTheme.colorScheme.onSurface
 
-    TopAppBar(
-        modifier = Modifier.statusBarsPadding(),
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = containerColor,
-            titleContentColor = contentColor,
-            actionIconContentColor = contentColor
-        ),
+    Box {
+        TopAppBar(
+            modifier = Modifier.statusBarsPadding(),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = containerColor,
+                titleContentColor = contentColor,
+                actionIconContentColor = contentColor
+            ),
         title = {
             if (isMultiSelectMode) {
                 // Multi Select Mode: 취소 버튼 + 선택 개수
@@ -166,10 +175,30 @@ fun OrganizeTopBar(
             }
         },
         actions = {
+            // 스마트 제외 버튼 (폴더 선택됐을 때만, Multi Select Mode 아닐 때만)
+            if (selectedFolderName != null && !isMultiSelectMode) {
+                IconButton(
+                    onClick = onAutoRejectClick,
+                    enabled = true  // 분석 중에도 클릭 가능 (취소 용도)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        // 항상 AutoAwesome 아이콘 표시
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = if (isAnalyzing) "분석 취소" else "스마트 제외",
+                            tint = contentColor
+                        )
+                    }
+                }
+            }
+
             // 필터 버튼은 Normal Mode와 Multi Select Mode 모두에서 표시
             if (selectedFolderName != null || isMultiSelectMode) {
                 Box {
-                    IconButton(onClick = { showFilterMenu = !showFilterMenu }) {
+                    IconButton(
+                        onClick = { showFilterMenu = !showFilterMenu },
+                        enabled = !isAnalyzing  // 분석 중일 때 비활성화
+                    ) {
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "Filter",
@@ -207,7 +236,19 @@ fun OrganizeTopBar(
                 }
             }
         }
-    )
+        )
+
+        // Top Bar 하단에 overlay로 프로그레스 바 배치 (높이 변화 없음)
+        if (isAnalyzing) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(2.dp),
+                color = TealAccent
+            )
+        }
+    }
 }
 
 /**

@@ -7,28 +7,35 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.widget.Toast
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.theme.TealAccent
 import java.io.File
 
@@ -38,13 +45,16 @@ fun PhotoGridItem(
     isSelected: Boolean,
     selectionState: PhotoSelectionState? = null,
     isMultiSelectMode: Boolean = false,
+    isAnalyzing: Boolean = false,
+    autoRejectReason: RejectReason? = null,
     onClick: () -> Unit,
     onToggleSelection: (() -> Unit)? = null
 ) {
     // 콜백을 안전하게 참조하기 위해 rememberUpdatedState 사용
     val onClickState = rememberUpdatedState(onClick)
     val onToggleSelectionState = rememberUpdatedState(onToggleSelection)
-    
+    val context = LocalContext.current
+
     Box(
         modifier = Modifier
             .aspectRatio(1f)
@@ -58,6 +68,12 @@ fun PhotoGridItem(
                     }
                 },
                 onLongClick = {
+                    // 분석 중일 때 롱프레스 제한
+                    if (isAnalyzing) {
+                        Toast.makeText(context, "분석이 끝난 뒤에 선택할 수 있어요.", Toast.LENGTH_SHORT).show()
+                        return@combinedClickable
+                    }
+
                     // Normal Mode에서 롱프레스 시 Multi Select Mode 진입 및 선택
                     if (!isMultiSelectMode) {
                         onToggleSelectionState.value?.invoke()
@@ -170,6 +186,30 @@ fun PhotoGridItem(
                 PhotoSelectionState.None -> {
                     // 아이콘 표시 없음
                 }
+            }
+        }
+
+        // 스마트 제외 후보 pill 배지 (우하단, selectionState와 독립적으로 표시)
+        autoRejectReason?.let { reason ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(6.dp)
+                    .height(24.dp)
+                    .background(
+                        color = Color(0xE6FFE7EA), // 연한 red tint + alpha
+                        shape = RoundedCornerShape(percent = 40) // pill 형태
+                    )
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = reason.label,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFE5484D), // 딥 레드
+                    maxLines = 1
+                )
             }
         }
     }

@@ -18,3 +18,4 @@ docs/
 .externalNativeBuild
 .cxx
 local.properties
+**/bin/
