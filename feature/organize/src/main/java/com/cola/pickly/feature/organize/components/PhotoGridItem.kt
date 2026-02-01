@@ -36,6 +36,7 @@ import coil.request.ImageRequest
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.core.ui.components.RejectReasonBadge
 import com.cola.pickly.core.ui.theme.TealAccent
 import java.io.File
 
@@ -189,28 +190,14 @@ fun PhotoGridItem(
             }
         }
 
-        // 스마트 제외 후보 pill 배지 (우하단, selectionState와 독립적으로 표시)
+        // 스마트 제외 후보 pill 배지 (우하단)
         autoRejectReason?.let { reason ->
-            Box(
+            RejectReasonBadge(
+                reason = reason,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(6.dp)
-                    .height(24.dp)
-                    .background(
-                        color = Color(0xE6FFE7EA), // 연한 red tint + alpha
-                        shape = RoundedCornerShape(percent = 40) // pill 형태
-                    )
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = reason.label,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFE5484D), // 딥 레드
-                    maxLines = 1
-                )
-            }
+            )
         }
     }
 }

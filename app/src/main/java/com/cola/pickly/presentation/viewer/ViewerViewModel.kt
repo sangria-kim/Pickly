@@ -3,6 +3,7 @@ package com.cola.pickly.presentation.viewer
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cola.pickly.core.data.database.PhotoScoreDao
 import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.model.PhotoSelectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ViewerViewModel @Inject constructor(
     private val photoRepository: PhotoRepository,
+    private val photoScoreDao: PhotoScoreDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -63,17 +65,27 @@ class ViewerViewModel @Inject constructor(
                 // TODO: 페이징이나 대량 데이터 처리 고려 필요, 현재는 전체 로드
                 val allPhotos = photoRepository.getPhotosByBucketId(folderId)
 
+                // 각 Photo의 recommendationScore를 DB에서 로드하여 추가
+                val photosWithScores = allPhotos.map { photo ->
+                    val scoreEntity = photoScoreDao.getScore(photo.id)
+                    if (scoreEntity != null) {
+                        photo.copy(recommendationScore = scoreEntity.score)
+                    } else {
+                        photo
+                    }
+                }
+
                 // selectionMap 사용 시점에 최신값 읽기 (초기화 후 업데이트된 값 반영)
-                val currentSelectionMap = savedStateHandleRef.get<Map<Long, PhotoSelectionState>>("initial_selection_map") 
+                val currentSelectionMap = savedStateHandleRef.get<Map<Long, PhotoSelectionState>>("initial_selection_map")
                     ?: initialSelectionMap
 
                 val filteredPhotos = if (selectedOnly) {
                     val selectedIds = currentSelectionMap
                         .filterValues { it == PhotoSelectionState.Selected }
                         .keys
-                    allPhotos.filter { selectedIds.contains(it.id) }
+                    photosWithScores.filter { selectedIds.contains(it.id) }
                 } else {
-                    allPhotos
+                    photosWithScores
                 }
                 
                 if (filteredPhotos.isEmpty()) {

@@ -19,20 +19,25 @@ enum class RejectReason(val label: String) {
     /**
      * 얼굴 크기가 너무 작음
      */
-    TOO_SMALL("작음"),
+    TOO_SMALL("얼굴작음"),
 
     /**
      * 얼굴의 주요 부위가 가려짐
      */
-    OCCLUDED("가림"),
+    OCCLUDED("얼굴가림"),
 
     /**
      * 눈을 감고 있음
      */
-    EYES_CLOSED("눈감김"),
+    EYES_CLOSED("눈감음"),
 
     /**
      * 얼굴이 잘려서 일부만 보임
      */
-    CROPPED("잘림")
+    CROPPED("얼굴잘림"),
+
+    /**
+     * 고개를 과도하게 돌림 (옆/위/아래를 보는 경우)
+     */
+    HEAD_TURNED("고개돌림")
 }

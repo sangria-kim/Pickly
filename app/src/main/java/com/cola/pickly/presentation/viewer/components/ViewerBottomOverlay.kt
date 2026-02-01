@@ -26,11 +26,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.offset
+import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.core.ui.components.RejectReasonBadge
 
 @Composable
 fun ViewerBottomOverlay(
     isSelected: Boolean,
     isRejected: Boolean,
+    rejectReason: RejectReason? = null,
     onSelectClick: () -> Unit,
     onRejectClick: () -> Unit
 ) {
@@ -61,14 +65,26 @@ fun ViewerBottomOverlay(
 
             Spacer(modifier = Modifier.width(48.dp))
 
-            // 제외 버튼 (Trash) - Right
-            ViewerControlButton(
-                icon = Icons.Default.Delete,
-                isActive = isRejected,
-                activeColor = Color(0xFFFF5252), // Requested: #FF5252
-                contentDescription = "Reject",
-                onClick = onRejectClick
-            )
+            // 제외 버튼 + pill 배지 영역
+            Box(contentAlignment = Alignment.TopCenter) {
+                ViewerControlButton(
+                    icon = Icons.Default.Delete,
+                    isActive = isRejected,
+                    activeColor = Color(0xFFFF5252), // Requested: #FF5252
+                    contentDescription = "Reject",
+                    onClick = onRejectClick
+                )
+
+                // pill 배지 (조건부 표시)
+                rejectReason?.let { reason ->
+                    RejectReasonBadge(
+                        reason = reason,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = (-8).dp)
+                    )
+                }
+            }
         }
     }
 }

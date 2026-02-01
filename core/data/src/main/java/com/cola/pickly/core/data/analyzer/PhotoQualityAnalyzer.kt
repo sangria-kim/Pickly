@@ -40,22 +40,13 @@ class PhotoQualityAnalyzer(
             val bitmap = loadResult.first
             val originalSize = loadResult.second
 
-            // 2. 선명도 계산 (가장 먼저 체크하여 심각한 블러 제거)
+            // 2. 선명도 계산 (미리 계산, 체크는 나중에)
             val sharpnessRaw = calculateSharpness(bitmap)
-            if (sharpnessRaw < SHAKE_THRESHOLD) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Too blurry (var=$sharpnessRaw)")
-                return@withContext RecommendationScore(
-                    isCutoff = true,
-                    cutoffReason = "Severe shaking (Blurry)",
-                    rejectReason = RejectReason.BLURRY,
-                    rawSharpness = sharpnessRaw // Raw 값 저장
-                )
-            }
 
             // 3. 얼굴 감지 (작은 얼굴까지 모두 포함)
             val allDetectedFaces = faceDetectorHelper.detectFaces(bitmap)
 
-            // 4. 컷오프: 얼굴 미검출
+            // 4. 우선순위 1위: NO_FACE (얼굴 미검출)
             if (allDetectedFaces.isEmpty()) {
                 Log.d(TAG, "analyze: ID=${photo.id}, No face detected")
                 return@withContext RecommendationScore(
@@ -72,7 +63,7 @@ class PhotoQualityAnalyzer(
                 it.boundingBox.width() >= bitmap.width * 0.05f
             }
             
-            // 6. 컷오프: 유효한 크기의 얼굴이 없음
+            // 6. 우선순위 2위: TOO_SMALL (얼굴 너무 작음, 논리적 제약으로 2위 고정)
             if (validFaces.isEmpty()) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Faces too small")
                 return@withContext RecommendationScore(
@@ -97,7 +88,7 @@ class PhotoQualityAnalyzer(
             val headEulerX = bestFace.headEulerAngleX
             val headEulerY = bestFace.headEulerAngleY
 
-            // 8. 컷오프: 얼굴 잘림 확인 (Face Crop)
+            // 8. 우선순위 3위: CROPPED (얼굴 잘림)
             if (isFaceCropped(bestFace, bitmap.width, bitmap.height)) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Face cropped")
                 return@withContext RecommendationScore(
@@ -117,27 +108,7 @@ class PhotoQualityAnalyzer(
                 )
             }
 
-            // 9. 컷오프: 주요 부위 가림 확인 (Occlusion)
-            if (isFaceOccluded(bestFace)) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Face occluded")
-                return@withContext RecommendationScore(
-                    faceCount = validFaces.size,
-                    isCutoff = true,
-                    cutoffReason = "Face occluded (Nose/Mouth hidden)",
-                    rejectReason = RejectReason.OCCLUDED,
-                    rawSharpness = sharpnessRaw,
-                    eyeOpenProb = eyeOpenProb.toDouble(),
-                    leftEyeOpenProb = leftEyeOpen.toDouble(),
-                    rightEyeOpenProb = rightEyeOpen.toDouble(),
-                    smileProb = smileProb.toDouble(),
-                    headEulerAngleX = headEulerX,
-                    headEulerAngleY = headEulerY,
-                    faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
-                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
-                )
-            }
-
-            // 10. 컷오프: 눈 감음 여부 (웃고 있지 않은데 눈을 감은 경우)
+            // 9. 우선순위 4위: EYES_CLOSED (눈감음)
             val isEyesClosed = (leftEyeOpen < EYES_OPEN_THRESHOLD || rightEyeOpen < EYES_OPEN_THRESHOLD)
             val isSmiling = smileProb > SMILE_THRESHOLD
 
@@ -159,14 +130,15 @@ class PhotoQualityAnalyzer(
                     allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
                 )
             }
-            
-            // 11. 컷오프: 과도한 고개 돌림 (Head Pose)
-            if (isHeadTurnedTooMuch(bestFace)) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Head turned too much (X=$headEulerX, Y=$headEulerY)")
+
+            // 10. 우선순위 5위: OCCLUDED (얼굴가림)
+            if (isFaceOccluded(bestFace)) {
+                Log.d(TAG, "analyze: ID=${photo.id}, Face occluded")
                 return@withContext RecommendationScore(
                     faceCount = validFaces.size,
                     isCutoff = true,
-                    cutoffReason = "Head turned too much",
+                    cutoffReason = "Face occluded (Nose/Mouth hidden)",
+                    rejectReason = RejectReason.OCCLUDED,
                     rawSharpness = sharpnessRaw,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),
@@ -179,11 +151,51 @@ class PhotoQualityAnalyzer(
                 )
             }
 
-            // 12. 좌표 변환 비율 계산
+            // 11. 우선순위 6위: HEAD_TURNED (고개돌림)
+            if (isHeadTurnedTooMuch(bestFace)) {
+                Log.d(TAG, "analyze: ID=${photo.id}, Head turned too much (X=$headEulerX, Y=$headEulerY)")
+                return@withContext RecommendationScore(
+                    faceCount = validFaces.size,
+                    isCutoff = true,
+                    cutoffReason = "Head turned too much",
+                    rejectReason = RejectReason.HEAD_TURNED,
+                    rawSharpness = sharpnessRaw,
+                    eyeOpenProb = eyeOpenProb.toDouble(),
+                    leftEyeOpenProb = leftEyeOpen.toDouble(),
+                    rightEyeOpenProb = rightEyeOpen.toDouble(),
+                    smileProb = smileProb.toDouble(),
+                    headEulerAngleX = headEulerX,
+                    headEulerAngleY = headEulerY,
+                    faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
+                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
+                )
+            }
+
+            // 12. 우선순위 7위: BLURRY (흔들림)
+            if (sharpnessRaw < SHAKE_THRESHOLD) {
+                Log.d(TAG, "analyze: ID=${photo.id}, Too blurry (var=$sharpnessRaw)")
+                return@withContext RecommendationScore(
+                    faceCount = validFaces.size,
+                    isCutoff = true,
+                    cutoffReason = "Severe shaking (Blurry)",
+                    rejectReason = RejectReason.BLURRY,
+                    rawSharpness = sharpnessRaw,
+                    eyeOpenProb = eyeOpenProb.toDouble(),
+                    leftEyeOpenProb = leftEyeOpen.toDouble(),
+                    rightEyeOpenProb = rightEyeOpen.toDouble(),
+                    smileProb = smileProb.toDouble(),
+                    headEulerAngleX = headEulerX,
+                    headEulerAngleY = headEulerY,
+                    faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
+                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
+                )
+            }
+
+            // 13. 좌표 변환 비율 계산
             val scaleX = originalSize.width.toDouble() / bitmap.width
             val scaleY = originalSize.height.toDouble() / bitmap.height
 
-            // 13. 점수 계산
+            // 14. 점수 계산 (컷오프 아님)
             val score = calculateScore(
                 bitmap, bestFace, validFaces, scaleX, scaleY, originalSize, 
                 sharpnessRaw, smileProb.toDouble(), eyeOpenProb.toDouble(), 

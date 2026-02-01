@@ -69,9 +69,10 @@ fun ViewerScreen(
 
         val currentPhoto = photos.getOrNull(pagerState.currentPage)
         val currentSelectionState = currentPhoto?.let { selectionMap[it.id] } ?: PhotoSelectionState.None
-        
+
         val isSelected = currentSelectionState == PhotoSelectionState.Selected
         val isRejected = currentSelectionState == PhotoSelectionState.Rejected
+        val rejectReason = currentPhoto?.recommendationScore?.rejectReason
 
         HorizontalPager(
             state = pagerState,
@@ -164,11 +165,12 @@ fun ViewerScreen(
                 ViewerBottomOverlay(
                     isSelected = isSelected,
                     isRejected = isRejected,
-                    onSelectClick = { 
-                        currentPhoto?.let { onSelectClick(it.id) } 
+                    rejectReason = rejectReason,
+                    onSelectClick = {
+                        currentPhoto?.let { onSelectClick(it.id) }
                     },
-                    onRejectClick = { 
-                        currentPhoto?.let { onRejectClick(it.id) } 
+                    onRejectClick = {
+                        currentPhoto?.let { onRejectClick(it.id) }
                     }
                 )
             }
