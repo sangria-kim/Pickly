@@ -13,9 +13,11 @@ interface SettingsRepository {
 
     suspend fun setDuplicateFilenamePolicy(policy: DuplicateFilenamePolicy)
 
-    suspend fun setRecommendationEnabled(enabled: Boolean)
-
     suspend fun setThemeMode(mode: ThemeMode)
+
+    suspend fun setSmartDiscardReasonEnabled(enabled: Boolean)
+
+    suspend fun setSmartDiscardCriteria(criteria: Set<com.cola.pickly.core.model.RejectReason>)
 }
 
 

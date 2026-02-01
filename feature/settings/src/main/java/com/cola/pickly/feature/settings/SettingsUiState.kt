@@ -11,8 +11,9 @@ import com.cola.pickly.core.data.settings.ThemeMode
  */
 data class SettingsUiState(
     val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
-    val isRecommendationEnabled: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.System,
+    val isSmartDiscardReasonEnabled: Boolean = true,
+    val smartDiscardCriteria: Set<com.cola.pickly.core.model.RejectReason> = com.cola.pickly.core.model.RejectReason.entries.toSet(),
     val isCacheSizeLoading: Boolean = true,
     val cacheSizeBytes: Long? = null,
     val isClearingCache: Boolean = false

@@ -1,268 +1,180 @@
 package com.cola.pickly.feature.settings
 
-import android.content.pm.PackageManager
-import android.os.Build
-import java.util.Locale
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cola.pickly.core.ui.R
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
 import com.cola.pickly.core.data.settings.ThemeMode
-import com.cola.pickly.core.ui.theme.TextPrimary
+import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.core.ui.theme.PicklyTheme
 import com.cola.pickly.feature.settings.components.SettingsActionItem
-import com.cola.pickly.feature.settings.components.SettingsDivider
+import com.cola.pickly.feature.settings.components.SettingsExpandableChecklist
 import com.cola.pickly.feature.settings.components.SettingsGroupLabel
 import com.cola.pickly.feature.settings.components.SettingsRadioItem
 import com.cola.pickly.feature.settings.components.SettingsSectionHeader
 import com.cola.pickly.feature.settings.components.SettingsSwitchItem
 import com.cola.pickly.feature.settings.components.SettingsTextItem
-import androidx.compose.material3.MaterialTheme
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.collect
 
-/**
- * S-08 설정 화면 (UI-only 단계)
- *
- * - 링크/캐시 삭제 등은 스낵바로 “준비 중입니다.” 처리
- * - 라디오/토글은 SettingsViewModel을 통해 즉시 상태 반영
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val comingSoonMessage = stringResource(R.string.settings_snackbar_coming_soon)
-    val cacheClearedMessage = stringResource(R.string.settings_cache_clear_done)
-    val cacheClearFailedMessage = stringResource(R.string.settings_cache_clear_failed)
-
-    fun showComingSoon() {
-        scope.launch { snackbarHostState.showSnackbar(comingSoonMessage) }
-    }
-
-    LaunchedEffect(viewModel) {
-        viewModel.events.collect { event ->
-            when (event) {
-                SettingsEvent.CacheCleared -> snackbarHostState.showSnackbar(cacheClearedMessage)
-                SettingsEvent.CacheClearFailed -> snackbarHostState.showSnackbar(cacheClearFailedMessage)
-            }
-        }
-    }
-
-    val appVersionText = rememberAppVersionText()
-    val cacheSizeText = when {
-        uiState.isCacheSizeLoading -> stringResource(R.string.settings_cache_size_loading)
-        uiState.cacheSizeBytes == null -> stringResource(R.string.settings_cache_size_placeholder)
-        else -> formatBytes(uiState.cacheSizeBytes)
-    }
-
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                modifier = Modifier.statusBarsPadding(),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                ),
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            )
-        }
-    ) { innerPadding ->
-        SettingsScreenContent(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            uiState = uiState,
-            appVersionText = appVersionText,
-            cacheSizeText = cacheSizeText,
-            onComingSoon = ::showComingSoon,
-            onClearCache = viewModel::clearCache,
-            onSetDuplicateFilenamePolicy = viewModel::setDuplicateFilenamePolicy,
-            onSetRecommendationEnabled = viewModel::setRecommendationEnabled,
-            onSetThemeMode = viewModel::setThemeMode
-        )
-    }
-}
-
-@Composable
-private fun rememberAppVersionText(): String {
-    val context = LocalContext.current
-    return remember(context) {
-        val packageName = context.packageName
-        val pm = context.packageManager
-        val info = if (Build.VERSION.SDK_INT >= 33) {
-            pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-        } else {
-            @Suppress("DEPRECATION")
-            pm.getPackageInfo(packageName, 0)
-        }
-
-        val versionName = info.versionName ?: "—"
-        val versionCode = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else {
-            @Suppress("DEPRECATION")
-            info.versionCode.toLong()
-        }
-
-        "$versionName ($versionCode)"
-    }
+    SettingsScreenContent(
+        uiState = uiState,
+        onDuplicatePolicyChanged = viewModel::setDuplicateFilenamePolicy,
+        onThemeChanged = viewModel::setThemeMode,
+        onSmartDiscardReasonEnabledChanged = viewModel::setSmartDiscardReasonEnabled,
+        onSmartDiscardCriterionToggle = viewModel::toggleSmartDiscardCriterion,
+        onClearCache = viewModel::clearCache
+    )
 }
 
 @Composable
 internal fun SettingsScreenContent(
-    modifier: Modifier = Modifier,
     uiState: SettingsUiState,
-    appVersionText: String,
-    cacheSizeText: String,
-    onComingSoon: () -> Unit,
-    onClearCache: () -> Unit,
-    onSetDuplicateFilenamePolicy: (DuplicateFilenamePolicy) -> Unit,
-    onSetRecommendationEnabled: (Boolean) -> Unit,
-    onSetThemeMode: (ThemeMode) -> Unit
+    onDuplicatePolicyChanged: (DuplicateFilenamePolicy) -> Unit,
+    onThemeChanged: (ThemeMode) -> Unit,
+    onSmartDiscardReasonEnabledChanged: (Boolean) -> Unit,
+    onSmartDiscardCriterionToggle: (RejectReason) -> Unit,
+    onClearCache: () -> Unit
 ) {
-    LazyColumn(modifier = modifier) {
-        // A. 사진 정리
-        item { SettingsSectionHeader(stringResource(R.string.settings_section_organize)) }
+    val scrollState = rememberScrollState()
 
-        item { SettingsGroupLabel(stringResource(R.string.settings_group_duplicate_filename)) }
-        item {
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+        contentWindowInsets = WindowInsets.safeDrawing
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(scrollState)
+        ) {
+            // 1. 사진 정리 (TODO: Real functionality)
+            SettingsSectionHeader(title = "사진 정리")
+            SettingsGroupLabel(text = "동일 파일명 처리")
             SettingsRadioItem(
-                title = stringResource(R.string.settings_option_duplicate_overwrite),
+                title = "덮어쓰기",
                 selected = uiState.duplicateFilenamePolicy == DuplicateFilenamePolicy.Overwrite,
-                onClick = { onSetDuplicateFilenamePolicy(DuplicateFilenamePolicy.Overwrite) }
+                onClick = { onDuplicatePolicyChanged(DuplicateFilenamePolicy.Overwrite) }
             )
-        }
-        item { SettingsDivider() }
-        item {
             SettingsRadioItem(
-                title = stringResource(R.string.settings_option_duplicate_skip),
+                title = "건너뛰기",
                 selected = uiState.duplicateFilenamePolicy == DuplicateFilenamePolicy.Skip,
-                onClick = { onSetDuplicateFilenamePolicy(DuplicateFilenamePolicy.Skip) }
+                onClick = { onDuplicatePolicyChanged(DuplicateFilenamePolicy.Skip) }
             )
-        }
 
-        // B. 사진 추천
-        item { SettingsSectionHeader(stringResource(R.string.settings_section_recommendation)) }
-        item {
+            // 2. 스마트 제외 (Implemented)
+            SettingsSectionHeader(title = "스마트 제외")
             SettingsSwitchItem(
-                title = stringResource(R.string.settings_option_recommendation_enabled),
-                checked = uiState.isRecommendationEnabled,
-                onCheckedChange = onSetRecommendationEnabled,
-                subtitle = stringResource(R.string.settings_option_recommendation_subtitle)
+                title = "후보 사유 표시",
+                subtitle = "후보 배지에 사유(예: 얼굴잘림) 표시",
+                checked = uiState.isSmartDiscardReasonEnabled,
+                onCheckedChange = onSmartDiscardReasonEnabledChanged
             )
-        }
+            
+            val criteriaList = (RejectReason.entries - RejectReason.NO_FACE).map { reason ->
+                reason to (reason in uiState.smartDiscardCriteria)
+            }
+            
+            SettingsExpandableChecklist(
+                title = "후보 기준",
+                subtitle = "${uiState.smartDiscardCriteria.count { it != RejectReason.NO_FACE }}개 선택됨",
+                items = criteriaList.map { (reason, checked) -> reason.label to checked },
+                onItemCheckedChange = { index, _ -> 
+                    onSmartDiscardCriterionToggle(criteriaList[index].first)
+                }
+            )
 
-        // C. 화면 표시
-        item { SettingsSectionHeader(stringResource(R.string.settings_section_display)) }
-        item { SettingsGroupLabel(stringResource(R.string.settings_group_theme)) }
-        item {
+            // 3. 화면 표시 (TODO: Real functionality)
+            SettingsSectionHeader(title = "화면 표시")
+            SettingsGroupLabel(text = "테마")
             SettingsRadioItem(
-                title = stringResource(R.string.settings_option_theme_system),
+                title = "시스템 설정 따름",
                 selected = uiState.themeMode == ThemeMode.System,
-                onClick = { onSetThemeMode(ThemeMode.System) }
+                onClick = { onThemeChanged(ThemeMode.System) }
             )
-        }
-        item { SettingsDivider() }
-        item {
             SettingsRadioItem(
-                title = stringResource(R.string.settings_option_theme_light),
+                title = "라이트 모드",
                 selected = uiState.themeMode == ThemeMode.Light,
-                onClick = { onSetThemeMode(ThemeMode.Light) }
+                onClick = { onThemeChanged(ThemeMode.Light) }
             )
-        }
-        item { SettingsDivider() }
-        item {
             SettingsRadioItem(
-                title = stringResource(R.string.settings_option_theme_dark),
+                title = "다크 모드",
                 selected = uiState.themeMode == ThemeMode.Dark,
-                onClick = { onSetThemeMode(ThemeMode.Dark) }
+                onClick = { onThemeChanged(ThemeMode.Dark) }
             )
-        }
 
-        // D. 데이터 관리
-        item { SettingsSectionHeader(stringResource(R.string.settings_section_data)) }
-        item {
+            // 4. 데이터 관리 (TODO: Real functionality)
+            SettingsSectionHeader(title = "데이터 관리")
             SettingsTextItem(
-                title = stringResource(R.string.settings_cache_size),
-                value = cacheSizeText
+                title = "캐시 용량",
+                value = uiState.cacheSizeBytes?.let { formatFileSize(it) } ?: "계산 중..."
             )
-        }
-        item { SettingsDivider() }
-        item {
             SettingsActionItem(
-                title = stringResource(R.string.settings_cache_clear),
+                title = "캐시 삭제",
                 onClick = onClearCache,
-                trailingText = if (uiState.isClearingCache) stringResource(R.string.settings_cache_clear_in_progress) else null,
-                enabled = !uiState.isClearingCache
+                subtitle = "사진 원본에는 영향을 주지 않습니다.",
+                enabled = !uiState.isClearingCache,
+                trailingText = if (uiState.isClearingCache) "삭제 중..." else null
             )
-        }
 
-        // E. 앱 정보
-        item { SettingsSectionHeader(stringResource(R.string.settings_section_app_info)) }
-        item {
+            // 5. 앱 정보 (UI Only)
+            SettingsSectionHeader(title = "앱 정보")
             SettingsTextItem(
-                title = stringResource(R.string.settings_app_version),
-                value = appVersionText
+                title = "앱 버전",
+                value = "1.0.0" // TODO: Get from BuildConfig
             )
-        }
-        item { SettingsDivider() }
-        item {
             SettingsActionItem(
-                title = stringResource(R.string.settings_privacy_policy),
-                onClick = onComingSoon
+                title = "개인정보 처리방침",
+                onClick = { /* TODO: Navigation */ }
             )
-        }
-        item { SettingsDivider() }
-        item {
             SettingsActionItem(
-                title = stringResource(R.string.settings_open_source_licenses),
-                onClick = onComingSoon
+                title = "오픈소스 라이선스",
+                onClick = { /* TODO: Navigation */ }
             )
         }
     }
 }
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes <= 0L) return "0B"
-    val unit = 1024.0
-    val kb = bytes / unit
-    val mb = kb / unit
-    val gb = mb / unit
-    return when {
-        gb >= 1 -> String.format(Locale.ROOT, "%.1fGB", gb)
-        mb >= 1 -> String.format(Locale.ROOT, "%.1fMB", mb)
-        kb >= 1 -> String.format(Locale.ROOT, "%.1fKB", kb)
-        else -> "${bytes}B"
-    }
+private fun formatFileSize(bytes: Long): String {
+    val mb = bytes / (1024.0 * 1024.0)
+    return "%.1f MB".format(mb)
 }
 
-
+@Preview(showBackground = true)
+@Composable
+fun SettingsScreenPreview() {
+    PicklyTheme {
+        SettingsScreenContent(
+            uiState = SettingsUiState(
+                cacheSizeBytes = 12 * 1024 * 1024
+            ),
+            onDuplicatePolicyChanged = {},
+            onThemeChanged = {},
+            onSmartDiscardReasonEnabledChanged = {},
+            onSmartDiscardCriterionToggle = {},
+            onClearCache = {}
+        )
+    }
+}

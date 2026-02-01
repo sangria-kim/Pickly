@@ -35,8 +35,9 @@ enum class ThemeMode {
  */
 data class Settings(
     val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
-    val isRecommendationEnabled: Boolean = false,
-    val themeMode: ThemeMode = ThemeMode.System
+    val themeMode: ThemeMode = ThemeMode.System,
+    val isSmartDiscardReasonEnabled: Boolean = true,
+    val smartDiscardCriteria: Set<com.cola.pickly.core.model.RejectReason> = com.cola.pickly.core.model.RejectReason.entries.toSet()
 )
 
 

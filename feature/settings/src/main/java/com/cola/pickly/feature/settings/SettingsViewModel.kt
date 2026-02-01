@@ -41,8 +41,9 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         duplicateFilenamePolicy = settings.duplicateFilenamePolicy,
-                        isRecommendationEnabled = settings.isRecommendationEnabled,
-                        themeMode = settings.themeMode
+                        themeMode = settings.themeMode,
+                        isSmartDiscardReasonEnabled = settings.isSmartDiscardReasonEnabled,
+                        smartDiscardCriteria = settings.smartDiscardCriteria
                     )
                 }
             }
@@ -55,8 +56,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setDuplicateFilenamePolicy(policy) }
     }
 
-    fun setRecommendationEnabled(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setRecommendationEnabled(enabled) }
+    fun setSmartDiscardReasonEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setSmartDiscardReasonEnabled(enabled) }
+    }
+
+    fun toggleSmartDiscardCriterion(criterion: com.cola.pickly.core.model.RejectReason) {
+        viewModelScope.launch {
+            val currentCriteria = _uiState.value.smartDiscardCriteria.toMutableSet()
+            if (currentCriteria.contains(criterion)) {
+                currentCriteria.remove(criterion)
+            } else {
+                currentCriteria.add(criterion)
+            }
+            settingsRepository.setSmartDiscardCriteria(currentCriteria)
+        }
     }
 
     fun setThemeMode(mode: ThemeMode) {

@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.cola.pickly.core.model.RejectReason
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -24,8 +26,11 @@ class DataStoreSettingsRepository @Inject constructor(
     override val settings: Flow<Settings> = dataStore.data.map { prefs ->
         Settings(
             duplicateFilenamePolicy = prefs.getEnum(KEY_DUPLICATE_FILENAME, DuplicateFilenamePolicy.Skip),
-            isRecommendationEnabled = prefs[KEY_RECOMMENDATION_ENABLED] ?: false,
-            themeMode = prefs.getEnum(KEY_THEME_MODE, ThemeMode.System)
+            themeMode = prefs.getEnum(KEY_THEME_MODE, ThemeMode.System),
+            isSmartDiscardReasonEnabled = prefs[KEY_NOTIFY_SMART_DISCARD_REASON] ?: true,
+            smartDiscardCriteria = prefs[KEY_SMART_DISCARD_CRITERIA]?.mapNotNull { name ->
+                runCatching { RejectReason.valueOf(name) }.getOrNull()
+            }?.toSet() ?: RejectReason.entries.toSet()
         )
     }
 
@@ -33,8 +38,12 @@ class DataStoreSettingsRepository @Inject constructor(
         dataStore.edit { it[KEY_DUPLICATE_FILENAME] = policy.name }
     }
 
-    override suspend fun setRecommendationEnabled(enabled: Boolean) {
-        dataStore.edit { it[KEY_RECOMMENDATION_ENABLED] = enabled }
+    override suspend fun setSmartDiscardReasonEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_NOTIFY_SMART_DISCARD_REASON] = enabled }
+    }
+
+    override suspend fun setSmartDiscardCriteria(criteria: Set<RejectReason>) {
+        dataStore.edit { it[KEY_SMART_DISCARD_CRITERIA] = criteria.map { r -> r.name }.toSet() }
     }
 
     override suspend fun setThemeMode(mode: ThemeMode) {
@@ -52,8 +61,9 @@ class DataStoreSettingsRepository @Inject constructor(
 
     private companion object {
         val KEY_DUPLICATE_FILENAME = stringPreferencesKey("settings.duplicate_filename_policy")
-        val KEY_RECOMMENDATION_ENABLED = booleanPreferencesKey("settings.recommendation_enabled")
         val KEY_THEME_MODE = stringPreferencesKey("settings.theme_mode")
+        val KEY_NOTIFY_SMART_DISCARD_REASON = booleanPreferencesKey("settings.notify_smart_discard_reason")
+        val KEY_SMART_DISCARD_CRITERIA = stringSetPreferencesKey("settings.smart_discard_criteria")
     }
 }
 
