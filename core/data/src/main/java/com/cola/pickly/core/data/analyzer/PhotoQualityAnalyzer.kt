@@ -25,7 +25,8 @@ import kotlin.math.sqrt
  * 얼굴 인식, 선명도, 조명, 구도 등을 평가합니다.
  */
 class PhotoQualityAnalyzer(
-    private val faceDetectorHelper: FaceDetectorHelper
+    private val faceDetectorHelper: FaceDetectorHelper,
+    private val thresholds: com.cola.pickly.core.data.settings.SmartDiscardThresholds
 ) {
 
     /**
@@ -58,9 +59,9 @@ class PhotoQualityAnalyzer(
                 )
             }
             
-            // 5. 유효 얼굴 필터링 (너비가 이미지의 5% 이상인 얼굴만)
-            val validFaces = allDetectedFaces.filter { 
-                it.boundingBox.width() >= bitmap.width * 0.05f
+            // 5. 유효 얼굴 필터링 (너비가 이미지의 설정된 비율 이상인 얼굴만)
+            val validFaces = allDetectedFaces.filter {
+                it.boundingBox.width() >= bitmap.width * thresholds.minFaceSize
             }
             
             // 6. 우선순위 2위: TOO_SMALL (얼굴 너무 작음, 논리적 제약으로 2위 고정)
@@ -109,8 +110,8 @@ class PhotoQualityAnalyzer(
             }
 
             // 9. 우선순위 4위: EYES_CLOSED (눈감음)
-            val isEyesClosed = (leftEyeOpen < EYES_OPEN_THRESHOLD || rightEyeOpen < EYES_OPEN_THRESHOLD)
-            val isSmiling = smileProb > SMILE_THRESHOLD
+            val isEyesClosed = (leftEyeOpen < thresholds.eyeOpenThreshold || rightEyeOpen < thresholds.eyeOpenThreshold)
+            val isSmiling = smileProb > thresholds.smileExceptionThreshold
 
             if (isEyesClosed && !isSmiling) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Eyes closed (L=$leftEyeOpen, R=$rightEyeOpen)")
@@ -172,7 +173,7 @@ class PhotoQualityAnalyzer(
             }
 
             // 12. 우선순위 7위: BLURRY (흔들림)
-            if (sharpnessRaw < SHAKE_THRESHOLD) {
+            if (sharpnessRaw < thresholds.blurThreshold) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Too blurry (var=$sharpnessRaw)")
                 return@withContext RecommendationScore(
                     faceCount = validFaces.size,
@@ -251,7 +252,7 @@ class PhotoQualityAnalyzer(
     private fun isHeadTurnedTooMuch(face: Face): Boolean {
         val pitch = abs(face.headEulerAngleX)
         val yaw = abs(face.headEulerAngleY)
-        return pitch > HEAD_ROTATION_THRESHOLD || yaw > HEAD_ROTATION_THRESHOLD
+        return pitch > thresholds.headAngleLimit || yaw > thresholds.headAngleLimit
     }
 
     private fun calculateScore(
@@ -460,9 +461,18 @@ class PhotoQualityAnalyzer(
 
     companion object {
         private const val TAG = "PhotoQualityAnalyzer"
+
+        // 아래 값들은 이제 SmartDiscardThresholds로 대체됨
+        @Deprecated("Use thresholds.blurThreshold", ReplaceWith("thresholds.blurThreshold"))
         private const val SHAKE_THRESHOLD = 100.0
+
+        @Deprecated("Use thresholds.eyeOpenThreshold", ReplaceWith("thresholds.eyeOpenThreshold"))
         private const val EYES_OPEN_THRESHOLD = 0.5
+
+        @Deprecated("Use thresholds.smileExceptionThreshold", ReplaceWith("thresholds.smileExceptionThreshold"))
         private const val SMILE_THRESHOLD = 0.7
+
+        @Deprecated("Use thresholds.headAngleLimit", ReplaceWith("thresholds.headAngleLimit"))
         private const val HEAD_ROTATION_THRESHOLD = 30.0
     }
 }

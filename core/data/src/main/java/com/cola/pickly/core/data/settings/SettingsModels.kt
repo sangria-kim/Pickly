@@ -25,6 +25,19 @@ enum class ThemeMode {
 }
 
 /**
+ * 스마트 사진 제외 기능의 임계값 설정.
+ *
+ * PhotoQualityAnalyzer가 사진을 분석할 때 사용하는 기준값들입니다.
+ */
+data class SmartDiscardThresholds(
+    val blurThreshold: Double = 100.0,           // 흔들림 임계값 (Laplacian variance)
+    val minFaceSize: Float = 0.05f,              // 얼굴 최소 크기 (이미지 너비 대비 비율)
+    val eyeOpenThreshold: Float = 0.5f,          // 눈 뜸 임계값
+    val smileExceptionThreshold: Float = 0.7f,   // 눈웃음 예외 임계값
+    val headAngleLimit: Float = 30.0f            // 고개 각도 제한 (도)
+)
+
+/**
  * 설정 값 묶음(단일 소스).
  *
  * Wireframe.md의 정책 기본값을 우선 반영:
@@ -37,7 +50,8 @@ data class Settings(
     val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
     val themeMode: ThemeMode = ThemeMode.System,
     val isSmartDiscardReasonEnabled: Boolean = true,
-    val smartDiscardCriteria: Set<com.cola.pickly.core.model.RejectReason> = com.cola.pickly.core.model.RejectReason.entries.toSet()
+    val smartDiscardCriteria: Set<com.cola.pickly.core.model.RejectReason> = com.cola.pickly.core.model.RejectReason.entries.toSet(),
+    val smartDiscardThresholds: SmartDiscardThresholds = SmartDiscardThresholds()
 )
 
 

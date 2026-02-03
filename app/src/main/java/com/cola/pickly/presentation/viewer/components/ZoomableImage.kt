@@ -18,9 +18,17 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ZoomableImage(
     imagePath: String,
+    photoId: Long,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onZoomStateChanged: (Float) -> Unit, // Boolean -> Float
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -65,6 +73,14 @@ fun ZoomableImage(
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
+                .then(
+                    with(sharedTransitionScope) {
+                        Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(key = "photo-$photoId"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                    }
+                )
                 .graphicsLayer(
                     scaleX = scale,
                     scaleY = scale,

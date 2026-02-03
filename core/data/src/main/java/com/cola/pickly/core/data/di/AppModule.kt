@@ -3,7 +3,7 @@ package com.cola.pickly.core.data.di
 import android.content.ContentResolver
 import android.content.Context
 import com.cola.pickly.core.data.analyzer.FaceDetectorHelper
-import com.cola.pickly.core.data.analyzer.PhotoQualityAnalyzer
+import com.cola.pickly.core.data.analyzer.PhotoQualityAnalyzerFactory
 import com.cola.pickly.core.data.database.DatabaseModule
 import com.cola.pickly.core.data.database.PhotoScoreDao
 import com.cola.pickly.core.data.database.PicklyDatabase
@@ -14,6 +14,7 @@ import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.data.usecase.PickBestPhotosUseCaseImpl
 
 import com.cola.pickly.core.domain.usecase.PickBestPhotosUseCase
+import com.cola.pickly.core.data.settings.SmartDiscardThresholds
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -40,14 +41,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePhotoQualityAnalyzer(faceDetectorHelper: FaceDetectorHelper): PhotoQualityAnalyzer {
-        return PhotoQualityAnalyzer(faceDetectorHelper)
-    }
-
-
-
-    @Provides
-    @Singleton
     fun providePicklyDatabase(@ApplicationContext context: Context): PicklyDatabase {
         return DatabaseModule.getDatabase(context)
     }
@@ -61,9 +54,11 @@ object AppModule {
     @Provides
     @Singleton
     fun providePickBestPhotosUseCase(
-        analyzer: PhotoQualityAnalyzer,
+        analyzerFactory: PhotoQualityAnalyzerFactory,
         photoScoreDao: PhotoScoreDao
     ): PickBestPhotosUseCase {
+        // PickBestPhotosUseCase는 항상 기본 임계값을 사용
+        val analyzer = analyzerFactory.create(SmartDiscardThresholds())
         return PickBestPhotosUseCaseImpl(analyzer, photoScoreDao)
     }
 }

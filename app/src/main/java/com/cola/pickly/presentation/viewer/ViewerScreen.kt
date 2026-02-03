@@ -30,12 +30,19 @@ import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerTopOverlay
 import com.cola.pickly.presentation.viewer.components.ZoomableImage
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ViewerScreen(
     photos: List<Photo>,
     initialIndex: Int,
     selectionMap: Map<Long, PhotoSelectionState>,
     viewerContext: ViewerContext,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onBackClick: () -> Unit,
     onSelectClick: (Long) -> Unit = {},
     onRejectClick: (Long) -> Unit = {}
@@ -81,8 +88,12 @@ fun ViewerScreen(
         ) { page ->
             val photo = photos[page]
             
+            
             ZoomableImage(
                 imagePath = photo.filePath,
+                photoId = photo.id,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
                 onZoomStateChanged = { scale ->
                     val wasZoomed = isZoomed
                     isZoomed = scale > 1f

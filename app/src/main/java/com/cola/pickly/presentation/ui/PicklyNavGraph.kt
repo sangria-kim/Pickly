@@ -22,15 +22,19 @@ import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.presentation.viewer.ViewerUiState
-import com.cola.pickly.presentation.viewer.ViewerViewModel
 import com.cola.pickly.presentation.viewer.ViewerScreen
+import com.cola.pickly.presentation.viewer.ViewerViewModel
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PicklyNavGraph(
     mainViewModel: MainViewModel
 ) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "splash") {
+    SharedTransitionLayout {
+        NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(navController = navController, viewModel = mainViewModel) 
         }
@@ -56,6 +60,8 @@ fun PicklyNavGraph(
             }
 
             MainScreen(
+                sharedTransitionScope = this@SharedTransitionLayout,
+                animatedVisibilityScope = this@composable,
                 mainViewModel = mainViewModel,
                 onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext, rejectCandidates ->
                     // viewer 라우트로 이동하기 전에 selectionMap을 현재 backStackEntry의 savedStateHandle에 저장
@@ -132,6 +138,8 @@ fun PicklyNavGraph(
                     BackHandler(onBack = handleBack)
                     
                     ViewerScreen(
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedVisibilityScope = this@composable,
                         photos = state.photos,
                         initialIndex = state.initialIndex,
                         selectionMap = state.selectionMap,
@@ -154,5 +162,6 @@ fun PicklyNavGraph(
                 }
             }
         }
+    }
     }
 }
