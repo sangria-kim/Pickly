@@ -81,7 +81,7 @@ fun ViewerBottomOverlay(
                         reason = reason,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .offset(y = (-8).dp)
+                            .offset(y = (-32).dp)
                     )
                 }
             }

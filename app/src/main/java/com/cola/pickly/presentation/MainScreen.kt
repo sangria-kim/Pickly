@@ -49,6 +49,7 @@ import com.cola.pickly.feature.organize.OrganizeViewModel
 import com.cola.pickly.feature.organize.components.BulkActionBar
 import com.cola.pickly.feature.settings.SettingsScreen
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.ui.theme.TealAccent
 sealed class MainTab(
@@ -129,7 +130,7 @@ fun PicklyBottomNavigation(
 @Composable
 fun MainScreen(
     mainViewModel: MainViewModel,
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, ViewerContext) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, ViewerContext, Map<Long, RejectReason>) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null
 ) {
@@ -187,8 +188,8 @@ fun MainScreen(
             composable(MainTab.Organize.route) {
                 OrganizeScreen(
                     viewModel = organizeViewModel,
-                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly ->
-                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.SELECT)
+                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, rejectCandidates ->
+                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.SELECT, rejectCandidates)
                     },
                     selectedFolder = selectedFolder,
                     selectionUpdates = selectionUpdates,
@@ -213,8 +214,8 @@ fun MainScreen(
                 val globalSelectionMap by organizeViewModel.globalSelectionMap.collectAsStateWithLifecycle()
                 ArchiveScreen(
                     globalSelectionMap = globalSelectionMap,
-                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly ->
-                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.ARCHIVE)
+                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, rejectCandidates ->
+                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.ARCHIVE, rejectCandidates)
                     },
                     onNavigateToOrganize = {
                         // Tab 1 (정리하기)로 이동

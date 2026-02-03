@@ -43,6 +43,7 @@ import com.cola.pickly.feature.organize.components.OrganizeEmptyScreen
 import com.cola.pickly.feature.organize.components.OrganizeGridScreen
 import com.cola.pickly.feature.organize.components.OrganizeTopBar
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.R
 import android.content.Intent
 
@@ -50,7 +51,7 @@ import android.content.Intent
 fun OrganizeScreen(
     viewModel: OrganizeViewModel = hiltViewModel(),
     folderSelectViewModel: FolderSelectViewModel = hiltViewModel(),
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, Map<Long, RejectReason>) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null,
     onMultiSelectModeChanged: ((Boolean) -> Unit)? = null,
@@ -270,7 +271,7 @@ fun OrganizeScreen(
                         autoRejectCandidates = state.autoRejectCandidates,
                         onPhotoClick = { photo ->
                             viewModel.requestInterruptConfirmation {
-                                onNavigateToPhotoDetail(state.folderId, photo.id, state.selectionMap, false)
+                                onNavigateToPhotoDetail(state.folderId, photo.id, state.selectionMap, false, state.autoRejectCandidates)
                             }
                         },
                         onToggleSelection = { photoId ->

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.cola.pickly.core.data.database.PhotoScoreDao
 import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.RejectReason
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,9 @@ class ViewerViewModel @Inject constructor(
     private var initialSelectionMap: Map<Long, PhotoSelectionState> = 
         savedStateHandle.get<Map<Long, PhotoSelectionState>>("initial_selection_map") ?: emptyMap()
 
+    private var initialRejectCandidates: Map<Long, RejectReason> = 
+        savedStateHandle.get<Map<Long, RejectReason>>("initial_reject_candidates") ?: emptyMap()
+
     private val _uiState = MutableStateFlow<ViewerUiState>(ViewerUiState.Loading)
     val uiState: StateFlow<ViewerUiState> = _uiState.asStateFlow()
 
@@ -36,16 +40,29 @@ class ViewerViewModel @Inject constructor(
         loadPhotos()
     }
     
-    fun initializeSelectionMap(selectionMap: Map<Long, PhotoSelectionState>) {
+    fun initializeViewerData(
+        selectionMap: Map<Long, PhotoSelectionState>,
+        rejectCandidates: Map<Long, RejectReason>
+    ) {
         // savedStateHandle에 저장하여 loadPhotos()에서 읽을 수 있도록 함
         savedStateHandleRef["initial_selection_map"] = selectionMap
+        savedStateHandleRef["initial_reject_candidates"] = rejectCandidates
+        
         initialSelectionMap = selectionMap
+        initialRejectCandidates = rejectCandidates
         
         // 이미 로드된 경우 상태 업데이트
         if (_uiState.value is ViewerUiState.Success) {
             _uiState.update { currentState ->
                 if (currentState is ViewerUiState.Success) {
-                    currentState.copy(selectionMap = selectionMap)
+                    val updatedPhotos = currentState.photos.map { photo ->
+                        // Apply reject candidates if needed
+                        applyRejectCandidate(photo, rejectCandidates)
+                    }
+                    currentState.copy(
+                        photos = updatedPhotos,
+                        selectionMap = selectionMap
+                    )
                 } else {
                     currentState
                 }
@@ -65,19 +82,23 @@ class ViewerViewModel @Inject constructor(
                 // TODO: 페이징이나 대량 데이터 처리 고려 필요, 현재는 전체 로드
                 val allPhotos = photoRepository.getPhotosByBucketId(folderId)
 
-                // 각 Photo의 recommendationScore를 DB에서 로드하여 추가
-                val photosWithScores = allPhotos.map { photo ->
-                    val scoreEntity = photoScoreDao.getScore(photo.id)
-                    if (scoreEntity != null) {
-                        photo.copy(recommendationScore = scoreEntity.score)
-                    } else {
-                        photo
-                    }
-                }
-
-                // selectionMap 사용 시점에 최신값 읽기 (초기화 후 업데이트된 값 반영)
+                // selectionMap 및 rejectCandidates 사용 시점에 최신값 읽기
                 val currentSelectionMap = savedStateHandleRef.get<Map<Long, PhotoSelectionState>>("initial_selection_map")
                     ?: initialSelectionMap
+                val currentRejectCandidates = savedStateHandleRef.get<Map<Long, RejectReason>>("initial_reject_candidates")
+                    ?: initialRejectCandidates
+
+                // 각 Photo의 recommendationScore를 DB에서 로드하고 Reject Candidate 반영
+                val photosWithScores = allPhotos.map { photo ->
+                    var photoWithScore = photo
+                    val scoreEntity = photoScoreDao.getScore(photo.id)
+                    
+                    if (scoreEntity != null) {
+                        photoWithScore = photo.copy(recommendationScore = scoreEntity.score)
+                    }
+                    
+                    applyRejectCandidate(photoWithScore, currentRejectCandidates)
+                }
 
                 val filteredPhotos = if (selectedOnly) {
                     val selectedIds = currentSelectionMap
@@ -115,6 +136,15 @@ class ViewerViewModel @Inject constructor(
                 _uiState.value = ViewerUiState.Error(e.message ?: "사진을 불러오는 중 에러가 발생했습니다.")
             }
         }
+    }
+
+    private fun applyRejectCandidate(photo: com.cola.pickly.core.model.Photo, candidates: Map<Long, RejectReason>): com.cola.pickly.core.model.Photo {
+        val candidateReason = candidates[photo.id] ?: return photo
+        
+        val currentScore = photo.recommendationScore ?: com.cola.pickly.core.model.RecommendationScore.DEFAULT
+        return photo.copy(
+            recommendationScore = currentScore.copy(rejectReason = candidateReason)
+        )
     }
 
     fun toggleSelection(photoId: Long) {

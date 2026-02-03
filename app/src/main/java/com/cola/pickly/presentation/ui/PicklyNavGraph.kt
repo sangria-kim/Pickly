@@ -19,6 +19,7 @@ import com.cola.pickly.presentation.MainScreen
 import com.cola.pickly.presentation.MainViewModel
 import com.cola.pickly.presentation.splash.SplashScreen
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.presentation.viewer.ViewerUiState
 import com.cola.pickly.presentation.viewer.ViewerViewModel
@@ -56,12 +57,16 @@ fun PicklyNavGraph(
 
             MainScreen(
                 mainViewModel = mainViewModel,
-                onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext ->
+                onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext, rejectCandidates ->
                     // viewer 라우트로 이동하기 전에 selectionMap을 현재 backStackEntry의 savedStateHandle에 저장
                     // viewer composable에서 previousBackStackEntry의 savedStateHandle을 통해 읽어옴
                     navController.currentBackStackEntry?.savedStateHandle?.set(
                         "initial_selection_map_for_viewer",
                         selectionMap
+                    )
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "initial_reject_candidates_for_viewer",
+                        rejectCandidates
                     )
                     navController.navigate("viewer/$folderId/$photoId?selectedOnly=$selectedOnly&context=${viewerContext.name}")
                 },
@@ -96,14 +101,19 @@ fun PicklyNavGraph(
             
             // 이전 화면(main)에서 전달된 initial_selection_map을 읽음
             val selectionMapFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
+            val rejectCandidatesFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, RejectReason>>("initial_reject_candidates_for_viewer")
             
             val viewerViewModel: ViewerViewModel = hiltViewModel()
             
             // ViewModel 초기화 직후 selectionMap 설정
             if (selectionMapFromPrevious != null) {
-                viewerViewModel.initializeSelectionMap(selectionMapFromPrevious)
+                viewerViewModel.initializeViewerData(
+                    selectionMapFromPrevious,
+                    rejectCandidatesFromPrevious ?: emptyMap()
+                )
                 // 데이터 소비 후 초기화
                 navController.previousBackStackEntry?.savedStateHandle?.remove<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
+                navController.previousBackStackEntry?.savedStateHandle?.remove<Map<Long, RejectReason>>("initial_reject_candidates_for_viewer")
             }
             
             val uiState by viewerViewModel.uiState.collectAsStateWithLifecycle()
