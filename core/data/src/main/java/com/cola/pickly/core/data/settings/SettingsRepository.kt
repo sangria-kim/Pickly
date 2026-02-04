@@ -15,9 +15,11 @@ interface SettingsRepository {
 
     suspend fun setThemeMode(mode: ThemeMode)
 
-    suspend fun setSmartDiscardReasonEnabled(enabled: Boolean)
-
     suspend fun setSmartDiscardCriteria(criteria: Set<com.cola.pickly.core.model.RejectReason>)
+
+    suspend fun setSmartDiscardThresholds(thresholds: SmartDiscardThresholds)
+
+    suspend fun setDebugOptions(options: DebugOptions)
 }
 
 

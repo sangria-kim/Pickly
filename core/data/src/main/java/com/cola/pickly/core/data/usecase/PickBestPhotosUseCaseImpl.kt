@@ -2,13 +2,16 @@ package com.cola.pickly.core.data.usecase
 
 import android.util.Log
 import com.cola.pickly.core.data.analyzer.PhotoQualityAnalyzer
+import com.cola.pickly.core.data.analyzer.PhotoQualityAnalyzerFactory
 import com.cola.pickly.core.data.database.PhotoScoreDao
 import com.cola.pickly.core.data.database.PhotoScoreEntity
+import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.domain.usecase.PickBestPhotosUseCase
 import com.cola.pickly.core.model.Photo
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
@@ -19,21 +22,25 @@ import javax.inject.Inject
  * DB 캐싱을 지원하여 이미 분석된 사진은 재분석하지 않습니다.
  */
 class PickBestPhotosUseCaseImpl @Inject constructor(
-    private val analyzer: PhotoQualityAnalyzer,
+    private val analyzerFactory: PhotoQualityAnalyzerFactory,
+    private val settingsRepository: SettingsRepository,
     private val photoScoreDao: PhotoScoreDao
 ) : PickBestPhotosUseCase {
 
     override suspend fun invoke(photos: List<Photo>): List<Photo> = coroutineScope {
+        val currentSettings = settingsRepository.settings.first()
+        val analyzer = analyzerFactory.create(currentSettings.smartDiscardThresholds)
+
         // 사진 단위 병렬 처리
         val deferredPhotos = photos.map { photo ->
             async {
-                processPhoto(photo)
+                processPhoto(photo, analyzer)
             }
         }
         deferredPhotos.awaitAll()
     }
 
-    private suspend fun processPhoto(photo: Photo): Photo {
+    private suspend fun processPhoto(photo: Photo, analyzer: PhotoQualityAnalyzer): Photo {
         // 캐싱된 점수가 있으면 DB에서 가져오고, 없으면 분석 후 DB에 저장
         val cachedScore = photoScoreDao.getScore(photo.id)
         return if (cachedScore != null) {

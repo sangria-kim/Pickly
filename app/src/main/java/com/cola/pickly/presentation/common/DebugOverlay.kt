@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,14 +18,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cola.pickly.core.data.settings.DebugOptions
 import com.cola.pickly.core.model.Photo
 
 @Composable
 fun DebugOverlay(
     photo: Photo,
-    debugOptions: AppDebugConfig,
+    debugOptions: DebugOptions,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -63,7 +66,7 @@ fun DebugOverlay(
                 .align(Alignment.Center)
         ) {
             // 3. 얼굴 박스 그리기
-            if (debugOptions.isShowFaceBoundingBoxEnabled) {
+            if (debugOptions.showFaceBoundingBox) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     // 이 Canvas는 displayedWidth/Height 크기를 가짐 (Box 크기와 동일)
                     // photoWidth/Height -> Canvas Size로 스케일링
@@ -96,9 +99,29 @@ fun DebugOverlay(
             }
         }
 
-        // 4. 점수 및 메타 정보 표시 (이미지 영역 밖으로 벗어날 수 있도록 Root Box에 배치)
+        // 4. 스마트 제외 사유 표시 (새 기능)
+        if (debugOptions.showRejectReasonOverlay && score != null && score.isCutoff) {
+            score.rejectReason?.let { reason ->
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = 48.dp, start = 8.dp)
+                        .background(Color.Red.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "제외: ${reason.label}",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        // 5. 점수 및 메타 정보 표시 (이미지 영역 밖으로 벗어날 수 있도록 Root Box에 배치)
         // 오른쪽 전체 영역 사용 (TopEnd ~ BottomEnd)
-        if (debugOptions.isShowScoreEnabled && score != null) {
+        if (debugOptions.showScoreOverlay && score != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd) // 우측 상단 정렬

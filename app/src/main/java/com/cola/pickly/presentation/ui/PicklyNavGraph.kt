@@ -26,12 +26,32 @@ import com.cola.pickly.presentation.viewer.ViewerScreen
 import com.cola.pickly.presentation.viewer.ViewerViewModel
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import com.cola.pickly.core.data.settings.SettingsRepository
+import dagger.hilt.android.EntryPointAccessors
+import androidx.compose.ui.platform.LocalContext
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface PicklyNavGraphEntryPoint {
+    fun settingsRepository(): SettingsRepository
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PicklyNavGraph(
     mainViewModel: MainViewModel
 ) {
+    val context = LocalContext.current
+    val entryPoint = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            PicklyNavGraphEntryPoint::class.java
+        )
+    }
+    val settingsRepository = remember { entryPoint.settingsRepository() }
     val navController = rememberNavController()
     SharedTransitionLayout {
         NavHost(navController = navController, startDestination = "splash") {
@@ -150,7 +170,8 @@ fun PicklyNavGraph(
                         },
                         onRejectClick = { photoId ->
                             viewerViewModel.toggleRejection(photoId)
-                        }
+                        },
+                        settingsRepository = settingsRepository
                     )
                 }
                 is ViewerUiState.Error -> {

@@ -26,14 +26,23 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val cacheRepository: CacheRepository
+    private val cacheRepository: CacheRepository,
+    @javax.inject.Named("isDebugBuild") private val isDebugBuild: Boolean,
+    @javax.inject.Named("appVersion") private val appVersion: String
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    private val _uiState = MutableStateFlow(
+        SettingsUiState(
+            appVersion = appVersion,
+            isDebugBuild = isDebugBuild
+        )
+    )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<SettingsEvent>()
     val events = _events.asSharedFlow()
+
+    private var versionTapCount = 0
 
     init {
         viewModelScope.launch {
@@ -42,8 +51,9 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         duplicateFilenamePolicy = settings.duplicateFilenamePolicy,
                         themeMode = settings.themeMode,
-                        isSmartDiscardReasonEnabled = settings.isSmartDiscardReasonEnabled,
-                        smartDiscardCriteria = settings.smartDiscardCriteria
+                        smartDiscardCriteria = settings.smartDiscardCriteria,
+                        debugOptions = settings.debugOptions,
+                        smartDiscardThresholds = settings.smartDiscardThresholds
                     )
                 }
             }
@@ -54,10 +64,6 @@ class SettingsViewModel @Inject constructor(
 
     fun setDuplicateFilenamePolicy(policy: DuplicateFilenamePolicy) {
         viewModelScope.launch { settingsRepository.setDuplicateFilenamePolicy(policy) }
-    }
-
-    fun setSmartDiscardReasonEnabled(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setSmartDiscardReasonEnabled(enabled) }
     }
 
     fun toggleSmartDiscardCriterion(criterion: com.cola.pickly.core.model.RejectReason) {
@@ -107,11 +113,67 @@ class SettingsViewModel @Inject constructor(
             refreshCacheSize()
         }
     }
+
+    // 디버그 메뉴 관련
+    fun onVersionTap() {
+        if (!isDebugBuild) return
+
+        versionTapCount++
+        if (versionTapCount >= 7) {
+            _uiState.update { it.copy(isDebugMenuVisible = true) }
+        }
+    }
+
+    fun setDebugOption(type: DebugOptionType, enabled: Boolean) {
+        viewModelScope.launch {
+            val currentOptions = _uiState.value.debugOptions
+            val newOptions = when (type) {
+                DebugOptionType.SHOW_FACE_BOX -> currentOptions.copy(showFaceBoundingBox = enabled)
+                DebugOptionType.SHOW_REJECT_REASON -> currentOptions.copy(showRejectReasonOverlay = enabled)
+                DebugOptionType.SHOW_SCORE -> currentOptions.copy(showScoreOverlay = enabled)
+            }
+            settingsRepository.setDebugOptions(newOptions)
+        }
+    }
+
+    fun setThreshold(type: ThresholdType, value: Float) {
+        viewModelScope.launch {
+            val currentThresholds = _uiState.value.smartDiscardThresholds
+            val newThresholds = when (type) {
+                ThresholdType.BLUR -> currentThresholds.copy(blurThreshold = value)
+                ThresholdType.MIN_FACE_SIZE -> currentThresholds.copy(minFaceSize = value)
+                ThresholdType.HEAD_ANGLE -> currentThresholds.copy(headAngleLimit = value)
+                ThresholdType.EYE_OPEN -> currentThresholds.copy(eyeOpenThreshold = value)
+                ThresholdType.SMILE_EXCEPTION -> currentThresholds.copy(smileExceptionThreshold = value)
+            }
+            settingsRepository.setSmartDiscardThresholds(newThresholds)
+        }
+    }
+
+    fun resetSmartDiscardThresholds() {
+        viewModelScope.launch {
+            settingsRepository.setSmartDiscardThresholds(com.cola.pickly.core.data.settings.SmartDiscardThresholds())
+        }
+    }
 }
 
 sealed interface SettingsEvent {
     data object CacheCleared : SettingsEvent
     data object CacheClearFailed : SettingsEvent
+}
+
+enum class DebugOptionType {
+    SHOW_FACE_BOX,
+    SHOW_REJECT_REASON,
+    SHOW_SCORE
+}
+
+enum class ThresholdType {
+    BLUR,
+    MIN_FACE_SIZE,
+    HEAD_ANGLE,
+    EYE_OPEN,
+    SMILE_EXCEPTION
 }
 
 

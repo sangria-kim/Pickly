@@ -17,18 +17,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.cola.pickly.core.data.settings.Settings
+import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.ui.util.ViewerSystemBarsPolicy
+import com.cola.pickly.presentation.common.DebugOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerTopOverlay
 import com.cola.pickly.presentation.viewer.components.ZoomableImage
+import dagger.hilt.android.EntryPointAccessors
+import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -45,8 +52,12 @@ fun ViewerScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBackClick: () -> Unit,
     onSelectClick: (Long) -> Unit = {},
-    onRejectClick: (Long) -> Unit = {}
+    onRejectClick: (Long) -> Unit = {},
+    settingsRepository: SettingsRepository
 ) {
+    val settings by settingsRepository.settings.collectAsStateWithLifecycle(
+        initialValue = Settings()
+    )
     var isOverlayVisible by remember { mutableStateOf(true) }
     var isInfoVisible by remember { mutableStateOf(false) } // State for info overlay
     var isZoomed by remember { mutableStateOf(false) }
@@ -87,28 +98,35 @@ fun ViewerScreen(
             userScrollEnabled = !isZoomed // 확대 중일 때는 스와이프 비활성화
         ) { page ->
             val photo = photos[page]
-            
-            
-            ZoomableImage(
-                imagePath = photo.filePath,
-                photoId = photo.id,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-                onZoomStateChanged = { scale ->
-                    val wasZoomed = isZoomed
-                    isZoomed = scale > 1f
 
-                    if (!wasZoomed && isZoomed) {
-                        // 줌 시작: 현재 오버레이 상태 저장 후 숨김
-                        overlayStateBeforeZoom = isOverlayVisible
-                        isOverlayVisible = false
-                        isInfoVisible = false
-                    } else if (wasZoomed && !isZoomed) {
-                        // 줌 해제: 이전 오버레이 상태 복원
-                        isOverlayVisible = overlayStateBeforeZoom
+            Box(modifier = Modifier.fillMaxSize()) {
+                ZoomableImage(
+                    imagePath = photo.filePath,
+                    photoId = photo.id,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    onZoomStateChanged = { scale ->
+                        val wasZoomed = isZoomed
+                        isZoomed = scale > 1f
+
+                        if (!wasZoomed && isZoomed) {
+                            // 줌 시작: 현재 오버레이 상태 저장 후 숨김
+                            overlayStateBeforeZoom = isOverlayVisible
+                            isOverlayVisible = false
+                            isInfoVisible = false
+                        } else if (wasZoomed && !isZoomed) {
+                            // 줌 해제: 이전 오버레이 상태 복원
+                            isOverlayVisible = overlayStateBeforeZoom
+                        }
                     }
-                }
-            )
+                )
+
+                // DebugOverlay 추가
+                DebugOverlay(
+                    photo = photo,
+                    debugOptions = settings.debugOptions
+                )
+            }
         }
 
         // Top Overlay

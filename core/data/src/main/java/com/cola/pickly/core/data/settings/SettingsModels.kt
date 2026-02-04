@@ -25,19 +25,6 @@ enum class ThemeMode {
 }
 
 /**
- * 스마트 사진 제외 기능의 임계값 설정.
- *
- * PhotoQualityAnalyzer가 사진을 분석할 때 사용하는 기준값들입니다.
- */
-data class SmartDiscardThresholds(
-    val blurThreshold: Double = 100.0,           // 흔들림 임계값 (Laplacian variance)
-    val minFaceSize: Float = 0.05f,              // 얼굴 최소 크기 (이미지 너비 대비 비율)
-    val eyeOpenThreshold: Float = 0.5f,          // 눈 뜸 임계값
-    val smileExceptionThreshold: Float = 0.7f,   // 눈웃음 예외 임계값
-    val headAngleLimit: Float = 30.0f            // 고개 각도 제한 (도)
-)
-
-/**
  * 설정 값 묶음(단일 소스).
  *
  * Wireframe.md의 정책 기본값을 우선 반영:
@@ -49,9 +36,34 @@ data class SmartDiscardThresholds(
 data class Settings(
     val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
     val themeMode: ThemeMode = ThemeMode.System,
-    val isSmartDiscardReasonEnabled: Boolean = true,
     val smartDiscardCriteria: Set<com.cola.pickly.core.model.RejectReason> = com.cola.pickly.core.model.RejectReason.entries.toSet(),
-    val smartDiscardThresholds: SmartDiscardThresholds = SmartDiscardThresholds()
+    val smartDiscardThresholds: SmartDiscardThresholds = SmartDiscardThresholds(),
+    val debugOptions: DebugOptions = DebugOptions()
+)
+
+/**
+ * 스마트 사진 자동 제외 기능의 분석 파라미터 임계값.
+ *
+ * 디버그 메뉴에서 튜닝 가능하며, 각 임계값은 사진 분석 시 사용됩니다.
+ */
+data class SmartDiscardThresholds(
+    val blurThreshold: Float = 100.0f,
+    val minFaceSize: Float = 0.05f,
+    val headAngleLimit: Float = 30.0f,
+    val eyeOpenThreshold: Float = 0.50f,
+    val smileExceptionThreshold: Float = 0.70f
+)
+
+/**
+ * 디버그 전용 옵션 (개발자 메뉴).
+ *
+ * ViewerScreen에서 분석 결과를 시각화하는 옵션들입니다.
+ * Release 빌드에서는 디버그 메뉴 자체가 노출되지 않습니다.
+ */
+data class DebugOptions(
+    val showFaceBoundingBox: Boolean = true,
+    val showRejectReasonOverlay: Boolean = true,
+    val showScoreOverlay: Boolean = false
 )
 
 

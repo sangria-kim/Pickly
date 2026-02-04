@@ -1,6 +1,8 @@
 package com.cola.pickly.feature.settings
 
+import com.cola.pickly.core.data.settings.DebugOptions
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
+import com.cola.pickly.core.data.settings.SmartDiscardThresholds
 import com.cola.pickly.core.data.settings.ThemeMode
 
 /**
@@ -12,11 +14,17 @@ import com.cola.pickly.core.data.settings.ThemeMode
 data class SettingsUiState(
     val duplicateFilenamePolicy: DuplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
     val themeMode: ThemeMode = ThemeMode.System,
-    val isSmartDiscardReasonEnabled: Boolean = true,
     val smartDiscardCriteria: Set<com.cola.pickly.core.model.RejectReason> = com.cola.pickly.core.model.RejectReason.entries.toSet(),
     val isCacheSizeLoading: Boolean = true,
     val cacheSizeBytes: Long? = null,
-    val isClearingCache: Boolean = false
+    val isClearingCache: Boolean = false,
+
+    // 디버그 관련
+    val appVersion: String = "1.0.0",
+    val isDebugBuild: Boolean = false,
+    val isDebugMenuVisible: Boolean = false,
+    val debugOptions: DebugOptions = DebugOptions(),
+    val smartDiscardThresholds: SmartDiscardThresholds = SmartDiscardThresholds()
 )
 
 

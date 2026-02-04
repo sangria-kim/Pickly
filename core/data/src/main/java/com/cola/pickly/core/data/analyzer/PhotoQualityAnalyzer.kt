@@ -8,6 +8,7 @@ import android.graphics.Rect
 import android.util.Log
 import android.util.Size
 import androidx.exifinterface.media.ExifInterface
+import com.cola.pickly.core.data.settings.SmartDiscardThresholds
 import com.cola.pickly.core.model.FaceBoundingBox
 import com.cola.pickly.core.model.RecommendationScore
 import com.cola.pickly.core.model.Photo
@@ -26,7 +27,8 @@ import kotlin.math.sqrt
  */
 class PhotoQualityAnalyzer(
     private val faceDetectorHelper: FaceDetectorHelper,
-    private val thresholds: com.cola.pickly.core.data.settings.SmartDiscardThresholds
+    private val thresholds: SmartDiscardThresholds,
+    private val enabledCriteria: Set<RejectReason> = RejectReason.entries.toSet()
 ) {
 
     /**
@@ -66,14 +68,23 @@ class PhotoQualityAnalyzer(
             
             // 6. 우선순위 2위: TOO_SMALL (얼굴 너무 작음, 논리적 제약으로 2위 고정)
             if (validFaces.isEmpty()) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Faces too small")
+                if (RejectReason.TOO_SMALL in enabledCriteria) {
+                    Log.d(TAG, "analyze: ID=${photo.id}, Faces too small")
+                    return@withContext RecommendationScore(
+                        faceCount = allDetectedFaces.size, // 검출은 됐으나 너무 작음
+                        isCutoff = true,
+                        cutoffReason = "Faces too small ( < 5% )",
+                        rejectReason = RejectReason.TOO_SMALL,
+                        rawSharpness = sharpnessRaw,
+                        // 작은 얼굴들이라도 박스는 표시해줌
+                        allFaceBoundingBoxes = getScaledFaceBoundingBoxes(allDetectedFaces, originalSize, bitmap.width, bitmap.height)
+                    )
+                }
+                // TOO_SMALL 비활성화 + validFaces 비어있음 → 후속 체크 불가 → cutoff=false 반환
                 return@withContext RecommendationScore(
-                    faceCount = allDetectedFaces.size, // 검출은 됐으나 너무 작음
-                    isCutoff = true,
-                    cutoffReason = "Faces too small ( < 5% )",
-                    rejectReason = RejectReason.TOO_SMALL,
+                    faceCount = allDetectedFaces.size,
+                    isCutoff = false,
                     rawSharpness = sharpnessRaw,
-                    // 작은 얼굴들이라도 박스는 표시해줌
                     allFaceBoundingBoxes = getScaledFaceBoundingBoxes(allDetectedFaces, originalSize, bitmap.width, bitmap.height)
                 )
             }
@@ -90,7 +101,7 @@ class PhotoQualityAnalyzer(
             val headEulerY = bestFace.headEulerAngleY
 
             // 8. 우선순위 3위: CROPPED (얼굴 잘림)
-            if (isFaceCropped(bestFace, bitmap.width, bitmap.height)) {
+            if (isFaceCropped(bestFace, bitmap.width, bitmap.height) && RejectReason.CROPPED in enabledCriteria) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Face cropped")
                 return@withContext RecommendationScore(
                     faceCount = validFaces.size,
@@ -113,7 +124,7 @@ class PhotoQualityAnalyzer(
             val isEyesClosed = (leftEyeOpen < thresholds.eyeOpenThreshold || rightEyeOpen < thresholds.eyeOpenThreshold)
             val isSmiling = smileProb > thresholds.smileExceptionThreshold
 
-            if (isEyesClosed && !isSmiling) {
+            if (isEyesClosed && !isSmiling && RejectReason.EYES_CLOSED in enabledCriteria) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Eyes closed (L=$leftEyeOpen, R=$rightEyeOpen)")
                 return@withContext RecommendationScore(
                     faceCount = validFaces.size,
@@ -133,7 +144,7 @@ class PhotoQualityAnalyzer(
             }
 
             // 10. 우선순위 5위: OCCLUDED (얼굴가림)
-            if (isFaceOccluded(bestFace)) {
+            if (isFaceOccluded(bestFace) && RejectReason.OCCLUDED in enabledCriteria) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Face occluded")
                 return@withContext RecommendationScore(
                     faceCount = validFaces.size,
@@ -153,7 +164,7 @@ class PhotoQualityAnalyzer(
             }
 
             // 11. 우선순위 6위: HEAD_TURNED (고개돌림)
-            if (isHeadTurnedTooMuch(bestFace)) {
+            if (isHeadTurnedTooMuch(bestFace) && RejectReason.HEAD_TURNED in enabledCriteria) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Head turned too much (X=$headEulerX, Y=$headEulerY)")
                 return@withContext RecommendationScore(
                     faceCount = validFaces.size,
@@ -173,7 +184,7 @@ class PhotoQualityAnalyzer(
             }
 
             // 12. 우선순위 7위: BLURRY (흔들림)
-            if (sharpnessRaw < thresholds.blurThreshold) {
+            if (sharpnessRaw < thresholds.blurThreshold.toDouble() && RejectReason.BLURRY in enabledCriteria) {
                 Log.d(TAG, "analyze: ID=${photo.id}, Too blurry (var=$sharpnessRaw)")
                 return@withContext RecommendationScore(
                     faceCount = validFaces.size,
@@ -461,18 +472,5 @@ class PhotoQualityAnalyzer(
 
     companion object {
         private const val TAG = "PhotoQualityAnalyzer"
-
-        // 아래 값들은 이제 SmartDiscardThresholds로 대체됨
-        @Deprecated("Use thresholds.blurThreshold", ReplaceWith("thresholds.blurThreshold"))
-        private const val SHAKE_THRESHOLD = 100.0
-
-        @Deprecated("Use thresholds.eyeOpenThreshold", ReplaceWith("thresholds.eyeOpenThreshold"))
-        private const val EYES_OPEN_THRESHOLD = 0.5
-
-        @Deprecated("Use thresholds.smileExceptionThreshold", ReplaceWith("thresholds.smileExceptionThreshold"))
-        private const val SMILE_THRESHOLD = 0.7
-
-        @Deprecated("Use thresholds.headAngleLimit", ReplaceWith("thresholds.headAngleLimit"))
-        private const val HEAD_ROTATION_THRESHOLD = 30.0
     }
 }

@@ -15,7 +15,6 @@ private fun SettingsScreenContentPreview_Default() {
             uiState = SettingsUiState(),
             onDuplicatePolicyChanged = {},
             onThemeChanged = {},
-            onSmartDiscardReasonEnabledChanged = {},
             onSmartDiscardCriterionToggle = {},
             onClearCache = {}
         )
@@ -30,12 +29,10 @@ private fun SettingsScreenContentPreview_Customized() {
             uiState = SettingsUiState(
                 duplicateFilenamePolicy = DuplicateFilenamePolicy.Skip,
                 themeMode = ThemeMode.Dark,
-                isSmartDiscardReasonEnabled = true,
                 smartDiscardCriteria = setOf(RejectReason.BLURRY, RejectReason.EYES_CLOSED)
             ),
             onDuplicatePolicyChanged = {},
             onThemeChanged = {},
-            onSmartDiscardReasonEnabledChanged = {},
             onSmartDiscardCriterionToggle = {},
             onClearCache = {}
         )

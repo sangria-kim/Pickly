@@ -1,11 +1,13 @@
 package com.cola.pickly.feature.organize.domain.usecase
 
-import com.cola.pickly.core.data.analyzer.PhotoQualityAnalyzer
+import com.cola.pickly.core.data.analyzer.PhotoQualityAnalyzerFactory
+import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.RejectReason
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
@@ -13,9 +15,12 @@ import kotlin.system.measureTimeMillis
 /**
  * 사진 목록을 분석하여 자동 제외 후보를 식별하는 UseCase.
  * PhotoQualityAnalyzer를 사용하여 품질 기준 미달 사진을 찾습니다.
+ *
+ * 사용자 설정(SmartDiscardThresholds)을 실시간으로 적용하여 분석합니다.
  */
 class AnalyzePhotosForAutoRejectUseCase @Inject constructor(
-    private val photoQualityAnalyzer: PhotoQualityAnalyzer
+    private val analyzerFactory: PhotoQualityAnalyzerFactory,
+    private val settingsRepository: SettingsRepository
 ) {
     /**
      * 사진 목록을 분석하여 제외 후보 ID 목록을 반환합니다.
@@ -32,6 +37,10 @@ class AnalyzePhotosForAutoRejectUseCase @Inject constructor(
             )
         }
 
+        // 최신 설정 가져오기 (분석 시작 전 1회)
+        val currentSettings = settingsRepository.settings.first()
+        val analyzer = analyzerFactory.create(currentSettings.smartDiscardThresholds, currentSettings.smartDiscardCriteria)
+
         var candidates: Map<Long, RejectReason> = emptyMap()
         val analysisDurationMs = measureTimeMillis {
             candidates = photos
@@ -40,7 +49,7 @@ class AnalyzePhotosForAutoRejectUseCase @Inject constructor(
                     chunk.map { photo ->
                         async {
                             try {
-                                val score = photoQualityAnalyzer.analyze(photo)
+                                val score = analyzer.analyze(photo)
                                 if (score.isCutoff && score.rejectReason != null) {
                                     photo.id to score.rejectReason!!
                                 } else null
