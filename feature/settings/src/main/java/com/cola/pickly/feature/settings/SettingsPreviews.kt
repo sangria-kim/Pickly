@@ -38,3 +38,17 @@ private fun SettingsScreenContentPreview_Customized() {
         )
     }
 }
+
+@Preview(name = "Debug Visible", showBackground = true)
+@Composable
+private fun SettingsScreenContentPreview_DebugVisible() {
+    PicklyTheme {
+        SettingsScreenContent(
+            uiState = SettingsUiState(isDebugBuild = true, isDebugMenuVisible = true, cacheSizeBytes = 134 * 1024 * 1024),
+            onDuplicatePolicyChanged = {},
+            onThemeChanged = {},
+            onSmartDiscardCriterionToggle = {},
+            onClearCache = {}
+        )
+    }
+}

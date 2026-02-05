@@ -6,3 +6,5 @@ import androidx.compose.ui.graphics.Color
 val TealAccent = Color(0xFF2ED3B7)
 val TextPrimary = Color(0xFF121212)
 val TextSecondary = Color(0xFF757575)
+val DebugPinkOutline = Color(0xFFFFABB3)
+val DebugPinkBackground = Color(0xFFFFF0F1)

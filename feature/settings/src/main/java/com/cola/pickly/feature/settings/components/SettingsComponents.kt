@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -41,24 +43,24 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun SettingsSectionHeader(
     title: String,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        val titleColor = MaterialTheme.colorScheme.onSurface
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = titleColor,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-    }
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp)
+    )
 }
 
 @Composable
@@ -128,13 +130,8 @@ fun SettingsSwitchItem(
     ListItem(
         modifier = modifier.fillMaxWidth(),
         headlineContent = { Text(text = title, color = primaryColor) },
-        supportingContent = {
-            // Subtitle이 없어도 높이를 유지하기 위해 빈 텍스트를 렌더링하거나 subtitle을 표시함
-            val text = subtitle ?: " "
-            Text(
-                text = text,
-                color = if (subtitle != null) secondaryColor else Color.Transparent
-            )
+        supportingContent = subtitle?.let {
+            { Text(text = it, color = secondaryColor) }
         },
         trailingContent = {
             Switch(
@@ -177,6 +174,7 @@ fun SettingsActionItem(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     trailingText: String? = null,
+    showChevron: Boolean = false,
     enabled: Boolean = true
 ) {
     val primaryColor = if (enabled) {
@@ -198,9 +196,22 @@ fun SettingsActionItem(
         supportingContent = subtitle?.let {
             { Text(text = it, color = secondaryColor) }
         },
-        trailingContent = trailingText?.let { tt ->
-            { Text(text = tt, color = secondaryColor) }
-        }
+        trailingContent = if (trailingText != null || showChevron) {
+            {
+                Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {
+                    if (trailingText != null) {
+                        Text(text = trailingText, color = secondaryColor)
+                    }
+                    if (showChevron) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = secondaryColor
+                        )
+                    }
+                }
+            }
+        } else null
     )
 }
 
@@ -245,7 +256,8 @@ fun SettingsExpandableChecklist(
     subtitle: String? = null,
     items: List<Pair<String, Boolean>>,
     onItemCheckedChange: (Int, Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trailingLabel: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
     val primaryColor = MaterialTheme.colorScheme.onSurface
@@ -256,16 +268,21 @@ fun SettingsExpandableChecklist(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { expanded = !expanded },
-            headlineContent = { Text(text = title, color = primaryColor) },
+            headlineContent = { Text(text = title, style = MaterialTheme.typography.labelLarge, color = secondaryColor) },
             supportingContent = subtitle?.let {
-                { Text(text = it, color = secondaryColor) }
+                { Text(text = it, style = MaterialTheme.typography.bodySmall, color = secondaryColor) }
             },
             trailingContent = {
-                Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = secondaryColor
-                )
+                Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {
+                    if (trailingLabel != null) {
+                        Text(text = trailingLabel, style = MaterialTheme.typography.bodySmall, color = secondaryColor)
+                    }
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = secondaryColor
+                    )
+                }
             }
         )
 
@@ -332,13 +349,17 @@ fun SettingsSliderItem(
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = if (defaultValue != null) {
-                    "현재 ${valueFormatter(value)} / 기본 ${valueFormatter(defaultValue)}"
-                } else {
-                    valueFormatter(value)
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = TealAccent, fontWeight = FontWeight.Bold)) {
+                        append(valueFormatter(value))
+                    }
+                    if (defaultValue != null) {
+                        withStyle(style = SpanStyle(color = secondaryColor)) {
+                            append(" 기본 ${valueFormatter(defaultValue)}")
+                        }
+                    }
                 },
-                style = MaterialTheme.typography.bodyMedium,
-                color = secondaryColor
+                style = MaterialTheme.typography.bodyMedium
             )
         }
         Slider(
@@ -359,5 +380,79 @@ fun SettingsSliderItem(
                 color = secondaryColor
             )
         }
+    }
+}
+
+@Composable
+fun SettingsCardSection(
+    modifier: Modifier = Modifier,
+    borderColor: Color = MaterialTheme.colorScheme.outline,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    androidx.compose.material3.Card(
+        modifier = modifier.padding(horizontal = 16.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
+        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = backgroundColor)
+    ) {
+        Column { content() }
+    }
+}
+
+@Composable
+fun SettingsCardHeader(title: String, description: String? = null, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = if (description != null) 2.dp else 8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (description != null) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsCardTuningHeader(title: String, actionText: String, onActionClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp).fillMaxWidth(),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = actionText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TealAccent,
+            modifier = Modifier.clickable(onClick = onActionClick)
+        )
+    }
+}
+
+@Composable
+fun SettingsDebugSectionTitle(modifier: Modifier = Modifier) {
+    Row(modifier = modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "디버그",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        com.cola.pickly.core.ui.components.PillBadge(
+            text = "개발/QA 전용",
+            backgroundColor = Color(0xFFFFEBEE),
+            textColor = Color(0xFFD32F2F),
+            fontSize = 10.sp,
+            height = 20.dp
+        )
     }
 }
