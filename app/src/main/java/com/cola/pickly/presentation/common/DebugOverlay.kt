@@ -22,12 +22,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cola.pickly.core.data.settings.DebugOptions
+import com.cola.pickly.core.data.settings.SmartDiscardThresholds
 import com.cola.pickly.core.model.Photo
 
 @Composable
 fun DebugOverlay(
     photo: Photo,
     debugOptions: DebugOptions,
+    thresholds: SmartDiscardThresholds = SmartDiscardThresholds(),
+    isInfoVisible: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -122,10 +125,13 @@ fun DebugOverlay(
         // 5. 점수 및 메타 정보 표시 (이미지 영역 밖으로 벗어날 수 있도록 Root Box에 배치)
         // 오른쪽 전체 영역 사용 (TopEnd ~ BottomEnd)
         if (debugOptions.showScoreOverlay && score != null) {
+            // InfoOverlay 활성 시 아래로 이동 (겹침 방지)
+            // InfoOverlay 하단 ≈ statusBar(~40dp) + 72dp + content(~60dp) ≈ 172dp
+            val scoreTopPadding = if (isInfoVisible) 180.dp else 48.dp
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd) // 우측 상단 정렬
-                    .padding(top = 48.dp, end = 8.dp, bottom = 8.dp) // TopAppBar 고려하여 상단 여백
+                    .padding(top = scoreTopPadding, end = 8.dp, bottom = 8.dp)
                     .background(Color.Black.copy(alpha = 0.6f))
                     .padding(8.dp)
                     .verticalScroll(rememberScrollState()) // 내용이 길어지면 스크롤 가능하게 처리
@@ -160,10 +166,11 @@ fun DebugOverlay(
                     }
                     
                     appendLine("\n[Thresholds]")
-                    appendLine("Blur < 100.0")
-                    appendLine("Eye > 0.5")
-                    appendLine("Smile > 0.7")
-                    appendLine("Head < 30°")
+                    appendLine("Blur < ${"%.1f".format(thresholds.blurThreshold)}")
+                    appendLine("Eye > ${"%.2f".format(thresholds.eyeOpenThreshold)}")
+                    appendLine("Smile > ${"%.2f".format(thresholds.smileExceptionThreshold)}")
+                    appendLine("Head < ${"%.0f".format(thresholds.headAngleLimit)}°")
+                    appendLine("MinFace > ${"%.1f".format(thresholds.minFaceSize * 100)}%")
                 }
 
                 Text(

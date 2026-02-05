@@ -76,6 +76,8 @@ class PhotoQualityAnalyzer(
                         cutoffReason = "Faces too small ( < 5% )",
                         rejectReason = RejectReason.TOO_SMALL,
                         rawSharpness = sharpnessRaw,
+                        analyzedWidth = originalSize.width,
+                        analyzedHeight = originalSize.height,
                         // 작은 얼굴들이라도 박스는 표시해줌
                         allFaceBoundingBoxes = getScaledFaceBoundingBoxes(allDetectedFaces, originalSize, bitmap.width, bitmap.height)
                     )
@@ -85,6 +87,8 @@ class PhotoQualityAnalyzer(
                     faceCount = allDetectedFaces.size,
                     isCutoff = false,
                     rawSharpness = sharpnessRaw,
+                    analyzedWidth = originalSize.width,
+                    analyzedHeight = originalSize.height,
                     allFaceBoundingBoxes = getScaledFaceBoundingBoxes(allDetectedFaces, originalSize, bitmap.width, bitmap.height)
                 )
             }
@@ -109,6 +113,8 @@ class PhotoQualityAnalyzer(
                     cutoffReason = "Face cropped at edges",
                     rejectReason = RejectReason.CROPPED,
                     rawSharpness = sharpnessRaw,
+                    analyzedWidth = originalSize.width,
+                    analyzedHeight = originalSize.height,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),
                     rightEyeOpenProb = rightEyeOpen.toDouble(),
@@ -132,6 +138,8 @@ class PhotoQualityAnalyzer(
                     cutoffReason = "Eyes closed",
                     rejectReason = RejectReason.EYES_CLOSED,
                     rawSharpness = sharpnessRaw,
+                    analyzedWidth = originalSize.width,
+                    analyzedHeight = originalSize.height,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),
                     rightEyeOpenProb = rightEyeOpen.toDouble(),
@@ -152,6 +160,8 @@ class PhotoQualityAnalyzer(
                     cutoffReason = "Face occluded (Nose/Mouth hidden)",
                     rejectReason = RejectReason.OCCLUDED,
                     rawSharpness = sharpnessRaw,
+                    analyzedWidth = originalSize.width,
+                    analyzedHeight = originalSize.height,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),
                     rightEyeOpenProb = rightEyeOpen.toDouble(),
@@ -172,6 +182,8 @@ class PhotoQualityAnalyzer(
                     cutoffReason = "Head turned too much",
                     rejectReason = RejectReason.HEAD_TURNED,
                     rawSharpness = sharpnessRaw,
+                    analyzedWidth = originalSize.width,
+                    analyzedHeight = originalSize.height,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),
                     rightEyeOpenProb = rightEyeOpen.toDouble(),
@@ -192,6 +204,8 @@ class PhotoQualityAnalyzer(
                     cutoffReason = "Severe shaking (Blurry)",
                     rejectReason = RejectReason.BLURRY,
                     rawSharpness = sharpnessRaw,
+                    analyzedWidth = originalSize.width,
+                    analyzedHeight = originalSize.height,
                     eyeOpenProb = eyeOpenProb.toDouble(),
                     leftEyeOpenProb = leftEyeOpen.toDouble(),
                     rightEyeOpenProb = rightEyeOpen.toDouble(),

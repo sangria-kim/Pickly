@@ -121,11 +121,19 @@ fun ViewerScreen(
                     }
                 )
 
-                // DebugOverlay 추가
-                DebugOverlay(
-                    photo = photo,
-                    debugOptions = settings.debugOptions
-                )
+                // DebugOverlay — 탭 토글·줄 중 숨김을 다른 오버레이와 동일하게 적용
+                AnimatedVisibility(
+                    visible = isOverlayVisible && !isZoomed,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    DebugOverlay(
+                        photo = photo,
+                        debugOptions = settings.debugOptions,
+                        thresholds = settings.smartDiscardThresholds,
+                        isInfoVisible = isInfoVisible
+                    )
+                }
             }
         }
 
