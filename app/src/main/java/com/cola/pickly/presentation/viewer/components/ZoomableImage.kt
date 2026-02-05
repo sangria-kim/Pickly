@@ -67,7 +67,7 @@ fun ZoomableImage(
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(imagePath)
-                .crossfade(true)
+                .crossfade(false)
                 .build(),
             contentDescription = null,
             contentScale = ContentScale.Fit,

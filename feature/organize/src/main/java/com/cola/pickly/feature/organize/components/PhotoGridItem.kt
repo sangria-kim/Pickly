@@ -92,7 +92,7 @@ fun PhotoGridItem(
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(File(photo.filePath))
-                .crossfade(true)
+                .crossfade(false)
                 .size(512) // 이미지 크기를 512x512로 제한하여 메모리 사용량 감소
                 .build(),
             contentDescription = null,
