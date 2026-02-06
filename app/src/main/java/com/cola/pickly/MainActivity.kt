@@ -27,37 +27,27 @@ class MainActivity : ComponentActivity() {
     lateinit var settingsRepository: SettingsRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 시스템 스플래시 설치 (super.onCreate 이전에 호출해야 함)
         val splashScreen = installSplashScreen()
-        
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        setupUI(splashScreen)
+    }
 
-        // 초기화 로직 시작
+    private fun setupUI(splashScreen: androidx.core.splashscreen.SplashScreen) {
         mainViewModel.init()
-
-        // 스플래시 화면 유지 조건 설정
         splashScreen.setKeepOnScreenCondition {
-            // 권한 체크 중일 때만 시스템 스플래시 유지
             val state = mainViewModel.uiState.value
-            if (state is MainUiState.Initializing) {
-                state.isChecking
-            } else {
-                false
-            }
+            state is MainUiState.Initializing && state.isChecking
         }
-
         setContent {
             val settings = settingsRepository.settings.collectAsStateWithLifecycle(
                 initialValue = Settings()
             ).value
-
             val darkTheme = when (settings.themeMode) {
                 ThemeMode.System -> isSystemInDarkTheme()
                 ThemeMode.Light -> false
                 ThemeMode.Dark -> true
             }
-
             PicklyTheme(darkTheme = darkTheme) {
                 PicklyNavGraph(mainViewModel = mainViewModel)
             }

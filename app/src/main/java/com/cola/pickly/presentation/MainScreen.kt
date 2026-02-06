@@ -55,6 +55,8 @@ import com.cola.pickly.core.ui.theme.TealAccent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import com.cola.pickly.presentation.legal.PrivacyPolicyScreen
+import com.cola.pickly.presentation.legal.OpenSourceLicensesScreen
 
 sealed class MainTab(
     val route: String,
@@ -239,7 +241,28 @@ fun MainScreen(
                 )
             }
             composable(MainTab.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateToPrivacyPolicy = {
+                        navController.navigate("privacy_policy")
+                    },
+                    onNavigateToOpenSourceLicenses = {
+                        navController.navigate("open_source_licenses")
+                    }
+                )
+            }
+            composable("privacy_policy") {
+                PrivacyPolicyScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+            composable("open_source_licenses") {
+                OpenSourceLicensesScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     }

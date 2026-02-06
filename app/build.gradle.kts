@@ -5,6 +5,7 @@ plugins {
     id("kotlin-kapt")
     id("kotlin-parcelize")
     alias(libs.plugins.hilt)
+    alias(libs.plugins.aboutlibraries)
 }
 
 android {
@@ -36,6 +37,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs += listOf(
+            "-Xskip-prerelease-check",
+            "-Xsuppress-version-warnings"
+        )
     }
     buildFeatures {
         compose = true
@@ -92,6 +97,9 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    // --- AboutLibraries ---
+    implementation(libs.aboutlibraries.compose.m3.android)
+
     // --- Debug / Test ---
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -106,3 +114,13 @@ dependencies {
 kapt {
     correctErrorTypes = true
 }
+
+aboutLibraries {
+    // AboutLibraries 설정
+    // 라이선스 정보를 자동으로 수집하여 생성
+}
+
+// AboutLibraries가 생성한 JSON 파일을 res/raw로 복사
+// Note: 이 파일은 빌드 시 자동으로 생성되며, 수동으로 복사해야 합니다.
+// 개발 시에는 exportLibraryDefinitions 태스크를 실행한 후 수동으로 복사하거나,
+// CI/CD 파이프라인에서 자동화할 수 있습니다.

@@ -42,7 +42,9 @@ import com.cola.pickly.feature.settings.components.SettingsTextItem
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onNavigateToPrivacyPolicy: () -> Unit = {},
+    onNavigateToOpenSourceLicenses: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -55,7 +57,9 @@ fun SettingsScreen(
         onVersionTap = viewModel::onVersionTap,
         onDebugOptionChanged = viewModel::setDebugOption,
         onThresholdChanged = viewModel::setThreshold,
-        onResetThresholds = viewModel::resetSmartDiscardThresholds
+        onResetThresholds = viewModel::resetSmartDiscardThresholds,
+        onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
+        onNavigateToOpenSourceLicenses = onNavigateToOpenSourceLicenses
     )
 }
 
@@ -69,7 +73,9 @@ internal fun SettingsScreenContent(
     onVersionTap: () -> Unit = {},
     onDebugOptionChanged: (DebugOptionType, Boolean) -> Unit = { _, _ -> },
     onThresholdChanged: (ThresholdType, Float) -> Unit = { _, _ -> },
-    onResetThresholds: () -> Unit = {}
+    onResetThresholds: () -> Unit = {},
+    onNavigateToPrivacyPolicy: () -> Unit = {},
+    onNavigateToOpenSourceLicenses: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
 
@@ -175,13 +181,13 @@ internal fun SettingsScreenContent(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 SettingsActionItem(
                     title = "개인정보 처리방침",
-                    onClick = { /* TODO: Navigation */ },
+                    onClick = onNavigateToPrivacyPolicy,
                     showChevron = true
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 SettingsActionItem(
                     title = "오픈소스 라이선스",
-                    onClick = { /* TODO: Navigation */ },
+                    onClick = onNavigateToOpenSourceLicenses,
                     showChevron = true
                 )
             }
