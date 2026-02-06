@@ -129,7 +129,6 @@ class SettingsViewModel @Inject constructor(
             val currentOptions = _uiState.value.debugOptions
             val newOptions = when (type) {
                 DebugOptionType.SHOW_FACE_BOX -> currentOptions.copy(showFaceBoundingBox = enabled)
-                DebugOptionType.SHOW_REJECT_REASON -> currentOptions.copy(showRejectReasonOverlay = enabled)
                 DebugOptionType.SHOW_SCORE -> currentOptions.copy(showScoreOverlay = enabled)
             }
             settingsRepository.setDebugOptions(newOptions)
@@ -164,7 +163,6 @@ sealed interface SettingsEvent {
 
 enum class DebugOptionType {
     SHOW_FACE_BOX,
-    SHOW_REJECT_REASON,
     SHOW_SCORE
 }
 

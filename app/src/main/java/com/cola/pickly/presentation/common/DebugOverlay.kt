@@ -102,27 +102,7 @@ fun DebugOverlay(
             }
         }
 
-        // 4. 스마트 제외 사유 표시 (새 기능)
-        if (debugOptions.showRejectReasonOverlay && score != null && score.isCutoff) {
-            score.rejectReason?.let { reason ->
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(top = 48.dp, start = 8.dp)
-                        .background(Color.Red.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "제외: ${reason.label}",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
-        // 5. 점수 및 메타 정보 표시 (이미지 영역 밖으로 벗어날 수 있도록 Root Box에 배치)
+        // 4. 점수 및 메타 정보 표시 (이미지 영역 밖으로 벗어날 수 있도록 Root Box에 배치)
         // 오른쪽 전체 영역 사용 (TopEnd ~ BottomEnd)
         if (debugOptions.showScoreOverlay && score != null) {
             // InfoOverlay 활성 시 아래로 이동 (겹침 방지)

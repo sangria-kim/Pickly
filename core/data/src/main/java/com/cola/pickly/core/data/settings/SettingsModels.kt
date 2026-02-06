@@ -62,7 +62,6 @@ data class SmartDiscardThresholds(
  */
 data class DebugOptions(
     val showFaceBoundingBox: Boolean = true,
-    val showRejectReasonOverlay: Boolean = true,
     val showScoreOverlay: Boolean = false
 )
 

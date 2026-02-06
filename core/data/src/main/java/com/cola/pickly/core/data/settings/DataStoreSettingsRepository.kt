@@ -40,7 +40,6 @@ class DataStoreSettingsRepository @Inject constructor(
             ),
             debugOptions = DebugOptions(
                 showFaceBoundingBox = prefs[KEY_SHOW_FACE_BOX] ?: true,
-                showRejectReasonOverlay = prefs[KEY_SHOW_REJECT_REASON] ?: true,
                 showScoreOverlay = prefs[KEY_SHOW_SCORE] ?: false
             )
         )
@@ -71,7 +70,6 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun setDebugOptions(options: DebugOptions) {
         dataStore.edit { prefs ->
             prefs[KEY_SHOW_FACE_BOX] = options.showFaceBoundingBox
-            prefs[KEY_SHOW_REJECT_REASON] = options.showRejectReasonOverlay
             prefs[KEY_SHOW_SCORE] = options.showScoreOverlay
         }
     }
@@ -99,7 +97,6 @@ class DataStoreSettingsRepository @Inject constructor(
 
         // DebugOptions keys
         val KEY_SHOW_FACE_BOX = booleanPreferencesKey("settings.debug.show_face_box")
-        val KEY_SHOW_REJECT_REASON = booleanPreferencesKey("settings.debug.show_reject_reason")
         val KEY_SHOW_SCORE = booleanPreferencesKey("settings.debug.show_score")
     }
 }

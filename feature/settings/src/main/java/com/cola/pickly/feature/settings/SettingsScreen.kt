@@ -206,12 +206,6 @@ internal fun SettingsScreenContent(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     SettingsSwitchItem(
-                        title = "스마트 제외 사유 표시",
-                        checked = uiState.debugOptions.showRejectReasonOverlay,
-                        onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_REJECT_REASON, it) }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                    SettingsSwitchItem(
                         title = "사진 평가 점수 표시",
                         checked = uiState.debugOptions.showScoreOverlay,
                         onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_SCORE, it) }
