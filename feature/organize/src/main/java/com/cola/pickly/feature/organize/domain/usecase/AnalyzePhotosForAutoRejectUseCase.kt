@@ -1,6 +1,8 @@
 package com.cola.pickly.feature.organize.domain.usecase
 
 import com.cola.pickly.core.data.analyzer.PhotoQualityAnalyzerFactory
+import com.cola.pickly.core.data.database.PhotoScoreDao
+import com.cola.pickly.core.data.database.PhotoScoreEntity
 import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.RejectReason
@@ -17,10 +19,12 @@ import kotlin.system.measureTimeMillis
  * PhotoQualityAnalyzer를 사용하여 품질 기준 미달 사진을 찾습니다.
  *
  * 사용자 설정(SmartDiscardThresholds)을 실시간으로 적용하여 분석합니다.
+ * 분석 결과는 DB에 저장되어 캐시로 활용됩니다.
  */
 class AnalyzePhotosForAutoRejectUseCase @Inject constructor(
     private val analyzerFactory: PhotoQualityAnalyzerFactory,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val photoScoreDao: PhotoScoreDao
 ) {
     /**
      * 사진 목록을 분석하여 제외 후보 ID 목록을 반환합니다.
@@ -50,6 +54,16 @@ class AnalyzePhotosForAutoRejectUseCase @Inject constructor(
                         async {
                             try {
                                 val score = analyzer.analyze(photo)
+
+                                // 분석 결과를 DB에 저장 (캐시로 활용)
+                                photoScoreDao.insertScore(
+                                    PhotoScoreEntity(
+                                        photoId = photo.id,
+                                        score = score,
+                                        analyzedAt = System.currentTimeMillis()
+                                    )
+                                )
+
                                 if (score.isCutoff && score.rejectReason != null) {
                                     photo.id to score.rejectReason!!
                                 } else null

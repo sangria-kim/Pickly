@@ -121,9 +121,18 @@ fun ViewerScreen(
                     }
                 )
 
-                // DebugOverlay — 탭 토글·줄 중 숨김을 다른 오버레이와 동일하게 적용
+                // DebugOverlay — 조건부 표시:
+                // 1. 일반 오버레이 표시 상태 (isOverlayVisible)
+                // 2. 확대 중이 아님 (!isZoomed)
+                // 3. ViewerContext가 SELECT일 때만 (ARCHIVE에서는 숨김)
+                // 4. DebugOptions 중 하나라도 활성화됨
+                val shouldShowDebugOverlay = isOverlayVisible
+                    && !isZoomed
+                    && viewerContext == ViewerContext.SELECT
+                    && (settings.debugOptions.showFaceBoundingBox || settings.debugOptions.showScoreOverlay)
+
                 AnimatedVisibility(
-                    visible = isOverlayVisible && !isZoomed,
+                    visible = shouldShowDebugOverlay,
                     enter = fadeIn(),
                     exit = fadeOut()
                 ) {
