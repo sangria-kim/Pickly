@@ -38,6 +38,8 @@ class DataStoreSettingsRepository @Inject constructor(
                 eyeOpenThreshold = prefs[KEY_EYE_OPEN_THRESHOLD] ?: 0.50f,
                 smileExceptionThreshold = prefs[KEY_SMILE_EXCEPTION_THRESHOLD] ?: 0.70f
             ),
+            smartDiscardResultMode = prefs.getEnum(KEY_SMART_DISCARD_RESULT_MODE, SmartDiscardResultMode.ShowAsCandidates),
+            hasShownAutoRejectWarning = prefs[KEY_HAS_SHOWN_AUTO_REJECT_WARNING] ?: false,
             debugOptions = DebugOptions(
                 showDebugOverlay = prefs[KEY_SHOW_DEBUG_OVERLAY] ?: false,
                 showFaceBoundingBox = prefs[KEY_SHOW_FACE_BOX] ?: true,
@@ -68,6 +70,14 @@ class DataStoreSettingsRepository @Inject constructor(
         }
     }
 
+    override suspend fun setSmartDiscardResultMode(mode: SmartDiscardResultMode) {
+        dataStore.edit { it[KEY_SMART_DISCARD_RESULT_MODE] = mode.name }
+    }
+
+    override suspend fun setHasShownAutoRejectWarning(shown: Boolean) {
+        dataStore.edit { it[KEY_HAS_SHOWN_AUTO_REJECT_WARNING] = shown }
+    }
+
     override suspend fun setDebugOptions(options: DebugOptions) {
         dataStore.edit { prefs ->
             prefs[KEY_SHOW_DEBUG_OVERLAY] = options.showDebugOverlay
@@ -96,6 +106,10 @@ class DataStoreSettingsRepository @Inject constructor(
         val KEY_HEAD_ANGLE_LIMIT = floatPreferencesKey("settings.head_angle_limit")
         val KEY_EYE_OPEN_THRESHOLD = floatPreferencesKey("settings.eye_open_threshold")
         val KEY_SMILE_EXCEPTION_THRESHOLD = floatPreferencesKey("settings.smile_exception_threshold")
+
+        // SmartDiscardResultMode keys
+        val KEY_SMART_DISCARD_RESULT_MODE = stringPreferencesKey("settings.smart_discard_result_mode")
+        val KEY_HAS_SHOWN_AUTO_REJECT_WARNING = booleanPreferencesKey("settings.has_shown_auto_reject_warning")
 
         // DebugOptions keys
         val KEY_SHOW_DEBUG_OVERLAY = booleanPreferencesKey("settings.debug.show_debug_overlay")

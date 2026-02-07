@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,7 +37,8 @@ class OrganizeViewModel @Inject constructor(
     private val moveSelectedPhotosUseCase: MoveSelectedPhotosUseCase,
     private val copySelectedPhotosUseCase: CopySelectedPhotosUseCase,
     private val softDeleteSelectedPhotosUseCase: SoftDeleteSelectedPhotosUseCase,
-    private val analyzePhotosForAutoRejectUseCase: AnalyzePhotosForAutoRejectUseCase
+    private val analyzePhotosForAutoRejectUseCase: AnalyzePhotosForAutoRejectUseCase,
+    private val settingsRepository: com.cola.pickly.core.data.settings.SettingsRepository
 ) : ViewModel() {
 
     private fun logD(message: String) {
@@ -683,12 +685,29 @@ class OrganizeViewModel @Inject constructor(
 
                 logD("Auto-reject analysis: ${result.candidates.size}/${result.totalAnalyzed} photos, ${result.analysisDurationMs}ms")
 
-                // 분석 완료
+                // 설정 읽기
+                val settings = settingsRepository.settings.first()
+                val isAutoRejectMode = settings.smartDiscardResultMode == com.cola.pickly.core.data.settings.SmartDiscardResultMode.AutoReject
+
+                // 분석 완료 및 설정에 따른 처리
                 _uiState.update { state ->
                     if (state is OrganizeUiState.GridReady) {
+                        val newSelectionMap = if (isAutoRejectMode) {
+                            // 자동 제외 모드: 후보를 Rejected 상태로 변경
+                            state.selectionMap.toMutableMap().apply {
+                                result.candidates.keys.forEach { photoId ->
+                                    put(photoId, PhotoSelectionState.Rejected)
+                                }
+                            }
+                        } else {
+                            // 후보로 표시만: selectionMap 변경 없음
+                            state.selectionMap
+                        }
+
                         state.copy(
                             isAnalyzing = false,
-                            autoRejectCandidates = result.candidates
+                            autoRejectCandidates = result.candidates,
+                            selectionMap = newSelectionMap
                         )
                     } else state
                 }
@@ -696,6 +715,7 @@ class OrganizeViewModel @Inject constructor(
                 // 결과 안내 메시지
                 val message = when {
                     result.candidates.isEmpty() -> "후보로 표시할 사진이 없어요."
+                    isAutoRejectMode -> "아쉬운 사진 ${result.candidates.size}개를 자동으로 제외했어요."
                     else -> "아쉬운 사진 후보를 표시했어요."
                 }
                 _snackbarMessages.emit(message)

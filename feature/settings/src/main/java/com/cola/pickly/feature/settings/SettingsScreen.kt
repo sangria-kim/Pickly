@@ -14,7 +14,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +33,7 @@ import com.cola.pickly.core.ui.theme.DebugPinkOutline
 import com.cola.pickly.core.ui.theme.PicklyTheme
 import com.cola.pickly.feature.settings.components.SettingsActionItem
 import com.cola.pickly.feature.settings.components.SettingsCardHeader
+import com.cola.pickly.feature.settings.components.AutoRejectWarningDialog
 import com.cola.pickly.feature.settings.components.SettingsCardSection
 import com.cola.pickly.feature.settings.components.SettingsCardTuningHeader
 import com.cola.pickly.feature.settings.components.SettingsDebugSectionTitle
@@ -47,12 +52,40 @@ fun SettingsScreen(
     onNavigateToOpenSourceLicenses: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showAutoRejectWarningDialog by remember { mutableStateOf(false) }
+
+    // 이벤트 처리
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                SettingsEvent.ShowAutoRejectWarningDialog -> {
+                    showAutoRejectWarningDialog = true
+                }
+                else -> { /* 다른 이벤트는 현재 처리하지 않음 */ }
+            }
+        }
+    }
+
+    // 다이얼로그 표시
+    if (showAutoRejectWarningDialog) {
+        AutoRejectWarningDialog(
+            onConfirm = {
+                viewModel.confirmAutoRejectMode()
+                showAutoRejectWarningDialog = false
+            },
+            onDismiss = {
+                viewModel.cancelAutoRejectMode()
+                showAutoRejectWarningDialog = false
+            }
+        )
+    }
 
     SettingsScreenContent(
         uiState = uiState,
         onDuplicatePolicyChanged = viewModel::setDuplicateFilenamePolicy,
         onThemeChanged = viewModel::setThemeMode,
         onSmartDiscardCriterionToggle = viewModel::toggleSmartDiscardCriterion,
+        onSmartDiscardResultModeChanged = viewModel::setSmartDiscardResultMode,
         onClearCache = viewModel::clearCache,
         onVersionTap = viewModel::onVersionTap,
         onDebugOptionChanged = viewModel::setDebugOption,
@@ -69,6 +102,7 @@ internal fun SettingsScreenContent(
     onDuplicatePolicyChanged: (DuplicateFilenamePolicy) -> Unit,
     onThemeChanged: (ThemeMode) -> Unit,
     onSmartDiscardCriterionToggle: (RejectReason) -> Unit,
+    onSmartDiscardResultModeChanged: (com.cola.pickly.core.data.settings.SmartDiscardResultMode) -> Unit = {},
     onClearCache: () -> Unit,
     onVersionTap: () -> Unit = {},
     onDebugOptionChanged: (DebugOptionType, Boolean) -> Unit = { _, _ -> },
@@ -129,6 +163,23 @@ internal fun SettingsScreenContent(
                         onSmartDiscardCriterionToggle(criteriaList[index].first)
                     },
                     trailingLabel = "${uiState.smartDiscardCriteria.count { it != RejectReason.NO_FACE }}개 선택됨"
+                )
+            }
+
+            SettingsCardSection(modifier = Modifier.padding(top = 20.dp)) {
+                SettingsCardHeader(title = "분석 결과 처리 방식", description = "분석된 사진을 어떻게 처리할지 선택하세요.")
+                SettingsRadioItem(
+                    title = "아쉬움 후보로 표시만 하기",
+                    subtitle = "분석 결과를 뱃지로 표시하고, 직접 선택할 수 있어요.",
+                    selected = uiState.smartDiscardResultMode == com.cola.pickly.core.data.settings.SmartDiscardResultMode.ShowAsCandidates,
+                    onClick = { onSmartDiscardResultModeChanged(com.cola.pickly.core.data.settings.SmartDiscardResultMode.ShowAsCandidates) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                SettingsRadioItem(
+                    title = "자동으로 제외하기",
+                    subtitle = "분석 결과에 따라 자동으로 제외 상태로 변경돼요.",
+                    selected = uiState.smartDiscardResultMode == com.cola.pickly.core.data.settings.SmartDiscardResultMode.AutoReject,
+                    onClick = { onSmartDiscardResultModeChanged(com.cola.pickly.core.data.settings.SmartDiscardResultMode.AutoReject) }
                 )
             }
 

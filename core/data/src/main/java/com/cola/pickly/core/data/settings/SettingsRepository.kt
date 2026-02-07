@@ -19,6 +19,10 @@ interface SettingsRepository {
 
     suspend fun setSmartDiscardThresholds(thresholds: SmartDiscardThresholds)
 
+    suspend fun setSmartDiscardResultMode(mode: SmartDiscardResultMode)
+
+    suspend fun setHasShownAutoRejectWarning(shown: Boolean)
+
     suspend fun setDebugOptions(options: DebugOptions)
 }
 

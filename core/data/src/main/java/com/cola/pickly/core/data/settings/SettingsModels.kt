@@ -25,6 +25,14 @@ enum class ThemeMode {
 }
 
 /**
+ * 스마트 제외 분석 결과 처리 방식
+ */
+enum class SmartDiscardResultMode {
+    ShowAsCandidates,  // 뱃지만 표시 (기본값)
+    AutoReject         // 자동으로 제외 상태로 변경
+}
+
+/**
  * 설정 값 묶음(단일 소스).
  *
  * Wireframe.md의 정책 기본값을 우선 반영:
@@ -38,6 +46,8 @@ data class Settings(
     val themeMode: ThemeMode = ThemeMode.System,
     val smartDiscardCriteria: Set<com.cola.pickly.core.model.RejectReason> = com.cola.pickly.core.model.RejectReason.entries.toSet(),
     val smartDiscardThresholds: SmartDiscardThresholds = SmartDiscardThresholds(),
+    val smartDiscardResultMode: SmartDiscardResultMode = SmartDiscardResultMode.ShowAsCandidates,
+    val hasShownAutoRejectWarning: Boolean = false,
     val debugOptions: DebugOptions = DebugOptions()
 )
 

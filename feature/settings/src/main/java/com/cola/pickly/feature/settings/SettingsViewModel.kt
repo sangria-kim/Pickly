@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cola.pickly.core.data.cache.CacheRepository
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
 import com.cola.pickly.core.data.settings.SettingsRepository
+import com.cola.pickly.core.data.settings.SmartDiscardResultMode
 import com.cola.pickly.core.data.settings.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +53,8 @@ class SettingsViewModel @Inject constructor(
                         duplicateFilenamePolicy = settings.duplicateFilenamePolicy,
                         themeMode = settings.themeMode,
                         smartDiscardCriteria = settings.smartDiscardCriteria,
+                        smartDiscardResultMode = settings.smartDiscardResultMode,
+                        hasShownAutoRejectWarning = settings.hasShownAutoRejectWarning,
                         debugOptions = settings.debugOptions,
                         smartDiscardThresholds = settings.smartDiscardThresholds
                     )
@@ -80,6 +83,29 @@ class SettingsViewModel @Inject constructor(
 
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { settingsRepository.setThemeMode(mode) }
+    }
+
+    fun setSmartDiscardResultMode(mode: SmartDiscardResultMode) {
+        viewModelScope.launch {
+            // 자동 제외 모드이고 경고를 아직 보여주지 않았다면 다이얼로그 표시
+            if (mode == SmartDiscardResultMode.AutoReject && !_uiState.value.hasShownAutoRejectWarning) {
+                _events.emit(SettingsEvent.ShowAutoRejectWarningDialog)
+            } else {
+                settingsRepository.setSmartDiscardResultMode(mode)
+            }
+        }
+    }
+
+    fun confirmAutoRejectMode() {
+        viewModelScope.launch {
+            settingsRepository.setSmartDiscardResultMode(SmartDiscardResultMode.AutoReject)
+            settingsRepository.setHasShownAutoRejectWarning(true)
+        }
+    }
+
+    fun cancelAutoRejectMode() {
+        // 모드 변경 없이 다이얼로그만 닫음
+        // UI에서 라디오 버튼이 원래 선택으로 돌아가도록 처리
     }
 
     fun refreshCacheSize() {
@@ -160,6 +186,7 @@ class SettingsViewModel @Inject constructor(
 sealed interface SettingsEvent {
     data object CacheCleared : SettingsEvent
     data object CacheClearFailed : SettingsEvent
+    data object ShowAutoRejectWarningDialog : SettingsEvent
 }
 
 enum class DebugOptionType {
