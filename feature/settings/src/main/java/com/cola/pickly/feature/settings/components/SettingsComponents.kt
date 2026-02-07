@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -92,9 +93,14 @@ fun SettingsRadioItem(
     val primaryColor = MaterialTheme.colorScheme.onSurface
     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
 
+    val itemModifier = if (subtitle != null) {
+        modifier.fillMaxWidth().heightIn(min = 52.dp, max = 60.dp)
+    } else {
+        modifier.fillMaxWidth().heightIn(min = 40.dp, max = 48.dp)
+    }
+
     ListItem(
-        modifier = modifier
-            .fillMaxWidth()
+        modifier = itemModifier
             .semantics {
                 role = Role.RadioButton
                 this.selected = selected
@@ -109,9 +115,21 @@ fun SettingsRadioItem(
                 )
             )
         },
-        headlineContent = { Text(text = title, color = primaryColor) },
+        headlineContent = {
+            Text(
+                text = title,
+                color = primaryColor,
+                style = MaterialTheme.typography.labelLarge
+            )
+        },
         supportingContent = subtitle?.let {
-            { Text(text = it, color = secondaryColor) }
+            {
+                Text(
+                    text = it,
+                    color = secondaryColor,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     )
 }
@@ -136,9 +154,21 @@ fun SettingsSwitchItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { onCheckedChange(!checked) },
-        headlineContent = { Text(text = title, color = primaryColor) },
+        headlineContent = {
+            Text(
+                text = title,
+                color = primaryColor,
+                style = MaterialTheme.typography.labelLarge
+            )
+        },
         supportingContent = subtitle?.let {
-            { Text(text = it, color = secondaryColor) }
+            {
+                Text(
+                    text = it,
+                    color = secondaryColor,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         },
         trailingContent = {
             Switch(
@@ -167,11 +197,29 @@ fun SettingsTextItem(
 
     ListItem(
         modifier = modifier.fillMaxWidth(),
-        headlineContent = { Text(text = title, color = primaryColor) },
-        supportingContent = subtitle?.let {
-            { Text(text = it, color = secondaryColor) }
+        headlineContent = {
+            Text(
+                text = title,
+                color = primaryColor,
+                style = MaterialTheme.typography.labelLarge
+            )
         },
-        trailingContent = { Text(text = value, color = secondaryColor) }
+        supportingContent = subtitle?.let {
+            {
+                Text(
+                    text = it,
+                    color = secondaryColor,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        },
+        trailingContent = {
+            Text(
+                text = value,
+                color = secondaryColor,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
     )
 }
 
@@ -200,15 +248,31 @@ fun SettingsActionItem(
                 if (!enabled) disabled()
             }
             .clickable(enabled = enabled, onClick = onClick),
-        headlineContent = { Text(text = title, color = primaryColor) },
+        headlineContent = {
+            Text(
+                text = title,
+                color = primaryColor,
+                style = MaterialTheme.typography.labelLarge
+            )
+        },
         supportingContent = subtitle?.let {
-            { Text(text = it, color = secondaryColor) }
+            {
+                Text(
+                    text = it,
+                    color = secondaryColor,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         },
         trailingContent = if (trailingText != null || showChevron) {
             {
                 Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {
                     if (trailingText != null) {
-                        Text(text = trailingText, color = secondaryColor)
+                        Text(
+                            text = trailingText,
+                            color = secondaryColor,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     if (showChevron) {
                         Icon(
@@ -251,9 +315,21 @@ fun SettingsCheckboxItem(
                 )
             )
         },
-        headlineContent = { Text(text = title, color = primaryColor) },
+        headlineContent = {
+            Text(
+                text = title,
+                color = primaryColor,
+                style = MaterialTheme.typography.labelLarge
+            )
+        },
         supportingContent = subtitle?.let {
-            { Text(text = it, color = secondaryColor) }
+            {
+                Text(
+                    text = it,
+                    color = secondaryColor,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     )
 }
@@ -410,7 +486,7 @@ fun SettingsCardSection(
 
 @Composable
 fun SettingsCardHeader(title: String, description: String? = null, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = if (description != null) 2.dp else 8.dp)) {
+    Column(modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 0.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,

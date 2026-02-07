@@ -164,9 +164,7 @@ internal fun SettingsScreenContent(
                     },
                     trailingLabel = "${uiState.smartDiscardCriteria.count { it != RejectReason.NO_FACE }}개 선택됨"
                 )
-            }
-
-            SettingsCardSection(modifier = Modifier.padding(top = 20.dp)) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 SettingsCardHeader(title = "분석 결과 처리 방식", description = "분석된 사진을 어떻게 처리할지 선택하세요.")
                 SettingsRadioItem(
                     title = "아쉬움 후보로 표시만 하기",
@@ -174,7 +172,6 @@ internal fun SettingsScreenContent(
                     selected = uiState.smartDiscardResultMode == com.cola.pickly.core.data.settings.SmartDiscardResultMode.ShowAsCandidates,
                     onClick = { onSmartDiscardResultModeChanged(com.cola.pickly.core.data.settings.SmartDiscardResultMode.ShowAsCandidates) }
                 )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 SettingsRadioItem(
                     title = "자동으로 제외하기",
                     subtitle = "분석 결과에 따라 자동으로 제외 상태로 변경돼요.",
