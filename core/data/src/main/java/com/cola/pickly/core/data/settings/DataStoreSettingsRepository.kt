@@ -39,6 +39,7 @@ class DataStoreSettingsRepository @Inject constructor(
                 smileExceptionThreshold = prefs[KEY_SMILE_EXCEPTION_THRESHOLD] ?: 0.70f
             ),
             debugOptions = DebugOptions(
+                showDebugOverlay = prefs[KEY_SHOW_DEBUG_OVERLAY] ?: false,
                 showFaceBoundingBox = prefs[KEY_SHOW_FACE_BOX] ?: true,
                 showScoreOverlay = prefs[KEY_SHOW_SCORE] ?: false
             )
@@ -69,6 +70,7 @@ class DataStoreSettingsRepository @Inject constructor(
 
     override suspend fun setDebugOptions(options: DebugOptions) {
         dataStore.edit { prefs ->
+            prefs[KEY_SHOW_DEBUG_OVERLAY] = options.showDebugOverlay
             prefs[KEY_SHOW_FACE_BOX] = options.showFaceBoundingBox
             prefs[KEY_SHOW_SCORE] = options.showScoreOverlay
         }
@@ -96,6 +98,7 @@ class DataStoreSettingsRepository @Inject constructor(
         val KEY_SMILE_EXCEPTION_THRESHOLD = floatPreferencesKey("settings.smile_exception_threshold")
 
         // DebugOptions keys
+        val KEY_SHOW_DEBUG_OVERLAY = booleanPreferencesKey("settings.debug.show_debug_overlay")
         val KEY_SHOW_FACE_BOX = booleanPreferencesKey("settings.debug.show_face_box")
         val KEY_SHOW_SCORE = booleanPreferencesKey("settings.debug.show_score")
     }

@@ -122,13 +122,20 @@ fun SettingsSwitchItem(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    subtitle: String? = null
+    subtitle: String? = null,
+    enabled: Boolean = true
 ) {
-    val primaryColor = MaterialTheme.colorScheme.onSurface
+    val primaryColor = if (enabled) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    }
     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     ListItem(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onCheckedChange(!checked) },
         headlineContent = { Text(text = title, color = primaryColor) },
         supportingContent = subtitle?.let {
             { Text(text = it, color = secondaryColor) }
@@ -137,6 +144,7 @@ fun SettingsSwitchItem(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
+                enabled = enabled,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = TealAccent,

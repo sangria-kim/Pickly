@@ -61,6 +61,7 @@ data class SmartDiscardThresholds(
  * Release 빌드에서는 디버그 메뉴 자체가 노출되지 않습니다.
  */
 data class DebugOptions(
+    val showDebugOverlay: Boolean = false,
     val showFaceBoundingBox: Boolean = true,
     val showScoreOverlay: Boolean = false
 )

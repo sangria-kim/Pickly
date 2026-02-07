@@ -125,10 +125,12 @@ fun ViewerScreen(
                 // 1. 일반 오버레이 표시 상태 (isOverlayVisible)
                 // 2. 확대 중이 아님 (!isZoomed)
                 // 3. ViewerContext가 SELECT일 때만 (ARCHIVE에서는 숨김)
-                // 4. DebugOptions 중 하나라도 활성화됨
+                // 4. 디버그 오버레이 마스터 토글 활성화
+                // 5. DebugOptions 중 하나라도 활성화됨
                 val shouldShowDebugOverlay = isOverlayVisible
                     && !isZoomed
                     && viewerContext == ViewerContext.SELECT
+                    && settings.debugOptions.showDebugOverlay
                     && (settings.debugOptions.showFaceBoundingBox || settings.debugOptions.showScoreOverlay)
 
                 AnimatedVisibility(

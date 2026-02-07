@@ -198,17 +198,26 @@ internal fun SettingsScreenContent(
 
                 // 분석/시각화 카드
                 SettingsCardSection(borderColor = DebugPinkOutline) {
-                    SettingsGroupLabel(text = "분석/시각화")
+                    SettingsCardHeader(title = "분석/시각화")
                     SettingsSwitchItem(
-                        title = "얼굴 박스 표시",
-                        checked = uiState.debugOptions.showFaceBoundingBox,
-                        onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_FACE_BOX, it) }
+                        title = "디버그 오버레이 표시",
+                        subtitle = "ViewerScreen에서 분석 결과를 시각화합니다.",
+                        checked = uiState.debugOptions.showDebugOverlay,
+                        onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_DEBUG_OVERLAY, it) }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     SettingsSwitchItem(
-                        title = "사진 평가 점수 표시",
+                        title = "  얼굴 박스 표시",
+                        checked = uiState.debugOptions.showFaceBoundingBox,
+                        onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_FACE_BOX, it) },
+                        enabled = uiState.debugOptions.showDebugOverlay
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                    SettingsSwitchItem(
+                        title = "  사진 평가 점수 표시",
                         checked = uiState.debugOptions.showScoreOverlay,
-                        onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_SCORE, it) }
+                        onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_SCORE, it) },
+                        enabled = uiState.debugOptions.showDebugOverlay
                     )
                 }
 
