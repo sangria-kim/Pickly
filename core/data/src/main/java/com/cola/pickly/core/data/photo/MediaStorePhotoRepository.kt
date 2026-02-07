@@ -171,6 +171,47 @@ class MediaStorePhotoRepository @Inject constructor(
         photos
     }
 
+    override suspend fun getModifiedTimes(photoIds: List<Long>): Map<Long, Long> =
+        withContext(Dispatchers.IO) {
+            if (photoIds.isEmpty()) return@withContext emptyMap()
+
+            // SQLite IN 쿼리 999개 제한 → 청킹
+            photoIds.chunked(999).flatMap { chunk ->
+                queryModifiedTimesChunk(chunk)
+            }.toMap()
+        }
+
+    private fun queryModifiedTimesChunk(chunk: List<Long>): List<Pair<Long, Long>> {
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DATE_MODIFIED
+        )
+
+        val selection = "${MediaStore.Images.Media._ID} IN (${chunk.joinToString(",") { "?" }})"
+        val selectionArgs = chunk.map { it.toString() }.toTypedArray()
+
+        val result = mutableListOf<Pair<Long, Long>>()
+
+        contentResolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            selectionArgs,
+            null
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val modifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
+
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                val modifiedAt = cursor.getLong(modifiedColumn) * 1000L  // 초 → 밀리초
+                result.add(id to modifiedAt)
+            }
+        }
+
+        return result
+    }
+
     // 공통 쿼리 로직 추출
     private fun queryPhotos(
         collection: android.net.Uri,

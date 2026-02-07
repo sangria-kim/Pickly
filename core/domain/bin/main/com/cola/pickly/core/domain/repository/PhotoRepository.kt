@@ -40,4 +40,11 @@ interface PhotoRepository {
      * @return [Photo]의 리스트. 사진이 없으면 빈 리스트를 반환합니다.
      */
     suspend fun getAllPhotos(): List<Photo>
+
+    /**
+     * 사진들의 수정 시각을 배치로 조회합니다.
+     * @param photoIds 조회할 사진의 ID 리스트
+     * @return photoId를 키로, 수정 시각(밀리초)을 값으로 하는 맵
+     */
+    suspend fun getModifiedTimes(photoIds: List<Long>): Map<Long, Long>
 }
