@@ -56,9 +56,10 @@ object AppModule {
     fun providePickBestPhotosUseCase(
         analyzerFactory: PhotoQualityAnalyzerFactory,
         settingsRepository: SettingsRepository,
-        photoScoreDao: PhotoScoreDao
+        photoScoreDao: PhotoScoreDao,
+        photoRepository: PhotoRepository
     ): PickBestPhotosUseCase {
-        return PickBestPhotosUseCaseImpl(analyzerFactory, settingsRepository, photoScoreDao)
+        return PickBestPhotosUseCaseImpl(analyzerFactory, settingsRepository, photoScoreDao, photoRepository)
     }
 }
 
