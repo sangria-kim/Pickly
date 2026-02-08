@@ -47,17 +47,10 @@ import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.R
 import android.content.Intent
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
-
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun OrganizeScreen(
     viewModel: OrganizeViewModel = hiltViewModel(),
     folderSelectViewModel: FolderSelectViewModel = hiltViewModel(),
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, Map<Long, RejectReason>) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null,
@@ -276,8 +269,6 @@ fun OrganizeScreen(
                         isMultiSelectMode = state.isMultiSelectMode,
                         isAnalyzing = state.isAnalyzing,
                         autoRejectCandidates = state.autoRejectCandidates,
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope,
                         onPhotoClick = { photo ->
                             viewModel.requestInterruptConfirmation {
                                 onNavigateToPhotoDetail(state.folderId, photo.id, state.selectionMap, false, state.autoRejectCandidates)

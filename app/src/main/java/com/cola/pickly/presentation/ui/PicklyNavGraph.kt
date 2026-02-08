@@ -1,12 +1,17 @@
 package com.cola.pickly.presentation.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
@@ -24,14 +29,13 @@ import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.presentation.viewer.ViewerUiState
 import com.cola.pickly.presentation.viewer.ViewerScreen
 import com.cola.pickly.presentation.viewer.ViewerViewModel
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
 import com.cola.pickly.core.data.settings.SettingsRepository
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.launch
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
@@ -39,7 +43,6 @@ interface PicklyNavGraphEntryPoint {
     fun settingsRepository(): SettingsRepository
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PicklyNavGraph(
     mainViewModel: MainViewModel
@@ -53,8 +56,7 @@ fun PicklyNavGraph(
     }
     val settingsRepository = remember { entryPoint.settingsRepository() }
     val navController = rememberNavController()
-    SharedTransitionLayout {
-        NavHost(navController = navController, startDestination = "splash") {
+    NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(navController = navController, viewModel = mainViewModel) 
         }
@@ -80,8 +82,6 @@ fun PicklyNavGraph(
             }
 
             MainScreen(
-                sharedTransitionScope = this@SharedTransitionLayout,
-                animatedVisibilityScope = this@composable,
                 mainViewModel = mainViewModel,
                 onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext, rejectCandidates ->
                     // viewer 라우트로 이동하기 전에 selectionMap을 현재 backStackEntry의 savedStateHandle에 저장
@@ -115,7 +115,11 @@ fun PicklyNavGraph(
                     type = NavType.StringType
                     defaultValue = ViewerContext.SELECT.name
                 }
-            )
+            ),
+            enterTransition = { fadeIn(animationSpec = tween(140)) },
+            exitTransition = { fadeOut(animationSpec = tween(140)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(140)) },
+            popExitTransition = { fadeOut(animationSpec = tween(140)) }
         ) { backStackEntry ->
             // Context 파라미터 읽기
             val contextName = backStackEntry.arguments?.getString("context") ?: ViewerContext.SELECT.name
@@ -147,24 +151,33 @@ fun PicklyNavGraph(
             // 시스템 back key 처리 - onBackClick과 동일한 동작
             when (val state = uiState) {
                 is ViewerUiState.Success -> {
-                    // 시스템 back key를 처리하는 함수
-                    val handleBack: () -> Unit = {
-                        // 뒤로가기 시 변경된 선택 상태를 전달
-                        navController.previousBackStackEntry?.savedStateHandle?.set("selection_updates", state.selectionMap)
-                        navController.popBackStack()
+                    val coroutineScope = rememberCoroutineScope()
+                    var exitRequestId by remember { mutableStateOf(0) }
+                    var isClosing by remember { mutableStateOf(false) }
+
+                    val requestClose: () -> Unit = requestClose@{
+                        if (isClosing) return@requestClose
+                        isClosing = true
+                        exitRequestId += 1
+                        coroutineScope.launch {
+                            // 1) 먼저 줌/스케일 상태 리셋이 적용되도록 한 프레임 양보
+                            withFrameNanos { }
+                            // 2) 뒤로가기 시 변경된 선택 상태를 전달
+                            navController.previousBackStackEntry?.savedStateHandle?.set("selection_updates", state.selectionMap)
+                            navController.popBackStack()
+                        }
                     }
                     
                     // BackHandler로 시스템 back key 처리
-                    BackHandler(onBack = handleBack)
+                    BackHandler(enabled = !isClosing, onBack = requestClose)
                     
                     ViewerScreen(
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedVisibilityScope = this@composable,
                         photos = state.photos,
                         initialIndex = state.initialIndex,
                         selectionMap = state.selectionMap,
                         viewerContext = viewerContext,
-                        onBackClick = handleBack,
+                        exitRequestId = exitRequestId,
+                        onBackClick = requestClose,
                         onSelectClick = { photoId ->
                             viewerViewModel.toggleSelection(photoId)
                         },
@@ -183,6 +196,5 @@ fun PicklyNavGraph(
                 }
             }
         }
-    }
     }
 }

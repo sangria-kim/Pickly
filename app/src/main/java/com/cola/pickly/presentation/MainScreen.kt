@@ -52,9 +52,6 @@ import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.ui.theme.TealAccent
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import com.cola.pickly.presentation.legal.PrivacyPolicyScreen
 import com.cola.pickly.presentation.legal.OpenSourceLicensesScreen
 
@@ -133,12 +130,9 @@ fun PicklyBottomNavigation(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MainScreen(
     mainViewModel: MainViewModel,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, ViewerContext, Map<Long, RejectReason>) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null
@@ -197,8 +191,6 @@ fun MainScreen(
             composable(MainTab.Organize.route) {
                 OrganizeScreen(
                     viewModel = organizeViewModel,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
                     onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, rejectCandidates ->
                         onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.SELECT, rejectCandidates)
                     },

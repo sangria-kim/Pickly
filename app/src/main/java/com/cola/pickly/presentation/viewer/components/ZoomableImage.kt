@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -14,25 +15,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntSize
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
+data class ZoomableImageMetrics(
+    val scale: Float = 1f,
+    val offset: Offset = Offset.Zero,
+    val imageSize: IntSize = IntSize.Zero
+)
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ZoomableImage(
     imagePath: String,
     photoId: Long,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     onZoomStateChanged: (Float) -> Unit, // Boolean -> Float
+    resetSignal: Int = 0,
+    onMetricsChanged: (ZoomableImageMetrics) -> Unit = {}
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var imageSize by remember { mutableStateOf(IntSize.Zero) }
+
+    LaunchedEffect(resetSignal) {
+        if (resetSignal <= 0) return@LaunchedEffect
+        scale = 1f
+        offset = Offset.Zero
+        onZoomStateChanged(1f)
+        onMetricsChanged(
+            ZoomableImageMetrics(
+                scale = scale,
+                offset = offset,
+                imageSize = imageSize
+            )
+        )
+    }
 
     val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
         // 확대되지 않은 상태에서 단일 손가락 드래그는 무시 (HorizontalPager가 처리하도록)
@@ -52,6 +71,14 @@ fun ZoomableImage(
                 // 확대되지 않았을 때는 offset을 리셋
                 offset = Offset.Zero
             }
+
+            onMetricsChanged(
+                ZoomableImageMetrics(
+                    scale = scale,
+                    offset = offset,
+                    imageSize = imageSize
+                )
+            )
         }
     }
 
@@ -73,14 +100,16 @@ fun ZoomableImage(
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
-                .then(
-                    with(sharedTransitionScope) {
-                        Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(key = "photo-$photoId"),
-                            animatedVisibilityScope = animatedVisibilityScope
+                .onSizeChanged { newSize ->
+                    imageSize = newSize
+                    onMetricsChanged(
+                        ZoomableImageMetrics(
+                            scale = scale,
+                            offset = offset,
+                            imageSize = imageSize
                         )
-                    }
-                )
+                    )
+                }
                 .graphicsLayer(
                     scaleX = scale,
                     scaleY = scale,

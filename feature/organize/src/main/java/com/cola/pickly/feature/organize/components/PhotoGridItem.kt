@@ -40,11 +40,6 @@ import com.cola.pickly.core.ui.components.RejectReasonBadge
 import com.cola.pickly.core.ui.theme.TealAccent
 import java.io.File
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
-
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PhotoGridItem(
     photo: Photo,
@@ -53,8 +48,6 @@ fun PhotoGridItem(
     isMultiSelectMode: Boolean = false,
     isAnalyzing: Boolean = false,
     autoRejectReason: RejectReason? = null,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
     onToggleSelection: (() -> Unit)? = null
 ) {
@@ -99,14 +92,6 @@ fun PhotoGridItem(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .then(
-                    with(sharedTransitionScope) {
-                        Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(key = "photo-${photo.id}"),
-                            animatedVisibilityScope = animatedVisibilityScope
-                        )
-                    }
-                )
                 .then(
                     if (isSelected && isMultiSelectMode) {
                         Modifier.border(

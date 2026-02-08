@@ -14,6 +14,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,7 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntSize
 import com.cola.pickly.core.data.settings.Settings
 import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.model.PhotoSelectionState
@@ -34,22 +37,17 @@ import com.cola.pickly.presentation.common.DebugOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerTopOverlay
 import com.cola.pickly.presentation.viewer.components.ZoomableImage
+import com.cola.pickly.presentation.viewer.components.ZoomableImageMetrics
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
-
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ViewerScreen(
     photos: List<Photo>,
     initialIndex: Int,
     selectionMap: Map<Long, PhotoSelectionState>,
     viewerContext: ViewerContext,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
+    exitRequestId: Int = 0,
     onBackClick: () -> Unit,
     onSelectClick: (Long) -> Unit = {},
     onRejectClick: (Long) -> Unit = {},
@@ -62,6 +60,8 @@ fun ViewerScreen(
     var isInfoVisible by remember { mutableStateOf(false) } // State for info overlay
     var isZoomed by remember { mutableStateOf(false) }
     var overlayStateBeforeZoom by remember { mutableStateOf(false) }
+    var rootSize by remember { mutableStateOf(IntSize.Zero) }
+    val metricsByPhotoId = remember { mutableStateMapOf<Long, ZoomableImageMetrics>() }
 
     ViewerSystemBarsPolicy()
 
@@ -69,6 +69,7 @@ fun ViewerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .onSizeChanged { rootSize = it }
             .pointerInput(isZoomed) {
                 detectTapGestures(
                     onTap = {
@@ -91,6 +92,7 @@ fun ViewerScreen(
         val isSelected = currentSelectionState == PhotoSelectionState.Selected
         val isRejected = currentSelectionState == PhotoSelectionState.Rejected
         val rejectReason = currentPhoto?.recommendationScore?.rejectReason
+        val currentMetrics = currentPhoto?.let { metricsByPhotoId[it.id] } ?: ZoomableImageMetrics()
 
         HorizontalPager(
             state = pagerState,
@@ -103,8 +105,6 @@ fun ViewerScreen(
                 ZoomableImage(
                     imagePath = photo.filePath,
                     photoId = photo.id,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
                     onZoomStateChanged = { scale ->
                         val wasZoomed = isZoomed
                         isZoomed = scale > 1f
@@ -118,6 +118,10 @@ fun ViewerScreen(
                             // 줌 해제: 이전 오버레이 상태 복원
                             isOverlayVisible = overlayStateBeforeZoom
                         }
+                    },
+                    resetSignal = exitRequestId,
+                    onMetricsChanged = { metrics ->
+                        metricsByPhotoId[photo.id] = metrics
                     }
                 )
 
@@ -145,6 +149,30 @@ fun ViewerScreen(
                         isInfoVisible = isInfoVisible
                     )
                 }
+            }
+        }
+
+        if (settings.debugOptions.showDebugOverlay) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(12.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
+                val text = buildString {
+                    appendLine("page=${pagerState.currentPage} / ${photos.size - 1}")
+                    appendLine("photoId=${currentPhoto?.id ?: -1}")
+                    appendLine("scale=${"%.3f".format(currentMetrics.scale)}")
+                    appendLine("offset=(${currentMetrics.offset.x.toInt()}, ${currentMetrics.offset.y.toInt()})")
+                    appendLine("root=${rootSize.width}x${rootSize.height}")
+                    appendLine("image=${currentMetrics.imageSize.width}x${currentMetrics.imageSize.height}")
+                }
+                androidx.compose.material3.Text(
+                    text = text,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = Color.White
+                )
             }
         }
 

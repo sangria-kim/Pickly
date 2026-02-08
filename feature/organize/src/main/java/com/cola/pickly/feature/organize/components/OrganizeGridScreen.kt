@@ -24,12 +24,6 @@ import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
-
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
-
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun OrganizeGridScreen(
     photos: List<Photo>,
@@ -38,8 +32,6 @@ fun OrganizeGridScreen(
     isMultiSelectMode: Boolean = false,
     isAnalyzing: Boolean = false,
     autoRejectCandidates: Map<Long, RejectReason> = emptyMap(),
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     onPhotoClick: (Photo) -> Unit,
     onToggleSelection: (Long) -> Unit
 ) {
@@ -61,8 +53,6 @@ fun OrganizeGridScreen(
                 isMultiSelectMode = isMultiSelectMode,
                 isAnalyzing = isAnalyzing,
                 autoRejectReason = autoRejectCandidates[photo.id],
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
                 onClick = { onPhotoClick(photo) },
                 onToggleSelection = { onToggleSelection(photo.id) }
             )
