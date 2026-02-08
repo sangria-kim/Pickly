@@ -276,12 +276,18 @@ internal fun SettingsScreenContent(
                         actionText = "기본값으로 재설정",
                         onActionClick = onResetThresholds
                     )
+                    val blurSpec = ThresholdSpecs.forType(ThresholdType.BLUR)
+                    val minFaceSpec = ThresholdSpecs.forType(ThresholdType.MIN_FACE_SIZE)
+                    val headAngleSpec = ThresholdSpecs.forType(ThresholdType.HEAD_ANGLE)
+                    val eyeOpenSpec = ThresholdSpecs.forType(ThresholdType.EYE_OPEN)
+                    val smileExceptionSpec = ThresholdSpecs.forType(ThresholdType.SMILE_EXCEPTION)
+
                     SettingsSliderItem(
                         title = "흔들림 임계값",
                         value = uiState.smartDiscardThresholds.blurThreshold,
                         onValueChange = { onThresholdChanged(ThresholdType.BLUR, it) },
-                        valueRange = 30f..250f,
-                        steps = 439,
+                        valueRange = blurSpec.range,
+                        steps = blurSpec.steps,
                         valueFormatter = { "%.1f".format(it) },
                         defaultValue = 100.0f,
                         subtitle = "값을 올리면 더 많이 '흔들림'으로 잡고, 내리면 심하게 흔들린 사진만 잡아요."
@@ -291,8 +297,8 @@ internal fun SettingsScreenContent(
                         title = "얼굴 최소 크기",
                         value = uiState.smartDiscardThresholds.minFaceSize,
                         onValueChange = { onThresholdChanged(ThresholdType.MIN_FACE_SIZE, it) },
-                        valueRange = 0.02f..0.20f,
-                        steps = 35,
+                        valueRange = minFaceSpec.range,
+                        steps = minFaceSpec.steps,
                         valueFormatter = { "%.1f%%".format(it * 100) },
                         defaultValue = 0.05f,
                         subtitle = "사진에서 얼굴이 차지하는 비율(%)이에요. 값을 올리면 얼굴이 작은 사진을 더 많이 '작음'으로 잡고, 내리면 작은 얼굴도 더 통과해요."
@@ -302,8 +308,8 @@ internal fun SettingsScreenContent(
                         title = "고개 각도 제한",
                         value = uiState.smartDiscardThresholds.headAngleLimit,
                         onValueChange = { onThresholdChanged(ThresholdType.HEAD_ANGLE, it) },
-                        valueRange = 10f..60f,
-                        steps = 99,
+                        valueRange = headAngleSpec.range,
+                        steps = headAngleSpec.steps,
                         valueFormatter = { "%.1f°".format(it) },
                         defaultValue = 30.0f,
                         subtitle = "값을 올리면 고개를 더 돌려도 통과하고, 내리면 조금만 돌아도 '고개돌림'으로 잡아요."
@@ -313,8 +319,8 @@ internal fun SettingsScreenContent(
                         title = "눈 뜸 임계값",
                         value = uiState.smartDiscardThresholds.eyeOpenThreshold,
                         onValueChange = { onThresholdChanged(ThresholdType.EYE_OPEN, it) },
-                        valueRange = 0.10f..0.90f,
-                        steps = 15,
+                        valueRange = eyeOpenSpec.range,
+                        steps = eyeOpenSpec.steps,
                         valueFormatter = { "%.2f".format(it) },
                         defaultValue = 0.50f,
                         subtitle = "값을 올리면 살짝 감긴 눈도 '눈감음'으로 잡고, 내리면 확실히 감긴 경우만 잡아요."
@@ -324,8 +330,8 @@ internal fun SettingsScreenContent(
                         title = "눈웃음 예외 임계값",
                         value = uiState.smartDiscardThresholds.smileExceptionThreshold,
                         onValueChange = { onThresholdChanged(ThresholdType.SMILE_EXCEPTION, it) },
-                        valueRange = 0.00f..1.00f,
-                        steps = 19,
+                        valueRange = smileExceptionSpec.range,
+                        steps = smileExceptionSpec.steps,
                         valueFormatter = { "%.2f".format(it) },
                         defaultValue = 0.70f,
                         subtitle = "값을 올리면 웃고 있어도 '눈감음'으로 잡힐 수 있고, 내리면 웃는 사진은 더 많이 통과해요."

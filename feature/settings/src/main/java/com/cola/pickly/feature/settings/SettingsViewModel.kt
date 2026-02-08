@@ -165,12 +165,13 @@ class SettingsViewModel @Inject constructor(
     fun setThreshold(type: ThresholdType, value: Float) {
         viewModelScope.launch {
             val currentThresholds = _uiState.value.smartDiscardThresholds
+            val normalized = ThresholdSpecs.forType(type).normalize(value)
             val newThresholds = when (type) {
-                ThresholdType.BLUR -> currentThresholds.copy(blurThreshold = value)
-                ThresholdType.MIN_FACE_SIZE -> currentThresholds.copy(minFaceSize = value)
-                ThresholdType.HEAD_ANGLE -> currentThresholds.copy(headAngleLimit = value)
-                ThresholdType.EYE_OPEN -> currentThresholds.copy(eyeOpenThreshold = value)
-                ThresholdType.SMILE_EXCEPTION -> currentThresholds.copy(smileExceptionThreshold = value)
+                ThresholdType.BLUR -> currentThresholds.copy(blurThreshold = normalized)
+                ThresholdType.MIN_FACE_SIZE -> currentThresholds.copy(minFaceSize = normalized)
+                ThresholdType.HEAD_ANGLE -> currentThresholds.copy(headAngleLimit = normalized)
+                ThresholdType.EYE_OPEN -> currentThresholds.copy(eyeOpenThreshold = normalized)
+                ThresholdType.SMILE_EXCEPTION -> currentThresholds.copy(smileExceptionThreshold = normalized)
             }
             settingsRepository.setSmartDiscardThresholds(newThresholds)
         }

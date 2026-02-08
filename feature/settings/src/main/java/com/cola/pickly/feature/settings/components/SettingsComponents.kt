@@ -27,7 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -416,6 +415,7 @@ fun SettingsSliderItem(
 ) {
     val primaryColor = MaterialTheme.colorScheme.onSurface
     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val accentColor = MaterialTheme.colorScheme.primary
 
     Column(
         modifier = modifier
@@ -434,7 +434,7 @@ fun SettingsSliderItem(
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = TealAccent, fontWeight = FontWeight.Bold)) {
+                    withStyle(style = SpanStyle(color = accentColor, fontWeight = FontWeight.Bold)) {
                         append(valueFormatter(value))
                     }
                     if (defaultValue != null) {
@@ -450,12 +450,7 @@ fun SettingsSliderItem(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
-            steps = steps,
-            colors = SliderDefaults.colors(
-                thumbColor = TealAccent,
-                activeTrackColor = TealAccent,
-                inactiveTrackColor = MaterialTheme.colorScheme.outline
-            )
+            steps = steps
         )
         if (subtitle != null) {
             Text(
