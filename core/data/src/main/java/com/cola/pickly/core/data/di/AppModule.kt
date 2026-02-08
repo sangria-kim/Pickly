@@ -12,9 +12,6 @@ import com.cola.pickly.core.data.photo.MediaStorePhotoRepository
 import com.cola.pickly.core.data.photo.MediaStorePhotoActionRepository
 import com.cola.pickly.core.data.photo.PhotoActionRepository
 import com.cola.pickly.core.domain.repository.PhotoRepository
-import com.cola.pickly.core.data.usecase.PickBestPhotosUseCaseImpl
-
-import com.cola.pickly.core.domain.usecase.PickBestPhotosUseCase
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -51,16 +48,6 @@ object AppModule {
         return database.photoScoreDao()
     }
 
-    @Provides
-    @Singleton
-    fun providePickBestPhotosUseCase(
-        analyzerFactory: PhotoQualityAnalyzerFactory,
-        settingsRepository: SettingsRepository,
-        photoScoreDao: PhotoScoreDao,
-        photoRepository: PhotoRepository
-    ): PickBestPhotosUseCase {
-        return PickBestPhotosUseCaseImpl(analyzerFactory, settingsRepository, photoScoreDao, photoRepository)
-    }
 }
 
 @Module
