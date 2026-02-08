@@ -281,7 +281,7 @@ internal fun SettingsScreenContent(
                         value = uiState.smartDiscardThresholds.blurThreshold,
                         onValueChange = { onThresholdChanged(ThresholdType.BLUR, it) },
                         valueRange = 30f..250f,
-                        steps = 44,
+                        steps = 439,
                         valueFormatter = { "%.1f".format(it) },
                         defaultValue = 100.0f,
                         subtitle = "값을 올리면 더 많이 '흔들림'으로 잡고, 내리면 심하게 흔들린 사진만 잡아요."
@@ -292,7 +292,7 @@ internal fun SettingsScreenContent(
                         value = uiState.smartDiscardThresholds.minFaceSize,
                         onValueChange = { onThresholdChanged(ThresholdType.MIN_FACE_SIZE, it) },
                         valueRange = 0.02f..0.20f,
-                        steps = 36,
+                        steps = 35,
                         valueFormatter = { "%.1f%%".format(it * 100) },
                         defaultValue = 0.05f,
                         subtitle = "사진에서 얼굴이 차지하는 비율(%)이에요. 값을 올리면 얼굴이 작은 사진을 더 많이 '작음'으로 잡고, 내리면 작은 얼굴도 더 통과해요."
@@ -303,7 +303,7 @@ internal fun SettingsScreenContent(
                         value = uiState.smartDiscardThresholds.headAngleLimit,
                         onValueChange = { onThresholdChanged(ThresholdType.HEAD_ANGLE, it) },
                         valueRange = 10f..60f,
-                        steps = 50,
+                        steps = 99,
                         valueFormatter = { "%.1f°".format(it) },
                         defaultValue = 30.0f,
                         subtitle = "값을 올리면 고개를 더 돌려도 통과하고, 내리면 조금만 돌아도 '고개돌림'으로 잡아요."
@@ -314,7 +314,7 @@ internal fun SettingsScreenContent(
                         value = uiState.smartDiscardThresholds.eyeOpenThreshold,
                         onValueChange = { onThresholdChanged(ThresholdType.EYE_OPEN, it) },
                         valueRange = 0.10f..0.90f,
-                        steps = 16,
+                        steps = 15,
                         valueFormatter = { "%.2f".format(it) },
                         defaultValue = 0.50f,
                         subtitle = "값을 올리면 살짝 감긴 눈도 '눈감음'으로 잡고, 내리면 확실히 감긴 경우만 잡아요."
@@ -325,7 +325,7 @@ internal fun SettingsScreenContent(
                         value = uiState.smartDiscardThresholds.smileExceptionThreshold,
                         onValueChange = { onThresholdChanged(ThresholdType.SMILE_EXCEPTION, it) },
                         valueRange = 0.00f..1.00f,
-                        steps = 20,
+                        steps = 19,
                         valueFormatter = { "%.2f".format(it) },
                         defaultValue = 0.70f,
                         subtitle = "값을 올리면 웃고 있어도 '눈감음'으로 잡힐 수 있고, 내리면 웃는 사진은 더 많이 통과해요."
