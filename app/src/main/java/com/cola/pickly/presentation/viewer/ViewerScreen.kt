@@ -145,34 +145,9 @@ fun ViewerScreen(
                     DebugOverlay(
                         photo = photo,
                         debugOptions = settings.debugOptions,
-                        thresholds = settings.smartDiscardThresholds,
-                        isInfoVisible = isInfoVisible
+                        thresholds = settings.smartDiscardThresholds
                     )
                 }
-            }
-        }
-
-        if (settings.debugOptions.showDebugOverlay) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(12.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
-            ) {
-                val text = buildString {
-                    appendLine("page=${pagerState.currentPage} / ${photos.size - 1}")
-                    appendLine("photoId=${currentPhoto?.id ?: -1}")
-                    appendLine("scale=${"%.3f".format(currentMetrics.scale)}")
-                    appendLine("offset=(${currentMetrics.offset.x.toInt()}, ${currentMetrics.offset.y.toInt()})")
-                    appendLine("root=${rootSize.width}x${rootSize.height}")
-                    appendLine("image=${currentMetrics.imageSize.width}x${currentMetrics.imageSize.height}")
-                }
-                androidx.compose.material3.Text(
-                    text = text,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-                    color = Color.White
-                )
             }
         }
 

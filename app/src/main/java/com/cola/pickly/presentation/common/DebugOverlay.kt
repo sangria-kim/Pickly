@@ -2,8 +2,11 @@ package com.cola.pickly.presentation.common
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,7 +33,6 @@ fun DebugOverlay(
     photo: Photo,
     debugOptions: DebugOptions,
     thresholds: SmartDiscardThresholds = SmartDiscardThresholds(),
-    isInfoVisible: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -102,63 +104,68 @@ fun DebugOverlay(
             }
         }
 
-        // 4. 점수 및 메타 정보 표시 (이미지 영역 밖으로 벗어날 수 있도록 Root Box에 배치)
-        // 오른쪽 전체 영역 사용 (TopEnd ~ BottomEnd)
+        // 4. 점수 및 메타 정보 표시 (중앙 정렬, 2열 구조)
         if (debugOptions.showScoreOverlay && score != null) {
-            // InfoOverlay 활성 시 아래로 이동 (겹침 방지)
-            // InfoOverlay 하단 ≈ statusBar(~40dp) + 72dp + content(~60dp) ≈ 172dp
-            val scoreTopPadding = if (isInfoVisible) 180.dp else 48.dp
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd) // 우측 상단 정렬
-                    .padding(top = scoreTopPadding, end = 8.dp, bottom = 8.dp)
-                    .background(Color.Black.copy(alpha = 0.6f))
+                    .align(Alignment.Center)
                     .padding(8.dp)
-                    .verticalScroll(rememberScrollState()) // 내용이 길어지면 스크롤 가능하게 처리
+                    .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                    .padding(8.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                val text = buildString {
-                    appendLine("ID: ${photo.id}")
-                    appendLine("Total: %.1f".format(score.totalScore))
-                    appendLine("----------")
-                    // Normalized Scores
-                    appendLine("Sharpness: %.1f".format(score.sharpnessScore))
-                    appendLine("Expression: %.1f".format(score.expressionScore))
-                    appendLine("Lighting: %.1f".format(score.lightingScore))
-                    appendLine("Composition: %.1f".format(score.compositionScore))
-                    appendLine("Background: %.1f".format(score.backgroundScore))
-                    
-                    appendLine("----------")
-                    // Actual Raw Values
-                    appendLine("[Actual]")
-                    appendLine("Blur(Var): %.1f".format(score.rawSharpness))
-                    // 눈 뜸 확률 (좌/우/평균)
-                    appendLine("Eye(Avg): %.2f".format(score.eyeOpenProb))
-                    appendLine("Eye(L/R): %.2f / %.2f".format(score.leftEyeOpenProb, score.rightEyeOpenProb))
-                    
-                    appendLine("Smile: %.2f".format(score.smileProb))
-                    appendLine("Head: P=%.0f, Y=%.0f".format(score.headEulerAngleX, score.headEulerAngleY))
-                    
-                    appendLine("----------")
-                    if (score.isCutoff) {
-                        append("❌ Cutoff: ${score.cutoffReason}")
-                    } else {
-                        append("✅ Pass")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // 좌측 열: 점수 요약 / 판단 결과
+                    Column {
+                        Text(
+                            text = buildString {
+                                appendLine("ID: ${photo.id}")
+                                appendLine("Total: %.1f".format(score.totalScore))
+                                appendLine("----------")
+                                appendLine("Sharpness: %.1f".format(score.sharpnessScore))
+                                appendLine("Expression: %.1f".format(score.expressionScore))
+                                appendLine("Lighting: %.1f".format(score.lightingScore))
+                                appendLine("Composition: %.1f".format(score.compositionScore))
+                                appendLine("Background: %.1f".format(score.backgroundScore))
+                                appendLine("----------")
+                                if (score.isCutoff) {
+                                    append("❌ Cutoff: ${score.cutoffReason}")
+                                } else {
+                                    append("✅ Pass")
+                                }
+                            },
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        )
                     }
-                    
-                    appendLine("\n[Thresholds]")
-                    appendLine("Blur < ${"%.1f".format(thresholds.blurThreshold)}")
-                    appendLine("Eye > ${"%.2f".format(thresholds.eyeOpenThreshold)}")
-                    appendLine("Smile > ${"%.2f".format(thresholds.smileExceptionThreshold)}")
-                    appendLine("Head < ${"%.0f".format(thresholds.headAngleLimit)}°")
-                    appendLine("MinFace > ${"%.1f".format(thresholds.minFaceSize * 100)}%")
-                }
 
-                Text(
-                    text = text,
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp
-                )
+                    // 우측 열: 실제 분석 값 / 기준값
+                    Column {
+                        Text(
+                            text = buildString {
+                                appendLine("[Actual]")
+                                appendLine("Blur(Var): %.1f".format(score.rawSharpness))
+                                appendLine("Eye(Avg): %.2f".format(score.eyeOpenProb))
+                                appendLine("Eye(L/R): %.2f / %.2f".format(score.leftEyeOpenProb, score.rightEyeOpenProb))
+                                appendLine("Smile: %.2f".format(score.smileProb))
+                                appendLine("Head: P=%.0f, Y=%.0f".format(score.headEulerAngleX, score.headEulerAngleY))
+                                appendLine("----------")
+                                appendLine("[Thresholds]")
+                                appendLine("Blur < ${"%.1f".format(thresholds.blurThreshold)}")
+                                appendLine("Eye > ${"%.2f".format(thresholds.eyeOpenThreshold)}")
+                                appendLine("Smile > ${"%.2f".format(thresholds.smileExceptionThreshold)}")
+                                appendLine("Head < ${"%.0f".format(thresholds.headAngleLimit)}°")
+                                appendLine("MinFace > ${"%.1f".format(thresholds.minFaceSize * 100)}%")
+                            },
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
             }
         }
     }
