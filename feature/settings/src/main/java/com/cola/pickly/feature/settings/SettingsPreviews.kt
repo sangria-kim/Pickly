@@ -1,5 +1,6 @@
 package com.cola.pickly.feature.settings
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
@@ -13,6 +14,7 @@ private fun SettingsScreenContentPreview_Default() {
     PicklyTheme {
         SettingsScreenContent(
             uiState = SettingsUiState(),
+            snackbarHostState = SnackbarHostState(),
             onDuplicatePolicyChanged = {},
             onThemeChanged = {},
             onSmartDiscardCriterionToggle = {},
@@ -31,6 +33,7 @@ private fun SettingsScreenContentPreview_Customized() {
                 themeMode = ThemeMode.Dark,
                 smartDiscardCriteria = setOf(RejectReason.BLURRY, RejectReason.EYES_CLOSED)
             ),
+            snackbarHostState = SnackbarHostState(),
             onDuplicatePolicyChanged = {},
             onThemeChanged = {},
             onSmartDiscardCriterionToggle = {},
@@ -45,6 +48,7 @@ private fun SettingsScreenContentPreview_DebugVisible() {
     PicklyTheme {
         SettingsScreenContent(
             uiState = SettingsUiState(isDebugBuild = true, isDebugMenuVisible = true, cacheSizeBytes = 134 * 1024 * 1024),
+            snackbarHostState = SnackbarHostState(),
             onDuplicatePolicyChanged = {},
             onThemeChanged = {},
             onSmartDiscardCriterionToggle = {},

@@ -13,6 +13,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.collectLatest
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
@@ -53,6 +56,14 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAutoRejectWarningDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Snackbar 메시지 수집
+    LaunchedEffect(Unit) {
+        viewModel.snackbarMessages.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     // 이벤트 처리
     LaunchedEffect(Unit) {
@@ -61,7 +72,6 @@ fun SettingsScreen(
                 SettingsEvent.ShowAutoRejectWarningDialog -> {
                     showAutoRejectWarningDialog = true
                 }
-                else -> { /* 다른 이벤트는 현재 처리하지 않음 */ }
             }
         }
     }
@@ -82,6 +92,7 @@ fun SettingsScreen(
 
     SettingsScreenContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onDuplicatePolicyChanged = viewModel::setDuplicateFilenamePolicy,
         onThemeChanged = viewModel::setThemeMode,
         onSmartDiscardCriterionToggle = viewModel::toggleSmartDiscardCriterion,
@@ -99,6 +110,7 @@ fun SettingsScreen(
 @Composable
 internal fun SettingsScreenContent(
     uiState: SettingsUiState,
+    snackbarHostState: SnackbarHostState,
     onDuplicatePolicyChanged: (DuplicateFilenamePolicy) -> Unit,
     onThemeChanged: (ThemeMode) -> Unit,
     onSmartDiscardCriterionToggle: (RejectReason) -> Unit,
@@ -117,7 +129,8 @@ internal fun SettingsScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-        contentWindowInsets = WindowInsets.safeDrawing
+        contentWindowInsets = WindowInsets.safeDrawing,
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -343,8 +356,12 @@ internal fun SettingsScreenContent(
 }
 
 private fun formatFileSize(bytes: Long): String {
-    val mb = bytes / (1024.0 * 1024.0)
-    return "%.1f MB".format(mb)
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "%.1f KB".format(bytes / 1024.0)
+        bytes < 1024 * 1024 * 1024 -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+        else -> "%.2f GB".format(bytes / (1024.0 * 1024.0 * 1024.0))
+    }
 }
 
 @Preview(showBackground = true)
@@ -355,6 +372,7 @@ fun SettingsScreenPreview() {
             uiState = SettingsUiState(
                 cacheSizeBytes = 12 * 1024 * 1024
             ),
+            snackbarHostState = SnackbarHostState(),
             onDuplicatePolicyChanged = {},
             onThemeChanged = {},
             onSmartDiscardCriterionToggle = {},

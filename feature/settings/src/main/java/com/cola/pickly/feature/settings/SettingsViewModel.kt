@@ -10,6 +10,7 @@ import com.cola.pickly.core.data.settings.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -42,6 +43,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _events = MutableSharedFlow<SettingsEvent>()
     val events = _events.asSharedFlow()
+
+    private val _snackbarMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val snackbarMessages: SharedFlow<String> = _snackbarMessages.asSharedFlow()
 
     private var versionTapCount = 0
 
@@ -131,9 +135,9 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isClearingCache = false) }
 
             if (result.isSuccess) {
-                _events.emit(SettingsEvent.CacheCleared)
+                _snackbarMessages.emit("캐시를 비웠어요.")
             } else {
-                _events.emit(SettingsEvent.CacheClearFailed)
+                _snackbarMessages.emit("캐시를 비우지 못했어요. 다시 시도해주세요.")
             }
 
             refreshCacheSize()
@@ -185,8 +189,6 @@ class SettingsViewModel @Inject constructor(
 }
 
 sealed interface SettingsEvent {
-    data object CacheCleared : SettingsEvent
-    data object CacheClearFailed : SettingsEvent
     data object ShowAutoRejectWarningDialog : SettingsEvent
 }
 
