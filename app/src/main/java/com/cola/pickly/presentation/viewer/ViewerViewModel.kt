@@ -92,11 +92,14 @@ class ViewerViewModel @Inject constructor(
                 val photosWithScores = allPhotos.map { photo ->
                     var photoWithScore = photo
                     val scoreEntity = photoScoreDao.getScore(photo.id)
-                    
+
                     if (scoreEntity != null) {
-                        photoWithScore = photo.copy(recommendationScore = scoreEntity.score)
+                        // DB에서 로드한 점수에서 rejectReason을 제거
+                        // (rejectReason은 세션 기반 UI 상태로만 취급)
+                        val scoreWithoutReason = scoreEntity.score.copy(rejectReason = null)
+                        photoWithScore = photo.copy(recommendationScore = scoreWithoutReason)
                     }
-                    
+
                     applyRejectCandidate(photoWithScore, currentRejectCandidates)
                 }
 
