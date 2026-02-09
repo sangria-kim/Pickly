@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -415,7 +416,7 @@ fun SettingsSliderItem(
 ) {
     val primaryColor = MaterialTheme.colorScheme.onSurface
     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val accentColor = MaterialTheme.colorScheme.primary
+    val accentColor = TealAccent
 
     Column(
         modifier = modifier
@@ -428,7 +429,7 @@ fun SettingsSliderItem(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.labelLarge,
                 color = primaryColor
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -450,7 +451,11 @@ fun SettingsSliderItem(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
-            steps = steps
+            steps = 0,  // tick marks 제거
+            colors = SliderDefaults.colors(
+                thumbColor = TealAccent,
+                activeTrackColor = TealAccent
+            )
         )
         if (subtitle != null) {
             Text(
@@ -499,16 +504,18 @@ fun SettingsCardHeader(title: String, description: String? = null, modifier: Mod
 }
 
 @Composable
-fun SettingsCardTuningHeader(title: String, actionText: String, onActionClick: () -> Unit, modifier: Modifier = Modifier) {
+fun SettingsCardTuningHeader(title: String? = null, actionText: String, onActionClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp).fillMaxWidth(),
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+        horizontalArrangement = if (title != null) androidx.compose.foundation.layout.Arrangement.SpaceBetween else androidx.compose.foundation.layout.Arrangement.End
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(
             text = actionText,
             style = MaterialTheme.typography.bodyMedium,
@@ -518,20 +525,3 @@ fun SettingsCardTuningHeader(title: String, actionText: String, onActionClick: (
     }
 }
 
-@Composable
-fun SettingsDebugSectionTitle(modifier: Modifier = Modifier) {
-    Row(modifier = modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "디버그",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        com.cola.pickly.core.ui.components.PillBadge(
-            text = "개발/QA 전용",
-            backgroundColor = Color(0xFFFFEBEE),
-            textColor = Color(0xFFD32F2F),
-            fontSize = 10.sp,
-            height = 20.dp
-        )
-    }
-}

@@ -39,7 +39,6 @@ import com.cola.pickly.feature.settings.components.SettingsCardHeader
 import com.cola.pickly.feature.settings.components.AutoRejectWarningDialog
 import com.cola.pickly.feature.settings.components.SettingsCardSection
 import com.cola.pickly.feature.settings.components.SettingsCardTuningHeader
-import com.cola.pickly.feature.settings.components.SettingsDebugSectionTitle
 import com.cola.pickly.feature.settings.components.SettingsExpandableChecklist
 import com.cola.pickly.feature.settings.components.SettingsGroupLabel
 import com.cola.pickly.feature.settings.components.SettingsRadioItem
@@ -255,37 +254,37 @@ internal fun SettingsScreenContent(
 
             // 6. 디버그 메뉴 (개발자 전용)
             if (uiState.isDebugBuild && uiState.isDebugMenuVisible) {
-                SettingsDebugSectionTitle()
-
-                // 분석/시각화 카드
+                // 섹션 1: 분석/시각화
+                SettingsSectionHeader(title = "분석/시각화")
                 SettingsCardSection(borderColor = DebugPinkOutline) {
-                    SettingsCardHeader(title = "분석/시각화")
                     SettingsSwitchItem(
                         title = "디버그 오버레이 표시",
                         subtitle = "ViewerScreen에서 분석 결과를 시각화합니다.",
                         checked = uiState.debugOptions.showDebugOverlay,
                         onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_DEBUG_OVERLAY, it) }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                    SettingsSwitchItem(
-                        title = "  얼굴 박스 표시",
-                        checked = uiState.debugOptions.showFaceBoundingBox,
-                        onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_FACE_BOX, it) },
-                        enabled = uiState.debugOptions.showDebugOverlay
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                    SettingsSwitchItem(
-                        title = "  사진 평가 점수 표시",
-                        checked = uiState.debugOptions.showScoreOverlay,
-                        onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_SCORE, it) },
-                        enabled = uiState.debugOptions.showDebugOverlay
-                    )
+
+                    // 조건부 렌더링: ON일 때만 하위 옵션 표시
+                    if (uiState.debugOptions.showDebugOverlay) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                        SettingsSwitchItem(
+                            title = "  얼굴 박스 표시",
+                            checked = uiState.debugOptions.showFaceBoundingBox,
+                            onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_FACE_BOX, it) }
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                        SettingsSwitchItem(
+                            title = "  사진 평가 점수 표시",
+                            checked = uiState.debugOptions.showScoreOverlay,
+                            onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_SCORE, it) }
+                        )
+                    }
                 }
 
-                // 튜닝 카드
-                SettingsCardSection(modifier = Modifier.padding(top = 20.dp), borderColor = DebugPinkOutline) {
+                // 섹션 2: 분석 파라미터 튜닝
+                SettingsSectionHeader(title = "분석 파라미터 튜닝")
+                SettingsCardSection(borderColor = DebugPinkOutline) {
                     SettingsCardTuningHeader(
-                        title = "분석 파라미터 튜닝",
                         actionText = "기본값으로 재설정",
                         onActionClick = onResetThresholds
                     )
