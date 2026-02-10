@@ -1,8 +1,7 @@
 package com.cola.pickly.presentation.viewer
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -32,6 +31,9 @@ import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.ViewerContext
 import com.cola.pickly.core.model.Photo
+import com.cola.pickly.core.ui.transition.ContainerTransformSpec
+import com.cola.pickly.core.ui.transition.LocalAnimatedVisibilityScope
+import com.cola.pickly.core.ui.transition.LocalSharedTransitionScope
 import com.cola.pickly.core.ui.util.ViewerSystemBarsPolicy
 import com.cola.pickly.presentation.common.DebugOverlay
 import com.cola.pickly.presentation.viewer.components.ViewerBottomOverlay
@@ -41,6 +43,7 @@ import com.cola.pickly.presentation.viewer.components.ZoomableImageMetrics
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ViewerScreen(
     photos: List<Photo>,
@@ -57,11 +60,15 @@ fun ViewerScreen(
         initialValue = Settings()
     )
     var isOverlayVisible by remember { mutableStateOf(true) }
-    var isInfoVisible by remember { mutableStateOf(false) } // State for info overlay
+    var isInfoVisible by remember { mutableStateOf(false) }
     var isZoomed by remember { mutableStateOf(false) }
     var overlayStateBeforeZoom by remember { mutableStateOf(false) }
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
     val metricsByPhotoId = remember { mutableStateMapOf<Long, ZoomableImageMetrics>() }
+
+    val sharedTransitionScope = LocalSharedTransitionScope.current
+    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+    val isTransitionActive = sharedTransitionScope?.isTransitionActive == true
 
     ViewerSystemBarsPolicy()
 
@@ -97,11 +104,28 @@ fun ViewerScreen(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = !isZoomed // 확대 중일 때는 스와이프 비활성화
+            userScrollEnabled = !isZoomed
         ) { page ->
             val photo = photos[page]
 
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (page == pagerState.currentPage
+                            && sharedTransitionScope != null
+                            && animatedVisibilityScope != null
+                        ) {
+                            with(sharedTransitionScope) {
+                                Modifier.sharedBounds(
+                                    sharedContentState = rememberSharedContentState(key = "photo_${photo.id}"),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    boundsTransform = ContainerTransformSpec.PhotoContainerTransform
+                                )
+                            }
+                        } else Modifier
+                    )
+            ) {
                 ZoomableImage(
                     imagePath = photo.filePath,
                     photoId = photo.id,
@@ -110,12 +134,10 @@ fun ViewerScreen(
                         isZoomed = scale > 1f
 
                         if (!wasZoomed && isZoomed) {
-                            // 줌 시작: 현재 오버레이 상태 저장 후 숨김
                             overlayStateBeforeZoom = isOverlayVisible
                             isOverlayVisible = false
                             isInfoVisible = false
                         } else if (wasZoomed && !isZoomed) {
-                            // 줌 해제: 이전 오버레이 상태 복원
                             isOverlayVisible = overlayStateBeforeZoom
                         }
                     },
@@ -125,22 +147,17 @@ fun ViewerScreen(
                     }
                 )
 
-                // DebugOverlay — 조건부 표시:
-                // 1. 일반 오버레이 표시 상태 (isOverlayVisible)
-                // 2. 확대 중이 아님 (!isZoomed)
-                // 3. ViewerContext가 SELECT일 때만 (ARCHIVE에서는 숨김)
-                // 4. 디버그 오버레이 마스터 토글 활성화
-                // 5. DebugOptions 중 하나라도 활성화됨
                 val shouldShowDebugOverlay = isOverlayVisible
                     && !isZoomed
+                    && !isTransitionActive
                     && viewerContext == ViewerContext.SELECT
                     && settings.debugOptions.showDebugOverlay
                     && (settings.debugOptions.showFaceBoundingBox || settings.debugOptions.showScoreOverlay)
 
                 AnimatedVisibility(
                     visible = shouldShowDebugOverlay,
-                    enter = fadeIn(),
-                    exit = fadeOut()
+                    enter = ContainerTransformSpec.overlayEnter(),
+                    exit = ContainerTransformSpec.overlayExit()
                 ) {
                     DebugOverlay(
                         photo = photo,
@@ -151,11 +168,10 @@ fun ViewerScreen(
             }
         }
 
-        // Top Overlay
         AnimatedVisibility(
-            visible = isOverlayVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            visible = isOverlayVisible && !isTransitionActive,
+            enter = ContainerTransformSpec.overlayEnter(),
+            exit = ContainerTransformSpec.overlayExit(),
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
             ViewerTopOverlay(
@@ -167,13 +183,12 @@ fun ViewerScreen(
             )
         }
 
-        // Info Overlay
-        if (isInfoVisible && isOverlayVisible && currentPhoto != null) {
+        if (isInfoVisible && isOverlayVisible && !isTransitionActive && currentPhoto != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(top = 72.dp, end = 16.dp) // Position below top overlay (approx 72dp height)
+                    .padding(top = 72.dp, end = 16.dp)
                     .background(Color.Black.copy(alpha = 0.7f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
@@ -205,12 +220,11 @@ fun ViewerScreen(
             }
         }
 
-        // Bottom Overlay - SELECT Context에서만 표시
         if (viewerContext == ViewerContext.SELECT) {
             AnimatedVisibility(
-                visible = isOverlayVisible,
-                enter = fadeIn(),
-                exit = fadeOut(),
+                visible = isOverlayVisible && !isTransitionActive,
+                enter = ContainerTransformSpec.overlayEnter(),
+                exit = ContainerTransformSpec.overlayExit(),
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 ViewerBottomOverlay(

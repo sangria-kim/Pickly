@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -38,8 +39,12 @@ import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.components.RejectReasonBadge
 import com.cola.pickly.core.ui.theme.TealAccent
+import com.cola.pickly.core.ui.transition.ContainerTransformSpec
+import com.cola.pickly.core.ui.transition.LocalAnimatedVisibilityScope
+import com.cola.pickly.core.ui.transition.LocalSharedTransitionScope
 import java.io.File
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PhotoGridItem(
     photo: Photo,
@@ -55,6 +60,8 @@ fun PhotoGridItem(
     val onClickState = rememberUpdatedState(onClick)
     val onToggleSelectionState = rememberUpdatedState(onToggleSelection)
     val context = LocalContext.current
+    val sharedTransitionScope = LocalSharedTransitionScope.current
+    val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
 
     Box(
         modifier = Modifier
@@ -86,12 +93,23 @@ fun PhotoGridItem(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(File(photo.filePath))
                 .crossfade(false)
-                .size(512) // 이미지 크기를 512x512로 제한하여 메모리 사용량 감소
+                .size(512)
                 .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
+                .then(
+                    if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                        with(sharedTransitionScope) {
+                            Modifier.sharedBounds(
+                                sharedContentState = rememberSharedContentState(key = "photo_${photo.id}"),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                boundsTransform = ContainerTransformSpec.PhotoContainerTransform
+                            )
+                        }
+                    } else Modifier
+                )
                 .then(
                     if (isSelected && isMultiSelectMode) {
                         Modifier.border(

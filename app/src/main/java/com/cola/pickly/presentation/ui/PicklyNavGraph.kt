@@ -1,10 +1,11 @@
 package com.cola.pickly.presentation.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import com.cola.pickly.core.ui.transition.ContainerTransformSpec
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +31,8 @@ import com.cola.pickly.presentation.viewer.ViewerUiState
 import com.cola.pickly.presentation.viewer.ViewerScreen
 import com.cola.pickly.presentation.viewer.ViewerViewModel
 import com.cola.pickly.core.data.settings.SettingsRepository
+import com.cola.pickly.core.ui.transition.LocalAnimatedVisibilityScope
+import com.cola.pickly.core.ui.transition.LocalSharedTransitionScope
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
 import dagger.hilt.EntryPoint
@@ -43,6 +46,7 @@ interface PicklyNavGraphEntryPoint {
     fun settingsRepository(): SettingsRepository
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PicklyNavGraph(
     mainViewModel: MainViewModel
@@ -56,143 +60,131 @@ fun PicklyNavGraph(
     }
     val settingsRepository = remember { entryPoint.settingsRepository() }
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "splash") {
-        composable("splash") {
-            SplashScreen(navController = navController, viewModel = mainViewModel) 
-        }
-        composable("main") { backStackEntry ->
-            // S-03에서 전달받은 결과 처리 (폴더 선택)
-            val savedStateHandle = backStackEntry.savedStateHandle
-            val selectedFolderId = savedStateHandle.get<String>("selected_folder_id")
-            val selectedFolderName = savedStateHandle.get<String>("selected_folder_name")
-            
-            // S-04에서 전달받은 결과 처리 (선택 상태 변경)
-            // popBackStack() 후 main composable이 다시 실행될 때마다 selection_updates를 읽도록 함
-            // savedStateHandle의 keys를 관찰하여 변경을 감지
-            val currentBackStackEntry by navController.currentBackStackEntryAsState()
-            var selectionUpdates by remember { mutableStateOf<Map<Long, PhotoSelectionState>?>(null) }
-            
-            // backStackEntry가 변경될 때마다 (popBackStack 후) selection_updates를 확인
-            LaunchedEffect(currentBackStackEntry?.id) {
-                val updates = savedStateHandle.get<Map<Long, PhotoSelectionState>>("selection_updates")
-                if (updates != null) {
-                    selectionUpdates = updates
-                    savedStateHandle.remove<Map<Long, PhotoSelectionState>>("selection_updates")
+    SharedTransitionLayout {
+        CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+            NavHost(navController = navController, startDestination = "splash") {
+                composable("splash") {
+                    SplashScreen(navController = navController, viewModel = mainViewModel)
                 }
-            }
+                composable("main") { backStackEntry ->
+                    CompositionLocalProvider(LocalAnimatedVisibilityScope provides this@composable) {
+                        val savedStateHandle = backStackEntry.savedStateHandle
+                        val selectedFolderId = savedStateHandle.get<String>("selected_folder_id")
+                        val selectedFolderName = savedStateHandle.get<String>("selected_folder_name")
 
-            MainScreen(
-                mainViewModel = mainViewModel,
-                onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext, rejectCandidates ->
-                    // viewer 라우트로 이동하기 전에 selectionMap을 현재 backStackEntry의 savedStateHandle에 저장
-                    // viewer composable에서 previousBackStackEntry의 savedStateHandle을 통해 읽어옴
-                    navController.currentBackStackEntry?.savedStateHandle?.set(
-                        "initial_selection_map_for_viewer",
-                        selectionMap
-                    )
-                    navController.currentBackStackEntry?.savedStateHandle?.set(
-                        "initial_reject_candidates_for_viewer",
-                        rejectCandidates
-                    )
-                    navController.navigate("viewer/$folderId/$photoId?selectedOnly=$selectedOnly&context=${viewerContext.name}")
-                },
-                selectedFolder = if (selectedFolderId != null && selectedFolderName != null) {
-                    selectedFolderId to selectedFolderName
-                } else null,
-                selectionUpdates = selectionUpdates
-            )
-        }
-        composable(
-            route = "viewer/{folderId}/{photoId}?selectedOnly={selectedOnly}&context={context}",
-            arguments = listOf(
-                navArgument("folderId") { type = NavType.StringType },
-                navArgument("photoId") { type = NavType.LongType },
-                navArgument("selectedOnly") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                },
-                navArgument("context") {
-                    type = NavType.StringType
-                    defaultValue = ViewerContext.SELECT.name
+                        val currentBackStackEntry by navController.currentBackStackEntryAsState()
+                        var selectionUpdates by remember { mutableStateOf<Map<Long, PhotoSelectionState>?>(null) }
+
+                        LaunchedEffect(currentBackStackEntry?.id) {
+                            val updates = savedStateHandle.get<Map<Long, PhotoSelectionState>>("selection_updates")
+                            if (updates != null) {
+                                selectionUpdates = updates
+                                savedStateHandle.remove<Map<Long, PhotoSelectionState>>("selection_updates")
+                            }
+                        }
+
+                        MainScreen(
+                            mainViewModel = mainViewModel,
+                            onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext, rejectCandidates ->
+                                navController.currentBackStackEntry?.savedStateHandle?.set(
+                                    "initial_selection_map_for_viewer",
+                                    selectionMap
+                                )
+                                navController.currentBackStackEntry?.savedStateHandle?.set(
+                                    "initial_reject_candidates_for_viewer",
+                                    rejectCandidates
+                                )
+                                navController.navigate("viewer/$folderId/$photoId?selectedOnly=$selectedOnly&context=${viewerContext.name}")
+                            },
+                            selectedFolder = if (selectedFolderId != null && selectedFolderName != null) {
+                                selectedFolderId to selectedFolderName
+                            } else null,
+                            selectionUpdates = selectionUpdates
+                        )
+                    }
                 }
-            ),
-            enterTransition = { fadeIn(animationSpec = tween(140)) },
-            exitTransition = { fadeOut(animationSpec = tween(140)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(140)) },
-            popExitTransition = { fadeOut(animationSpec = tween(140)) }
-        ) { backStackEntry ->
-            // Context 파라미터 읽기
-            val contextName = backStackEntry.arguments?.getString("context") ?: ViewerContext.SELECT.name
-            val viewerContext = try {
-                ViewerContext.valueOf(contextName)
-            } catch (e: IllegalArgumentException) {
-                ViewerContext.SELECT
-            }
-            
-            // 이전 화면(main)에서 전달된 initial_selection_map을 읽음
-            val selectionMapFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
-            val rejectCandidatesFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, RejectReason>>("initial_reject_candidates_for_viewer")
-            
-            val viewerViewModel: ViewerViewModel = hiltViewModel()
-            
-            // ViewModel 초기화 직후 selectionMap 설정
-            if (selectionMapFromPrevious != null) {
-                viewerViewModel.initializeViewerData(
-                    selectionMapFromPrevious,
-                    rejectCandidatesFromPrevious ?: emptyMap()
-                )
-                // 데이터 소비 후 초기화
-                navController.previousBackStackEntry?.savedStateHandle?.remove<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
-                navController.previousBackStackEntry?.savedStateHandle?.remove<Map<Long, RejectReason>>("initial_reject_candidates_for_viewer")
-            }
-            
-            val uiState by viewerViewModel.uiState.collectAsStateWithLifecycle()
-            
-            // 시스템 back key 처리 - onBackClick과 동일한 동작
-            when (val state = uiState) {
-                is ViewerUiState.Success -> {
-                    val coroutineScope = rememberCoroutineScope()
-                    var exitRequestId by remember { mutableStateOf(0) }
-                    var isClosing by remember { mutableStateOf(false) }
+                composable(
+                    route = "viewer/{folderId}/{photoId}?selectedOnly={selectedOnly}&context={context}",
+                    arguments = listOf(
+                        navArgument("folderId") { type = NavType.StringType },
+                        navArgument("photoId") { type = NavType.LongType },
+                        navArgument("selectedOnly") {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        },
+                        navArgument("context") {
+                            type = NavType.StringType
+                            defaultValue = ViewerContext.SELECT.name
+                        }
+                    ),
+                    enterTransition = { ContainerTransformSpec.navFadeIn() },
+                    exitTransition = { ContainerTransformSpec.navFadeOut() },
+                    popEnterTransition = { ContainerTransformSpec.navFadeIn() },
+                    popExitTransition = { ContainerTransformSpec.navFadeOut() }
+                ) { backStackEntry ->
+                    CompositionLocalProvider(LocalAnimatedVisibilityScope provides this@composable) {
+                        val contextName = backStackEntry.arguments?.getString("context") ?: ViewerContext.SELECT.name
+                        val viewerContext = try {
+                            ViewerContext.valueOf(contextName)
+                        } catch (e: IllegalArgumentException) {
+                            ViewerContext.SELECT
+                        }
 
-                    val requestClose: () -> Unit = requestClose@{
-                        if (isClosing) return@requestClose
-                        isClosing = true
-                        exitRequestId += 1
-                        coroutineScope.launch {
-                            // 1) 먼저 줌/스케일 상태 리셋이 적용되도록 한 프레임 양보
-                            withFrameNanos { }
-                            // 2) 뒤로가기 시 변경된 선택 상태를 전달
-                            navController.previousBackStackEntry?.savedStateHandle?.set("selection_updates", state.selectionMap)
-                            navController.popBackStack()
+                        val selectionMapFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
+                        val rejectCandidatesFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, RejectReason>>("initial_reject_candidates_for_viewer")
+
+                        val viewerViewModel: ViewerViewModel = hiltViewModel()
+
+                        if (selectionMapFromPrevious != null) {
+                            viewerViewModel.initializeViewerData(
+                                selectionMapFromPrevious,
+                                rejectCandidatesFromPrevious ?: emptyMap()
+                            )
+                            navController.previousBackStackEntry?.savedStateHandle?.remove<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
+                            navController.previousBackStackEntry?.savedStateHandle?.remove<Map<Long, RejectReason>>("initial_reject_candidates_for_viewer")
+                        }
+
+                        val uiState by viewerViewModel.uiState.collectAsStateWithLifecycle()
+
+                        when (val state = uiState) {
+                            is ViewerUiState.Success -> {
+                                val coroutineScope = rememberCoroutineScope()
+                                var exitRequestId by remember { mutableStateOf(0) }
+                                var isClosing by remember { mutableStateOf(false) }
+
+                                val requestClose: () -> Unit = requestClose@{
+                                    if (isClosing) return@requestClose
+                                    isClosing = true
+                                    exitRequestId += 1
+                                    coroutineScope.launch {
+                                        withFrameNanos { }
+                                        navController.previousBackStackEntry?.savedStateHandle?.set("selection_updates", state.selectionMap)
+                                        navController.popBackStack()
+                                    }
+                                }
+
+                                BackHandler(enabled = !isClosing, onBack = requestClose)
+
+                                ViewerScreen(
+                                    photos = state.photos,
+                                    initialIndex = state.initialIndex,
+                                    selectionMap = state.selectionMap,
+                                    viewerContext = viewerContext,
+                                    exitRequestId = exitRequestId,
+                                    onBackClick = requestClose,
+                                    onSelectClick = { photoId ->
+                                        viewerViewModel.toggleSelection(photoId)
+                                    },
+                                    onRejectClick = { photoId ->
+                                        viewerViewModel.toggleRejection(photoId)
+                                    },
+                                    settingsRepository = settingsRepository
+                                )
+                            }
+                            is ViewerUiState.Error -> { }
+                            ViewerUiState.Loading -> { }
                         }
                     }
-                    
-                    // BackHandler로 시스템 back key 처리
-                    BackHandler(enabled = !isClosing, onBack = requestClose)
-                    
-                    ViewerScreen(
-                        photos = state.photos,
-                        initialIndex = state.initialIndex,
-                        selectionMap = state.selectionMap,
-                        viewerContext = viewerContext,
-                        exitRequestId = exitRequestId,
-                        onBackClick = requestClose,
-                        onSelectClick = { photoId ->
-                            viewerViewModel.toggleSelection(photoId)
-                        },
-                        onRejectClick = { photoId ->
-                            viewerViewModel.toggleRejection(photoId)
-                        },
-                        settingsRepository = settingsRepository
-                    )
-                }
-                is ViewerUiState.Error -> {
-                    // 에러 처리 (예: Toast 메시지 후 종료)
-                    // 여기서는 간단히 빈 화면이나 로딩 유지
-                }
-                ViewerUiState.Loading -> {
-                    // 로딩 화면 (ViewerScreen 내부에서 처리하거나 별도 처리)
                 }
             }
         }
