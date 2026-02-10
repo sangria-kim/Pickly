@@ -3,10 +3,10 @@ package com.cola.pickly.feature.organize.components
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DriveFileMove
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DriveFileMove
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -25,10 +25,10 @@ sealed class BulkAction(
     @StringRes val labelResId: Int,
     val icon: ImageVector
 ) {
-    object Share : BulkAction(R.string.bulk_action_share, Icons.Default.Share)
-    object Move : BulkAction(R.string.bulk_action_move, Icons.Default.DriveFileMove)
-    object Copy : BulkAction(R.string.bulk_action_copy, Icons.Default.ContentCopy)
-    object Delete : BulkAction(R.string.bulk_action_delete, Icons.Default.Delete)
+    object Share : BulkAction(R.string.bulk_action_share, Icons.Outlined.Share)
+    object Move : BulkAction(R.string.bulk_action_move, Icons.Outlined.DriveFileMove)
+    object Copy : BulkAction(R.string.bulk_action_copy, Icons.Outlined.ContentCopy)
+    object Delete : BulkAction(R.string.bulk_action_delete, Icons.Outlined.Delete)
 
     companion object {
         val actions = listOf(Share, Move, Copy, Delete)
@@ -59,7 +59,13 @@ fun BulkActionBar(
                 is BulkAction.Copy -> onCopyClick
                 is BulkAction.Delete -> onDeleteClick
             }
-            
+
+            val itemColor = when (action) {
+                is BulkAction.Delete -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.outline
+            }
+            val disabledColor = itemColor.copy(alpha = 0.38f)
+
             NavigationBarItem(
                 icon = { Icon(action.icon, contentDescription = stringResource(action.labelResId)) },
                 label = { Text(stringResource(action.labelResId)) },
@@ -67,13 +73,13 @@ fun BulkActionBar(
                 onClick = if (isActionInProgress) { {} } else onClickHandler,
                 enabled = !isActionInProgress,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.outline,
-                    unselectedTextColor = MaterialTheme.colorScheme.outline,
+                    selectedIconColor = itemColor,
+                    selectedTextColor = itemColor,
+                    unselectedIconColor = itemColor,
+                    unselectedTextColor = itemColor,
                     indicatorColor = Color.Transparent,
-                    disabledIconColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f),
-                    disabledTextColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
+                    disabledIconColor = disabledColor,
+                    disabledTextColor = disabledColor
                 )
             )
         }

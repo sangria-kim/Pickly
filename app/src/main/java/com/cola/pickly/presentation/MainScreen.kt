@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -60,9 +60,9 @@ sealed class MainTab(
     @StringRes val labelResId: Int,
     val icon: ImageVector
 ) {
-    object Organize : MainTab("organize", R.string.nav_organize, Icons.Default.CheckCircle)
-    object Archive : MainTab("archive", R.string.archive_title, Icons.Default.DateRange)
-    object Settings : MainTab("settings", R.string.nav_settings, Icons.Default.Settings)
+    object Organize : MainTab("organize", R.string.nav_organize, Icons.Outlined.PhotoLibrary)
+    object Archive : MainTab("archive", R.string.archive_title, Icons.Outlined.Inventory2)
+    object Settings : MainTab("settings", R.string.nav_settings, Icons.Outlined.Settings)
 
     companion object {
         val tabs = listOf(Organize, Archive, Settings)

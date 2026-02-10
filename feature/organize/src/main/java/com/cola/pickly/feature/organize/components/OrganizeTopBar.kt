@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.Checkbox
@@ -184,7 +184,7 @@ fun OrganizeTopBar(
                     Box(contentAlignment = Alignment.Center) {
                         // 항상 AutoAwesome 아이콘 표시
                         Icon(
-                            Icons.Default.AutoAwesome,
+                            Icons.Outlined.AutoAwesome,
                             contentDescription = if (isAnalyzing) "분석 취소" else "스마트 제외",
                             tint = contentColor
                         )

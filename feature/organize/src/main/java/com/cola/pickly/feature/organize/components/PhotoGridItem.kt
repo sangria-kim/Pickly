@@ -10,13 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,6 +34,7 @@ import coil.request.ImageRequest
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.core.ui.components.PhotoSelectionBadge
 import com.cola.pickly.core.ui.components.RejectReasonBadge
 import com.cola.pickly.core.ui.theme.TealAccent
 import com.cola.pickly.core.ui.transition.ContainerTransformSpec
@@ -167,45 +165,13 @@ fun PhotoGridItem(
 
         // 사진 선택 결과 표시 아이콘 (좌하단)
         selectionState?.let { state ->
-            when (state) {
-                PhotoSelectionState.Selected -> {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(6.dp)
-                            .size(24.dp)
-                            .background(TealAccent, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Accepted",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-                PhotoSelectionState.Rejected -> {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(6.dp)
-                            .size(24.dp)
-                            .background(Color(0xFFFF5252), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Rejected",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-                PhotoSelectionState.None -> {
-                    // 아이콘 표시 없음
-                }
-            }
+            PhotoSelectionBadge(
+                selectionState = state,
+                backgroundAlpha = 0.9f,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(6.dp)
+            )
         }
 
         // 스마트 제외 후보 pill 배지 (우하단)

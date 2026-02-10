@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -54,9 +54,9 @@ fun ViewerBottomOverlay(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 채택 버튼 (Check) - Left
+            // 채택 버튼 (check_circle) - Left
             ViewerControlButton(
-                icon = Icons.Default.Check,
+                icon = Icons.Outlined.Check,
                 isActive = isSelected,
                 activeColor = Color(0xFF2ED3B7), // Requested: #2ED3B7
                 contentDescription = "Select",
@@ -68,7 +68,7 @@ fun ViewerBottomOverlay(
             // 제외 버튼 + pill 배지 영역
             Box(contentAlignment = Alignment.TopCenter) {
                 ViewerControlButton(
-                    icon = Icons.Default.Delete,
+                    icon = Icons.Outlined.Close,
                     isActive = isRejected,
                     activeColor = Color(0xFFFF5252), // Requested: #FF5252
                     contentDescription = "Reject",
@@ -97,13 +97,13 @@ private fun ViewerControlButton(
     contentDescription: String,
     onClick: () -> Unit
 ) {
-    // 활성화 시에는 원본 색상(투명도 없음), 비활성화(Gray) 시에는 50% 투명도 적용
+    // 활성화 시 70% 불투명, 비활성화 시 35% 불투명 (기존 대비 30% 더 투명)
     val backgroundColor = if (isActive) {
-        activeColor
+        activeColor.copy(alpha = 0.7f)
     } else {
-        Color.Gray.copy(alpha = 0.5f)
+        Color.Gray.copy(alpha = 0.35f)
     }
-    
+
     val iconTint = Color.White
 
     Box(

@@ -3,7 +3,7 @@ package com.cola.pickly.feature.archive.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,7 +55,7 @@ fun ArchiveTopBar(
             Box {
                 IconButton(onClick = { showFilterMenu = true }) {
                     Icon(
-                        Icons.Default.FilterList,
+                        Icons.Outlined.ViewAgenda,
                         contentDescription = "Filter"
                     )
                 }
