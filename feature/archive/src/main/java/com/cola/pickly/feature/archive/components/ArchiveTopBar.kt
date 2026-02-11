@@ -42,7 +42,7 @@ fun ArchiveTopBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+            actionIconContentColor = MaterialTheme.colorScheme.outline
         ),
         title = {
             Text(

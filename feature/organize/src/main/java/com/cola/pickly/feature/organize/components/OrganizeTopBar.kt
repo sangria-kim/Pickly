@@ -118,13 +118,18 @@ fun OrganizeTopBar(
     else
         MaterialTheme.colorScheme.onSurface
 
+    val actionIconColor = if (isMultiSelectMode)
+        Color.White
+    else
+        MaterialTheme.colorScheme.outline
+
     Box {
         TopAppBar(
             modifier = Modifier.statusBarsPadding(),
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = containerColor,
                 titleContentColor = contentColor,
-                actionIconContentColor = contentColor
+                actionIconContentColor = actionIconColor
             ),
         title = {
             if (isMultiSelectMode) {
@@ -186,7 +191,6 @@ fun OrganizeTopBar(
                         Icon(
                             Icons.Outlined.AutoAwesome,
                             contentDescription = if (isAnalyzing) "분석 취소" else "스마트 제외",
-                            tint = contentColor
                         )
                     }
                 }
@@ -202,7 +206,6 @@ fun OrganizeTopBar(
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "Filter",
-                            tint = contentColor
                         )
                     }
                     DropdownMenu(
