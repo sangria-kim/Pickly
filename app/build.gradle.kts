@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt")
+    alias(libs.plugins.ksp)
     id("kotlin-parcelize")
     alias(libs.plugins.hilt)
     alias(libs.plugins.aboutlibraries)
@@ -35,16 +35,19 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-        freeCompilerArgs += listOf(
-            "-Xskip-prerelease-check",
-            "-Xsuppress-version-warnings"
-        )
-    }
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+        freeCompilerArgs.addAll(
+            "-Xskip-prerelease-check",
+            "-Xsuppress-version-warnings"
+        )
     }
 }
 
@@ -94,7 +97,7 @@ dependencies {
 
     // --- Hilt ---
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     // --- AboutLibraries ---
@@ -109,10 +112,6 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-}
-
-kapt {
-    correctErrorTypes = true
 }
 
 aboutLibraries {
