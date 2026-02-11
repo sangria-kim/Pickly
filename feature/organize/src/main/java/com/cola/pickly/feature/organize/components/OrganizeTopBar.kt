@@ -1,6 +1,7 @@
 package com.cola.pickly.feature.organize.components
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -15,14 +16,15 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -38,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
@@ -211,30 +215,39 @@ fun OrganizeTopBar(
                     DropdownMenu(
                         expanded = showFilterMenu,
                         onDismissRequest = { showFilterMenu = false },
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
                     ) {
-                        // 전체 선택 (Tri-state)
-                        FilterTriStateCheckboxItem(
-                            label = stringResource(R.string.filter_select_all),
-                            state = selectAllState,
-                            onToggle = onSelectAllToggle
-                        )
+                        Column(modifier = Modifier.width(156.dp)) {
+                            // 전체 선택 (Tri-state)
+                            FilterTriStateCheckboxItem(
+                                label = stringResource(R.string.filter_select_all),
+                                state = selectAllState,
+                                onToggle = onSelectAllToggle
+                            )
 
-                        // 채택
-                        FilterCheckboxItem(
-                            label = stringResource(R.string.filter_accepted),
-                            checked = isAcceptedChecked,
-                            enabled = hasAcceptedPhotos,
-                            onToggle = onAcceptedToggle
-                        )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 2.dp),
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
 
-                        // 제외
-                        FilterCheckboxItem(
-                            label = stringResource(R.string.filter_rejected),
-                            checked = isRejectedChecked,
-                            enabled = hasRejectedPhotos,
-                            onToggle = onRejectedToggle
-                        )
+                            // 채택
+                            FilterCheckboxItem(
+                                label = stringResource(R.string.filter_accepted),
+                                checked = isAcceptedChecked,
+                                enabled = hasAcceptedPhotos,
+                                onToggle = onAcceptedToggle
+                            )
+
+                            // 제외
+                            FilterCheckboxItem(
+                                label = stringResource(R.string.filter_rejected),
+                                checked = isRejectedChecked,
+                                enabled = hasRejectedPhotos,
+                                onToggle = onRejectedToggle
+                            )
+                        }
                     }
                 }
             }
@@ -264,29 +277,41 @@ private fun FilterCheckboxItem(
     enabled: Boolean = true,
     onToggle: () -> Unit
 ) {
+    val backgroundColor = if (checked) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f) else Color.Transparent
+
+    val labelColor = if (!enabled) {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    } else if (checked) {
+        TealAccent
+    } else {
+        MaterialTheme.colorScheme.outline
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(MaterialTheme.shapes.small)
+            .background(backgroundColor)
             .clickable(enabled = enabled) { onToggle() }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = checked,
-            onCheckedChange = { onToggle() },
+            onCheckedChange = null,
             enabled = enabled,
+            modifier = Modifier.scale(0.7f),
             colors = CheckboxDefaults.colors(
-                checkedColor = TealAccent
+                checkedColor = TealAccent,
+                uncheckedColor = labelColor
             )
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (enabled)
-                MaterialTheme.colorScheme.onSurface
-            else
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            style = MaterialTheme.typography.labelMedium,
+            color = labelColor
         )
     }
 }
@@ -300,25 +325,35 @@ private fun FilterTriStateCheckboxItem(
     state: ToggleableState,
     onToggle: () -> Unit
 ) {
+    val isChecked = state != ToggleableState.Off
+    val backgroundColor = if (isChecked) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f) else Color.Transparent
+
+    val labelColor = if (isChecked) TealAccent else MaterialTheme.colorScheme.outline
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(MaterialTheme.shapes.small)
+            .background(backgroundColor)
             .clickable { onToggle() }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         TriStateCheckbox(
             state = state,
-            onClick = onToggle,
+            onClick = null,
+            modifier = Modifier.scale(0.7f),
             colors = CheckboxDefaults.colors(
-                checkedColor = TealAccent
+                checkedColor = TealAccent,
+                uncheckedColor = labelColor
             )
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface
+            style = MaterialTheme.typography.labelMedium,
+            color = labelColor
         )
     }
 }
