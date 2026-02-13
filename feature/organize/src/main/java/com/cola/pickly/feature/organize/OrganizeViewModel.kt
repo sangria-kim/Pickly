@@ -79,6 +79,9 @@ class OrganizeViewModel @Inject constructor(
     private val _snackbarMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessages: SharedFlow<String> = _snackbarMessages
 
+    private val _permissionRecoveryEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val permissionRecoveryEvents: SharedFlow<Unit> = _permissionRecoveryEvents
+
     private val _isActionInProgress = MutableStateFlow(false)
     val isActionInProgress: StateFlow<Boolean> = _isActionInProgress.asStateFlow()
 
@@ -776,25 +779,33 @@ class OrganizeViewModel @Inject constructor(
     }
 
     private suspend fun handleActionError(e: Exception, fallback: String) {
+        val isPermissionError = e is SecurityException ||
+            e.message?.contains("permission", ignoreCase = true) == true ||
+            e.message?.contains("SAF", ignoreCase = true) == true
+
         val message = when {
             e is SecurityException -> {
                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
                     "저장소 쓰기 권한이 필요해요. 앱을 재시작하여 권한을 허용해주세요."
                 } else {
-                    "저장소 접근 권한이 필요해요. 설정에서 권한을 허용한 뒤 다시 시도해주세요."
+                    "저장소 접근 권한이 필요해요."
                 }
             }
             e.message?.contains("permission", ignoreCase = true) == true -> {
-                "저장소 접근 권한이 필요해요. 설정에서 권한을 허용한 뒤 다시 시도해주세요."
+                "저장소 접근 권한이 필요해요."
             }
             e.message?.contains("SAF", ignoreCase = true) == true -> {
-                "저장소 접근에 실패했어요. 권한을 확인한 뒤 다시 시도해주세요."
+                "저장소 접근에 실패했어요. 권한을 확인해주세요."
             }
             else -> {
                 e.message ?: fallback
             }
         }
         _snackbarMessages.emit(message)
+
+        if (isPermissionError) {
+            _permissionRecoveryEvents.emit(Unit)
+        }
     }
 
     private sealed interface PendingAction {

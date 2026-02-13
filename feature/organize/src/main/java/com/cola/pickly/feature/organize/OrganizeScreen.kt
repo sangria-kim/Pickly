@@ -46,6 +46,9 @@ import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.R
 import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.compose.material3.SnackbarResult
 
 @Composable
 fun OrganizeScreen(
@@ -132,6 +135,22 @@ fun OrganizeScreen(
     LaunchedEffect(Unit) {
         viewModel.snackbarMessages.collectLatest { message ->
             snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.permissionRecoveryEvents.collect {
+            val result = snackbarHostState.showSnackbar(
+                message = "저장소 접근 권한이 필요해요.",
+                actionLabel = "설정으로 이동"
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                val intent = Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", context.packageName, null)
+                )
+                context.startActivity(intent)
+            }
         }
     }
 

@@ -23,10 +23,12 @@ sealed class MainUiState {
     object Ready : MainUiState()
 }
 
-enum class PermissionState {
-    Granted,
-    Denied,
-    NotDetermined
+sealed class PermissionState {
+    object Granted : PermissionState()
+    object PartiallyGranted : PermissionState()
+    object Denied : PermissionState()
+    object PermanentlyDenied : PermissionState()
+    object NotDetermined : PermissionState()
 }
 
 @HiltViewModel
@@ -43,47 +45,103 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun recheckPermission() {
+        viewModelScope.launch {
+            checkPermission()
+        }
+    }
+
     private fun checkPermission() {
         val permissions = getRequiredPermissions()
-        val allGranted = permissions.all { permission ->
-            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-        }
 
-        if (allGranted) {
-            _uiState.value = MainUiState.Ready
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val imagesGranted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.READ_MEDIA_IMAGES
+            ) == PackageManager.PERMISSION_GRANTED
+            val partialGranted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+            ) == PackageManager.PERMISSION_GRANTED
+
+            when {
+                imagesGranted -> _uiState.value = MainUiState.Ready
+                partialGranted -> _uiState.update {
+                    (it as? MainUiState.Initializing)?.copy(
+                        isChecking = false,
+                        permissionState = PermissionState.PartiallyGranted
+                    ) ?: it
+                }
+                else -> _uiState.update {
+                    (it as? MainUiState.Initializing)?.copy(
+                        isChecking = false,
+                        permissionState = PermissionState.NotDetermined
+                    ) ?: it
+                }
+            }
         } else {
-            _uiState.update {
-                (it as? MainUiState.Initializing)?.copy(
-                    isChecking = false,
-                    permissionState = PermissionState.NotDetermined
-                ) ?: it
+            val allGranted = permissions.all { permission ->
+                ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+            }
+
+            if (allGranted) {
+                _uiState.value = MainUiState.Ready
+            } else {
+                _uiState.update {
+                    (it as? MainUiState.Initializing)?.copy(
+                        isChecking = false,
+                        permissionState = PermissionState.NotDetermined
+                    ) ?: it
+                }
             }
         }
     }
 
-    fun onPermissionResult(grantedPermissions: Map<String, Boolean>) {
-        val allGranted = grantedPermissions.values.all { it }
+    fun onPermissionResult(
+        grantedMap: Map<String, Boolean>,
+        shouldShowRationaleChecker: (String) -> Boolean
+    ) {
+        val state = when {
+            // Android 14+: READ_MEDIA_IMAGES 전체 허용
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                grantedMap[Manifest.permission.READ_MEDIA_IMAGES] == true ->
+                PermissionState.Granted
 
-        if (allGranted) {
+            // Android 14+: READ_MEDIA_VISUAL_USER_SELECTED만 허용 (부분 허용)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                grantedMap[Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED] == true ->
+                PermissionState.PartiallyGranted
+
+            // 전체 허용 (공통)
+            grantedMap.values.all { it } ->
+                PermissionState.Granted
+
+            // 영구 거부: 거부된 권한 중 rationale 표시 불가한 항목 존재
+            grantedMap.any { (permission, granted) ->
+                !granted && !shouldShowRationaleChecker(permission)
+            } -> PermissionState.PermanentlyDenied
+
+            // 일반 거부
+            else -> PermissionState.Denied
+        }
+
+        if (state == PermissionState.Granted) {
             _uiState.value = MainUiState.Ready
         } else {
             _uiState.update {
-                (it as? MainUiState.Initializing)?.copy(permissionState = PermissionState.Denied) ?: it
+                (it as? MainUiState.Initializing)?.copy(permissionState = state) ?: it
             }
         }
     }
 
-    fun getRequiredPermission(): String {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        }
+    fun proceedWithPartialAccess() {
+        _uiState.value = MainUiState.Ready
     }
 
     fun getRequiredPermissions(): List<String> {
         return buildList {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                add(Manifest.permission.READ_MEDIA_IMAGES)
+                add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.READ_MEDIA_IMAGES)
             } else {
                 add(Manifest.permission.READ_EXTERNAL_STORAGE)
