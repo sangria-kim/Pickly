@@ -6,9 +6,11 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Settings
@@ -30,7 +32,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -58,11 +59,12 @@ import com.cola.pickly.presentation.legal.OpenSourceLicensesScreen
 sealed class MainTab(
     val route: String,
     @StringRes val labelResId: Int,
-    val icon: ImageVector
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
 ) {
-    object Organize : MainTab("organize", R.string.nav_organize, Icons.Outlined.PhotoLibrary)
-    object Archive : MainTab("archive", R.string.archive_title, Icons.Outlined.Inventory2)
-    object Settings : MainTab("settings", R.string.nav_settings, Icons.Outlined.Settings)
+    object Organize : MainTab("organize", R.string.nav_organize, Icons.Filled.PhotoLibrary, Icons.Outlined.PhotoLibrary)
+    object Archive : MainTab("archive", R.string.archive_title, Icons.Filled.Inventory2, Icons.Outlined.Inventory2)
+    object Settings : MainTab("settings", R.string.nav_settings, Icons.Filled.Settings, Icons.Outlined.Settings)
 
     companion object {
         val tabs = listOf(Organize, Archive, Settings)
@@ -82,7 +84,6 @@ fun PicklyBottomNavigation(
     val organizeUiState by organizeViewModel.uiState.collectAsStateWithLifecycle()
 
     NavigationBar(
-        modifier = Modifier.height(104.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.outline
     ) {
@@ -92,7 +93,12 @@ fun PicklyBottomNavigation(
         tabs.forEach { tab ->
             val isSelected = currentRoute == tab.route
             NavigationBarItem(
-                icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelResId)) },
+                icon = {
+                    Icon(
+                        if (isSelected) tab.selectedIcon else tab.unselectedIcon,
+                        contentDescription = stringResource(tab.labelResId)
+                    )
+                },
                 label = { Text(stringResource(tab.labelResId)) },
                 selected = isSelected,
                 onClick = {
@@ -123,7 +129,7 @@ fun PicklyBottomNavigation(
                     selectedTextColor = TealAccent,
                     unselectedIconColor = MaterialTheme.colorScheme.outline,
                     unselectedTextColor = MaterialTheme.colorScheme.outline,
-                    indicatorColor = Color.Transparent // 선택 시 배경색(Indicator) 제거
+                    indicatorColor = TealAccent.copy(alpha = 0.12f)
                 )
             )
         }

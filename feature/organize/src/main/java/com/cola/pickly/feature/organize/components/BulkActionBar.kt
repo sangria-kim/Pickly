@@ -1,7 +1,6 @@
 package com.cola.pickly.feature.organize.components
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
@@ -14,12 +13,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
+import com.cola.pickly.core.ui.theme.TealAccent
 
 sealed class BulkAction(
     @StringRes val labelResId: Int,
@@ -48,7 +45,6 @@ fun BulkActionBar(
     isActionInProgress: Boolean = false
 ) {
     NavigationBar(
-        modifier = Modifier.height(104.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.outline
     ) {
@@ -77,7 +73,7 @@ fun BulkActionBar(
                     selectedTextColor = itemColor,
                     unselectedIconColor = itemColor,
                     unselectedTextColor = itemColor,
-                    indicatorColor = Color.Transparent,
+                    indicatorColor = TealAccent.copy(alpha = 0.12f),
                     disabledIconColor = disabledColor,
                     disabledTextColor = disabledColor
                 )
