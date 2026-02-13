@@ -358,6 +358,3 @@ private fun FilterTriStateCheckboxItem(
     }
 }
 
-enum class FilterOption {
-    ALL, SELECTED, NOT_SELECTED
-}
