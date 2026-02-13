@@ -43,6 +43,7 @@ import com.cola.pickly.core.ui.theme.TealAccent
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveTopBar(
+    hasAcceptedPhotos: Boolean = false,
     onFilterClick: () -> Unit = {}
 ) {
     var showFilterMenu by remember { mutableStateOf(false) }
@@ -61,30 +62,32 @@ fun ArchiveTopBar(
             )
         },
         actions = {
-            // 필터 버튼
-            Box {
-                IconButton(onClick = { showFilterMenu = true }) {
-                    Icon(
-                        Icons.Outlined.ViewAgenda,
-                        contentDescription = "Filter"
-                    )
-                }
-                DropdownMenu(
-                    expanded = showFilterMenu,
-                    onDismissRequest = { showFilterMenu = false },
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Column(modifier = Modifier.width(156.dp)) {
-                        // V1에서는 "폴더별" 옵션만 제공 (향후 확장 가능)
-                        ArchiveFilterItem(
-                            label = "폴더별",
-                            selected = true,
-                            onClick = {
-                                onFilterClick()
-                                showFilterMenu = false
-                            }
+            // 채택된 사진이 있을 때만 필터 버튼 노출
+            if (hasAcceptedPhotos) {
+                Box {
+                    IconButton(onClick = { showFilterMenu = true }) {
+                        Icon(
+                            Icons.Outlined.ViewAgenda,
+                            contentDescription = "Filter"
                         )
+                    }
+                    DropdownMenu(
+                        expanded = showFilterMenu,
+                        onDismissRequest = { showFilterMenu = false },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(modifier = Modifier.width(156.dp)) {
+                            // V1에서는 "폴더별" 옵션만 제공 (향후 확장 가능)
+                            ArchiveFilterItem(
+                                label = "폴더별",
+                                selected = true,
+                                onClick = {
+                                    onFilterClick()
+                                    showFilterMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             }

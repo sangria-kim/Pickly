@@ -53,7 +53,10 @@ fun ArchiveScreen(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            ArchiveTopBar()
+            val hasAcceptedPhotos = (uiState as? ArchiveUiState.ArchiveReady)?.totalPhotoCount?.let { it > 0 } ?: false
+            ArchiveTopBar(
+                hasAcceptedPhotos = hasAcceptedPhotos
+            )
         }
     ) { innerPadding ->
         Box(
