@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import com.cola.pickly.feature.organize.FolderSelectUiState
@@ -76,6 +78,10 @@ fun OrganizeScreen(
     var showFolderSheet by rememberSaveable { mutableStateOf(false) }
     var showDestinationSelectSheet by rememberSaveable { mutableStateOf(false) }
     var showCreateFolderDialog by rememberSaveable { mutableStateOf(false) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        folderSelectViewModel.refreshFolders(silent = true)
+    }
 
     LaunchedEffect(selectedFolder) {
         selectedFolder?.let { (id, name) ->

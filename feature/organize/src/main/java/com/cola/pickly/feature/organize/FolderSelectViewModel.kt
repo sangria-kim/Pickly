@@ -27,24 +27,25 @@ class FolderSelectViewModel @Inject constructor(
     }
 
     /**
-     * (공식 API) 폴더 목록을 다시 로드합니다.
-     * UI는 직접 repo를 부르지 않고, ViewModel의 refresh만 호출/관찰합니다.
+     * 폴더 목록을 다시 로드합니다.
+     * @param silent true면 로딩 인디케이터를 표시하지 않고 기존 데이터를 유지한 채 갱신.
+     *               false(기본값)면 Loading 상태로 전환 후 갱신 (초기 로드 시 사용).
      */
-    fun refreshFolders() {
-        viewModelScope.launch { loadFolders() }
+    fun refreshFolders(silent: Boolean = false) {
+        viewModelScope.launch { loadFolders(showLoading = !silent) }
     }
 
     private fun observeRefreshEvents() {
         viewModelScope.launch {
             photoDataRefreshNotifier.refreshEvents.collectLatest {
                 // 어떤 이유든 폴더 카운트/썸네일 변화 가능성이 있으므로 목록을 갱신합니다.
-                loadFolders()
+                loadFolders(showLoading = false)
             }
         }
     }
 
-    private suspend fun loadFolders() {
-        _uiState.value = FolderSelectUiState.Loading
+    private suspend fun loadFolders(showLoading: Boolean = true) {
+        if (showLoading) _uiState.value = FolderSelectUiState.Loading
         try {
             val folders = photoRepository.getFolders()
             _uiState.value = FolderSelectUiState.Success(folders)

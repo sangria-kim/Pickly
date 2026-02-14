@@ -103,7 +103,7 @@ class MediaStorePhotoRepository @Inject constructor(
             projection.add(MediaStore.Images.Media.RELATIVE_PATH)
         }
 
-        val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
+        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
