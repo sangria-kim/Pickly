@@ -24,6 +24,8 @@ interface SettingsRepository {
     suspend fun setHasShownAutoRejectWarning(shown: Boolean)
 
     suspend fun setDebugOptions(options: DebugOptions)
+
+    suspend fun setHasSeenWelcomeSplash(seen: Boolean)
 }
 
 

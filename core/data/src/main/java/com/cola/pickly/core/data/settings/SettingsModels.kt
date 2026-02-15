@@ -48,7 +48,8 @@ data class Settings(
     val smartDiscardThresholds: SmartDiscardThresholds = SmartDiscardThresholds(),
     val smartDiscardResultMode: SmartDiscardResultMode = SmartDiscardResultMode.ShowAsCandidates,
     val hasShownAutoRejectWarning: Boolean = false,
-    val debugOptions: DebugOptions = DebugOptions()
+    val debugOptions: DebugOptions = DebugOptions(),
+    val hasSeenWelcomeSplash: Boolean = false
 )
 
 /**

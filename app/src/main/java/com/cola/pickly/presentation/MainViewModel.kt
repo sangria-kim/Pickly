@@ -7,10 +7,12 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cola.pickly.core.data.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -18,7 +20,9 @@ import javax.inject.Inject
 sealed class MainUiState {
     data class Initializing(
         val isChecking: Boolean = true,
-        val permissionState: PermissionState = PermissionState.NotDetermined
+        val permissionState: PermissionState = PermissionState.NotDetermined,
+        val showWelcome: Boolean = false,
+        val showPrePermission: Boolean = false
     ) : MainUiState()
     object Ready : MainUiState()
 }
@@ -33,7 +37,8 @@ sealed class PermissionState {
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<MainUiState>(MainUiState.Initializing())
@@ -42,6 +47,30 @@ class MainViewModel @Inject constructor(
     fun init() {
         viewModelScope.launch {
             checkPermission()
+            val hasSeenWelcome = settingsRepository.settings.first().hasSeenWelcomeSplash
+            if (!hasSeenWelcome) {
+                _uiState.update { state ->
+                    (state as? MainUiState.Initializing)?.copy(showWelcome = true) ?: state
+                }
+            }
+        }
+    }
+
+    fun onWelcomeDismissed() {
+        viewModelScope.launch {
+            settingsRepository.setHasSeenWelcomeSplash(true)
+            _uiState.update { state ->
+                (state as? MainUiState.Initializing)?.copy(
+                    showWelcome = false,
+                    showPrePermission = state.permissionState == PermissionState.NotDetermined
+                ) ?: state
+            }
+        }
+    }
+
+    fun onPrePermissionConfirmed() {
+        _uiState.update { state ->
+            (state as? MainUiState.Initializing)?.copy(showPrePermission = false) ?: state
         }
     }
 

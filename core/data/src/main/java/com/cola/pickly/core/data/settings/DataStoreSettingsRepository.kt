@@ -44,7 +44,8 @@ class DataStoreSettingsRepository @Inject constructor(
                 showDebugOverlay = prefs[KEY_SHOW_DEBUG_OVERLAY] ?: false,
                 showFaceBoundingBox = prefs[KEY_SHOW_FACE_BOX] ?: true,
                 showScoreOverlay = prefs[KEY_SHOW_SCORE] ?: false
-            )
+            ),
+            hasSeenWelcomeSplash = prefs[KEY_HAS_SEEN_WELCOME_SPLASH] ?: false
         )
     }
 
@@ -86,6 +87,10 @@ class DataStoreSettingsRepository @Inject constructor(
         }
     }
 
+    override suspend fun setHasSeenWelcomeSplash(seen: Boolean) {
+        dataStore.edit { it[KEY_HAS_SEEN_WELCOME_SPLASH] = seen }
+    }
+
     private fun <T : Enum<T>> Preferences.getEnum(key: Preferences.Key<String>, default: T): T {
         val raw = this[key] ?: return default
         // 기존 AutoRename 데이터를 Skip으로 마이그레이션
@@ -115,6 +120,9 @@ class DataStoreSettingsRepository @Inject constructor(
         val KEY_SHOW_DEBUG_OVERLAY = booleanPreferencesKey("settings.debug.show_debug_overlay")
         val KEY_SHOW_FACE_BOX = booleanPreferencesKey("settings.debug.show_face_box")
         val KEY_SHOW_SCORE = booleanPreferencesKey("settings.debug.show_score")
+
+        // Onboarding keys
+        val KEY_HAS_SEEN_WELCOME_SPLASH = booleanPreferencesKey("settings.has_seen_welcome_splash")
     }
 }
 

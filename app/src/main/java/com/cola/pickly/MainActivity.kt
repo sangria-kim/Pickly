@@ -1,6 +1,7 @@
 package com.cola.pickly
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -22,6 +23,11 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
+    private val splashStartTime = SystemClock.elapsedRealtime()
+
+    companion object {
+        private const val SPLASH_MAX_MS = 1500L
+    }
 
     @Inject
     lateinit var settingsRepository: SettingsRepository
@@ -37,7 +43,8 @@ class MainActivity : ComponentActivity() {
         mainViewModel.init()
         splashScreen.setKeepOnScreenCondition {
             val state = mainViewModel.uiState.value
-            state is MainUiState.Initializing && state.isChecking
+            val elapsed = SystemClock.elapsedRealtime() - splashStartTime
+            state is MainUiState.Initializing && state.isChecking && elapsed < SPLASH_MAX_MS
         }
         setContent {
             val settings = settingsRepository.settings.collectAsStateWithLifecycle(
