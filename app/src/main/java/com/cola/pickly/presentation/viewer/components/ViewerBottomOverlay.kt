@@ -35,6 +35,7 @@ fun ViewerBottomOverlay(
     isSelected: Boolean,
     isRejected: Boolean,
     rejectReason: RejectReason? = null,
+    isButtonLocked: Boolean = false,
     onSelectClick: () -> Unit,
     onRejectClick: () -> Unit
 ) {
@@ -60,6 +61,7 @@ fun ViewerBottomOverlay(
                 isActive = isSelected,
                 activeColor = Color(0xFF2ED3B7), // Requested: #2ED3B7
                 contentDescription = "Select",
+                enabled = !isButtonLocked,
                 onClick = onSelectClick
             )
 
@@ -72,6 +74,7 @@ fun ViewerBottomOverlay(
                     isActive = isRejected,
                     activeColor = Color(0xFFFF5252), // Requested: #FF5252
                     contentDescription = "Reject",
+                    enabled = !isButtonLocked,
                     onClick = onRejectClick
                 )
 
@@ -95,16 +98,16 @@ private fun ViewerControlButton(
     isActive: Boolean,
     activeColor: Color,
     contentDescription: String,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    // 활성화 시 70% 불투명, 비활성화 시 35% 불투명 (기존 대비 30% 더 투명)
-    val backgroundColor = if (isActive) {
-        activeColor.copy(alpha = 0.7f)
-    } else {
-        Color.Gray.copy(alpha = 0.35f)
+    val backgroundColor = when {
+        isActive -> activeColor.copy(alpha = 0.7f)
+        !enabled -> Color.Gray.copy(alpha = 0.15f)
+        else -> Color.Gray.copy(alpha = 0.35f)
     }
 
-    val iconTint = Color.White
+    val iconTint = if (isActive || enabled) Color.White else Color.White.copy(alpha = 0.4f)
 
     Box(
         modifier = Modifier
@@ -113,7 +116,8 @@ private fun ViewerControlButton(
             .background(backgroundColor)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null, 
+                indication = null,
+                enabled = enabled,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center

@@ -1,5 +1,6 @@
 package com.cola.pickly.presentation.viewer
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.background
@@ -12,11 +13,14 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -42,6 +46,8 @@ import com.cola.pickly.presentation.viewer.components.ZoomableImage
 import com.cola.pickly.presentation.viewer.components.ZoomableImageMetrics
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -51,6 +57,7 @@ fun ViewerScreen(
     selectionMap: Map<Long, PhotoSelectionState>,
     viewerContext: ViewerContext,
     exitRequestId: Int = 0,
+    autoAdvanceEvent: Flow<AutoAdvanceEvent> = emptyFlow(),
     onBackClick: () -> Unit,
     onSelectClick: (Long) -> Unit = {},
     onRejectClick: (Long) -> Unit = {},
@@ -59,11 +66,14 @@ fun ViewerScreen(
     val settings by settingsRepository.settings.collectAsStateWithLifecycle(
         initialValue = Settings()
     )
+    val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
     var isOverlayVisible by remember { mutableStateOf(true) }
     var isInfoVisible by remember { mutableStateOf(false) }
     var isZoomed by remember { mutableStateOf(false) }
     var overlayStateBeforeZoom by remember { mutableStateOf(false) }
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
+    var isButtonLocked by remember { mutableStateOf(false) }
     val metricsByPhotoId = remember { mutableStateMapOf<Long, ZoomableImageMetrics>() }
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
@@ -92,6 +102,25 @@ fun ViewerScreen(
             initialPage = initialIndex,
             pageCount = { photos.size }
         )
+
+        LaunchedEffect(Unit) {
+            autoAdvanceEvent.collect { event ->
+                when (event) {
+                    AutoAdvanceEvent.Advance -> {
+                        val nextPage = pagerState.currentPage + 1
+                        if (nextPage < photos.size) {
+                            isButtonLocked = true
+                            pagerState.animateScrollToPage(nextPage)
+                            isButtonLocked = false
+                        }
+                    }
+                    AutoAdvanceEvent.AtLastPage -> {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        Toast.makeText(context, "마지막 사진이에요", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
 
         val currentPhoto = photos.getOrNull(pagerState.currentPage)
         val currentSelectionState = currentPhoto?.let { selectionMap[it.id] } ?: PhotoSelectionState.None
@@ -231,11 +260,12 @@ fun ViewerScreen(
                     isSelected = isSelected,
                     isRejected = isRejected,
                     rejectReason = rejectReason,
+                    isButtonLocked = isButtonLocked,
                     onSelectClick = {
-                        currentPhoto?.let { onSelectClick(it.id) }
+                        if (!isButtonLocked) currentPhoto?.let { onSelectClick(it.id) }
                     },
                     onRejectClick = {
-                        currentPhoto?.let { onRejectClick(it.id) }
+                        if (!isButtonLocked) currentPhoto?.let { onRejectClick(it.id) }
                     }
                 )
             }

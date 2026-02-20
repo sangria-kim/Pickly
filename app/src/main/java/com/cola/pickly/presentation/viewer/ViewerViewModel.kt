@@ -8,12 +8,21 @@ import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+sealed interface AutoAdvanceEvent {
+    data object Advance : AutoAdvanceEvent
+    data object AtLastPage : AutoAdvanceEvent
+}
 
 @HiltViewModel
 class ViewerViewModel @Inject constructor(
@@ -35,6 +44,12 @@ class ViewerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<ViewerUiState>(ViewerUiState.Loading)
     val uiState: StateFlow<ViewerUiState> = _uiState.asStateFlow()
+
+    private val _autoAdvanceEvent = MutableSharedFlow<AutoAdvanceEvent>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val autoAdvanceEvent: SharedFlow<AutoAdvanceEvent> = _autoAdvanceEvent.asSharedFlow()
 
     init {
         loadPhotos()
@@ -159,21 +174,31 @@ class ViewerViewModel @Inject constructor(
     }
 
     private fun updateSelectionState(photoId: Long, targetState: PhotoSelectionState) {
+        var shouldAdvance = false
+        var isLastPage = false
+
         _uiState.update { currentState ->
             if (currentState is ViewerUiState.Success) {
                 val currentMap = currentState.selectionMap.toMutableMap()
                 val currentSelection = currentMap[photoId] ?: PhotoSelectionState.None
+                val newState = if (currentSelection == targetState) PhotoSelectionState.None else targetState
 
-                val newState = if (currentSelection == targetState) {
-                    PhotoSelectionState.None // 이미 해당 상태면 해제 (토글)
-                } else {
-                    targetState // 다른 상태면 타겟 상태로 변경 (상호 배타적 동작)
-                }
+                shouldAdvance = newState != PhotoSelectionState.None
+
+                val currentIndex = currentState.photos.indexOfFirst { it.id == photoId }
+                isLastPage = currentIndex == currentState.photos.lastIndex
 
                 currentMap[photoId] = newState
                 currentState.copy(selectionMap = currentMap)
             } else {
                 currentState
+            }
+        }
+
+        viewModelScope.launch {
+            if (shouldAdvance) {
+                if (isLastPage) _autoAdvanceEvent.emit(AutoAdvanceEvent.AtLastPage)
+                else _autoAdvanceEvent.emit(AutoAdvanceEvent.Advance)
             }
         }
     }

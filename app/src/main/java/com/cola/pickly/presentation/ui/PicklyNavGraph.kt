@@ -171,6 +171,7 @@ fun PicklyNavGraph(
                                     selectionMap = state.selectionMap,
                                     viewerContext = viewerContext,
                                     exitRequestId = exitRequestId,
+                                    autoAdvanceEvent = viewerViewModel.autoAdvanceEvent,
                                     onBackClick = requestClose,
                                     onSelectClick = { photoId ->
                                         viewerViewModel.toggleSelection(photoId)
