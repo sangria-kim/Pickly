@@ -47,6 +47,8 @@ import com.cola.pickly.presentation.viewer.components.ZoomableImageMetrics
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.isActive
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.emptyFlow
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -103,15 +105,23 @@ fun ViewerScreen(
             pageCount = { photos.size }
         )
 
+        val isButtonDisabled = isButtonLocked || pagerState.isScrollInProgress
+
         LaunchedEffect(Unit) {
             autoAdvanceEvent.collect { event ->
                 when (event) {
-                    AutoAdvanceEvent.Advance -> {
-                        val nextPage = pagerState.currentPage + 1
-                        if (nextPage < photos.size) {
+                    is AutoAdvanceEvent.Advance -> {
+                        if (event.targetIndex < photos.size) {
                             isButtonLocked = true
-                            pagerState.animateScrollToPage(nextPage)
-                            isButtonLocked = false
+                            try {
+                                pagerState.animateScrollToPage(event.targetIndex)
+                            } catch (e: CancellationException) {
+                                // PagerState MutatorMutex에 의한 취소는 흡수하여 collect 루프 유지
+                                // LaunchedEffect 코루틴 자체가 취소된 경우(화면 이탈 등)에만 rethrow
+                                if (!isActive) throw e
+                            } finally {
+                                isButtonLocked = false
+                            }
                         }
                     }
                     AutoAdvanceEvent.AtLastPage -> {
@@ -260,12 +270,12 @@ fun ViewerScreen(
                     isSelected = isSelected,
                     isRejected = isRejected,
                     rejectReason = rejectReason,
-                    isButtonLocked = isButtonLocked,
+                    isButtonLocked = isButtonDisabled,
                     onSelectClick = {
-                        if (!isButtonLocked) currentPhoto?.let { onSelectClick(it.id) }
+                        if (!isButtonDisabled) currentPhoto?.let { onSelectClick(it.id) }
                     },
                     onRejectClick = {
-                        if (!isButtonLocked) currentPhoto?.let { onRejectClick(it.id) }
+                        if (!isButtonDisabled) currentPhoto?.let { onRejectClick(it.id) }
                     }
                 )
             }

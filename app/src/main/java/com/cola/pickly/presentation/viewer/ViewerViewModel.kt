@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed interface AutoAdvanceEvent {
-    data object Advance : AutoAdvanceEvent
+    data class Advance(val targetIndex: Int) : AutoAdvanceEvent
     data object AtLastPage : AutoAdvanceEvent
 }
 
@@ -214,6 +214,7 @@ class ViewerViewModel @Inject constructor(
     private fun updateSelectionState(photoId: Long, targetState: PhotoSelectionState) {
         var shouldAdvance = false
         var isLastPage = false
+        var targetIndex = -1
 
         _uiState.update { currentState ->
             if (currentState is ViewerUiState.Success) {
@@ -225,6 +226,7 @@ class ViewerViewModel @Inject constructor(
 
                 val currentIndex = currentState.photos.indexOfFirst { it.id == photoId }
                 isLastPage = currentIndex == currentState.photos.lastIndex
+                targetIndex = currentIndex + 1
 
                 currentMap[photoId] = newState
                 currentState.copy(selectionMap = currentMap)
@@ -236,7 +238,7 @@ class ViewerViewModel @Inject constructor(
         viewModelScope.launch {
             if (shouldAdvance) {
                 if (isLastPage) _autoAdvanceEvent.emit(AutoAdvanceEvent.AtLastPage)
-                else _autoAdvanceEvent.emit(AutoAdvanceEvent.Advance)
+                else _autoAdvanceEvent.emit(AutoAdvanceEvent.Advance(targetIndex = targetIndex))
             }
         }
     }
