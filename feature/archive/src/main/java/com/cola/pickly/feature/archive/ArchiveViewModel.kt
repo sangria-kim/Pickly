@@ -3,14 +3,16 @@ package com.cola.pickly.feature.archive
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cola.pickly.core.model.Photo
+import com.cola.pickly.core.model.PhotoDisplayOrderComparator
 import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.model.PhotoSelectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 /**
@@ -44,32 +46,54 @@ class ArchiveViewModel @Inject constructor(
             _uiState.value = ArchiveUiState.LoadingArchive
 
             try {
-                // 모든 폴더의 사진 조회
-                val allPhotos = photoRepository.getAllPhotos()
+                val (allPhotos, folders) = coroutineScope {
+                    val photos = async {
+                        photoRepository.getAllPhotos().sortedWith(PhotoDisplayOrderComparator)
+                    }
+                    val folderList = async {
+                        photoRepository.getFolders()
+                    }
+                    photos.await() to folderList.await()
+                }
                 
                 // 채택된 사진만 필터링 (전역 selectionMap 사용)
-                val acceptedPhotos = allPhotos.filter { photo ->
-                    globalSelectionMap[photo.id] == PhotoSelectionState.Selected
-                }
+                val selectedIds = globalSelectionMap
+                    .filterValues { it == PhotoSelectionState.Selected }
+                    .keys
+                val acceptedPhotos = allPhotos.filter { photo -> selectedIds.contains(photo.id) }
 
                 if (acceptedPhotos.isEmpty()) {
                     _uiState.value = ArchiveUiState.EmptyArchive
                     return@launch
                 }
 
-                // 폴더별로 그룹핑
-                val folderGroups = groupPhotosByFolder(acceptedPhotos)
-
-                // 폴더 정렬 (V1: 폴더명 기준 정렬)
-                val sortedFolderGroups = folderGroups.toSortedMap(compareBy { it })
-
-                // 각 폴더 내 사진 정렬 (촬영일 기준 내림차순 - 최신순)
-                val sortedGroups = sortedFolderGroups.mapValues { (_, photos) ->
-                    photos.sortedByDescending { it.takenAt }
+                val folderNameMap = folders.associate { folder ->
+                    folder.id to folder.name
                 }
+                val sections = acceptedPhotos
+                    .groupBy { photo ->
+                        photo.bucketId ?: "unknown:${extractFolderName(photo.filePath)}"
+                    }
+                    .map { (groupKey, photos) ->
+                        val bucketId = photos.firstOrNull()?.bucketId
+                        val folderName = when {
+                            bucketId != null -> folderNameMap[bucketId] ?: extractFolderName(photos.first().filePath)
+                            else -> extractFolderName(photos.first().filePath)
+                        }
+                        ArchiveFolderSection(
+                            sectionId = bucketId ?: groupKey,
+                            bucketId = bucketId,
+                            folderName = folderName,
+                            photos = photos
+                        )
+                    }
+                    .sortedWith(
+                        compareBy<ArchiveFolderSection> { it.folderName.lowercase() }
+                            .thenBy { it.sectionId }
+                    )
 
                 _uiState.value = ArchiveUiState.ArchiveReady(
-                    folderGroups = sortedGroups
+                    folderSections = sections
                 )
             } catch (e: Exception) {
                 // 에러 발생 시 Empty 상태로 처리
@@ -78,35 +102,11 @@ class ArchiveViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 사진 목록을 폴더별로 그룹핑
-     * 
-     * @param photos 그룹핑할 사진 목록
-     * @return 폴더명을 키로 하는 Map
-     */
-    private fun groupPhotosByFolder(photos: List<Photo>): Map<String, List<Photo>> {
-        return photos.groupBy { photo ->
-            extractFolderName(photo.filePath)
-        }
-    }
-
-    /**
-     * 파일 경로에서 폴더명 추출
-     * 
-     * 예시:
-     * - `/storage/emulated/0/DCIM/Camera/photo.jpg` → `Camera`
-     * - `/storage/emulated/0/Pictures/Screenshots/screenshot.png` → `Screenshots`
-     * 
-     * @param filePath 파일의 전체 경로
-     * @return 폴더명 (경로의 마지막에서 두 번째 디렉토리명)
-     */
     private fun extractFolderName(filePath: String): String {
-        val file = File(filePath)
-        val parent = file.parentFile ?: return "Unknown"
-        
-        // 부모 디렉토리의 이름을 폴더명으로 사용
-        // 예: /storage/emulated/0/DCIM/Camera -> Camera
-        return parent.name.takeIf { it.isNotEmpty() } ?: "Unknown"
+        val normalizedPath = filePath.trimEnd('/')
+        val folderName = normalizedPath.substringBeforeLast("/", missingDelimiterValue = "")
+            .substringAfterLast("/", missingDelimiterValue = "")
+        return folderName.ifEmpty { "Unknown" }
     }
 }
 

@@ -56,7 +56,7 @@ import androidx.compose.material3.SnackbarResult
 fun OrganizeScreen(
     viewModel: OrganizeViewModel = hiltViewModel(),
     folderSelectViewModel: FolderSelectViewModel = hiltViewModel(),
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, Map<Long, RejectReason>) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, Map<Long, RejectReason>, List<Long>?) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null,
     onMultiSelectModeChanged: ((Boolean) -> Unit)? = null,
@@ -296,7 +296,14 @@ fun OrganizeScreen(
                         autoRejectCandidates = state.autoRejectCandidates,
                         onPhotoClick = { photo ->
                             viewModel.requestInterruptConfirmation {
-                                onNavigateToPhotoDetail(state.folderId, photo.id, state.selectionMap, false, state.autoRejectCandidates)
+                                onNavigateToPhotoDetail(
+                                    state.folderId,
+                                    photo.id,
+                                    state.selectionMap,
+                                    false,
+                                    state.autoRejectCandidates,
+                                    state.photos.map { it.id }
+                                )
                             }
                         },
                         onToggleSelection = { photoId ->

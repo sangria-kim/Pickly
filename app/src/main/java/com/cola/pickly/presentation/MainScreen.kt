@@ -139,7 +139,7 @@ fun PicklyBottomNavigation(
 @Composable
 fun MainScreen(
     mainViewModel: MainViewModel,
-    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, ViewerContext, Map<Long, RejectReason>) -> Unit,
+    onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, ViewerContext, Map<Long, RejectReason>, List<Long>?) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null
 ) {
@@ -197,8 +197,8 @@ fun MainScreen(
             composable(MainTab.Organize.route) {
                 OrganizeScreen(
                     viewModel = organizeViewModel,
-                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, rejectCandidates ->
-                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.SELECT, rejectCandidates)
+                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, rejectCandidates, orderedPhotoIds ->
+                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.SELECT, rejectCandidates, orderedPhotoIds)
                     },
                     selectedFolder = selectedFolder,
                     selectionUpdates = selectionUpdates,
@@ -223,8 +223,8 @@ fun MainScreen(
                 val globalSelectionMap by organizeViewModel.globalSelectionMap.collectAsStateWithLifecycle()
                 ArchiveScreen(
                     globalSelectionMap = globalSelectionMap,
-                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, rejectCandidates ->
-                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.ARCHIVE, rejectCandidates)
+                    onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, rejectCandidates, orderedPhotoIds ->
+                        onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.ARCHIVE, rejectCandidates, orderedPhotoIds)
                     },
                     onNavigateToOrganize = {
                         // Tab 1 (정리하기)로 이동

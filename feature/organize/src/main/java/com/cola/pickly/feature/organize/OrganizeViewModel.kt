@@ -12,6 +12,7 @@ import com.cola.pickly.core.domain.refresh.RefreshReason
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoFolder
+import com.cola.pickly.core.model.PhotoDisplayOrderComparator
 import com.cola.pickly.feature.organize.domain.usecase.MoveSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.ShareSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.CopySelectedPhotosUseCase
@@ -129,7 +130,9 @@ class OrganizeViewModel @Inject constructor(
         _uiState.value = OrganizeUiState.Loading
         try {
             // 선택된 폴더의 사진 목록 로드 (Bucket ID 기반)
-            val photos = photoRepository.getPhotosByBucketId(folderId)
+            val photos = photoRepository
+                .getPhotosByBucketId(folderId)
+                .sortedWith(PhotoDisplayOrderComparator)
 
             if (photos.isEmpty()) {
                 _uiState.value = OrganizeUiState.EmptyFolder(

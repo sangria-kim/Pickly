@@ -85,7 +85,7 @@ fun PicklyNavGraph(
 
                         MainScreen(
                             mainViewModel = mainViewModel,
-                            onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext, rejectCandidates ->
+                            onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, viewerContext, rejectCandidates, orderedPhotoIds ->
                                 navController.currentBackStackEntry?.savedStateHandle?.set(
                                     "initial_selection_map_for_viewer",
                                     selectionMap
@@ -93,6 +93,10 @@ fun PicklyNavGraph(
                                 navController.currentBackStackEntry?.savedStateHandle?.set(
                                     "initial_reject_candidates_for_viewer",
                                     rejectCandidates
+                                )
+                                navController.currentBackStackEntry?.savedStateHandle?.set(
+                                    "initial_ordered_photo_ids_for_viewer",
+                                    orderedPhotoIds
                                 )
                                 navController.navigate("viewer/$folderId/$photoId?selectedOnly=$selectedOnly&context=${viewerContext.name}")
                             },
@@ -132,16 +136,19 @@ fun PicklyNavGraph(
 
                         val selectionMapFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
                         val rejectCandidatesFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<Map<Long, RejectReason>>("initial_reject_candidates_for_viewer")
+                        val orderedPhotoIdsFromPrevious = navController.previousBackStackEntry?.savedStateHandle?.get<List<Long>>("initial_ordered_photo_ids_for_viewer")
 
                         val viewerViewModel: ViewerViewModel = hiltViewModel()
 
                         if (selectionMapFromPrevious != null) {
                             viewerViewModel.initializeViewerData(
                                 selectionMapFromPrevious,
-                                rejectCandidatesFromPrevious ?: emptyMap()
+                                rejectCandidatesFromPrevious ?: emptyMap(),
+                                orderedPhotoIdsFromPrevious
                             )
                             navController.previousBackStackEntry?.savedStateHandle?.remove<Map<Long, PhotoSelectionState>>("initial_selection_map_for_viewer")
                             navController.previousBackStackEntry?.savedStateHandle?.remove<Map<Long, RejectReason>>("initial_reject_candidates_for_viewer")
+                            navController.previousBackStackEntry?.savedStateHandle?.remove<List<Long>>("initial_ordered_photo_ids_for_viewer")
                         }
 
                         val uiState by viewerViewModel.uiState.collectAsStateWithLifecycle()

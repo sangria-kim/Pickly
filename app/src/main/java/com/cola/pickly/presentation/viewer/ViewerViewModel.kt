@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cola.pickly.core.data.database.PhotoScoreDao
 import com.cola.pickly.core.domain.repository.PhotoRepository
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.RecommendationScore
 import com.cola.pickly.core.model.RejectReason
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
@@ -41,6 +43,8 @@ class ViewerViewModel @Inject constructor(
 
     private var initialRejectCandidates: Map<Long, RejectReason> = 
         savedStateHandle.get<Map<Long, RejectReason>>("initial_reject_candidates") ?: emptyMap()
+    private var initialOrderedPhotoIds: List<Long> =
+        savedStateHandle.get<List<Long>>("initial_ordered_photo_ids") ?: emptyList()
 
     private val _uiState = MutableStateFlow<ViewerUiState>(ViewerUiState.Loading)
     val uiState: StateFlow<ViewerUiState> = _uiState.asStateFlow()
@@ -57,25 +61,37 @@ class ViewerViewModel @Inject constructor(
     
     fun initializeViewerData(
         selectionMap: Map<Long, PhotoSelectionState>,
-        rejectCandidates: Map<Long, RejectReason>
+        rejectCandidates: Map<Long, RejectReason>,
+        orderedPhotoIds: List<Long>? = null
     ) {
         // savedStateHandle에 저장하여 loadPhotos()에서 읽을 수 있도록 함
         savedStateHandleRef["initial_selection_map"] = selectionMap
         savedStateHandleRef["initial_reject_candidates"] = rejectCandidates
+        if (orderedPhotoIds != null) {
+            savedStateHandleRef["initial_ordered_photo_ids"] = orderedPhotoIds
+        } else {
+            savedStateHandleRef.remove<List<Long>>("initial_ordered_photo_ids")
+        }
         
         initialSelectionMap = selectionMap
         initialRejectCandidates = rejectCandidates
+        initialOrderedPhotoIds = orderedPhotoIds ?: emptyList()
         
         // 이미 로드된 경우 상태 업데이트
         if (_uiState.value is ViewerUiState.Success) {
             _uiState.update { currentState ->
                 if (currentState is ViewerUiState.Success) {
-                    val updatedPhotos = currentState.photos.map { photo ->
+                    val photosWithRejectState = currentState.photos.map { photo ->
                         // Apply reject candidates if needed
                         applyRejectCandidate(photo, rejectCandidates)
                     }
+                    val updatedPhotos = applyOrderedPhotoIds(
+                        photos = photosWithRejectState,
+                        orderedPhotoIds = orderedPhotoIds ?: emptyList()
+                    )
                     currentState.copy(
                         photos = updatedPhotos,
+                        initialIndex = currentState.initialIndex,
                         selectionMap = selectionMap
                     )
                 } else {
@@ -102,6 +118,8 @@ class ViewerViewModel @Inject constructor(
                     ?: initialSelectionMap
                 val currentRejectCandidates = savedStateHandleRef.get<Map<Long, RejectReason>>("initial_reject_candidates")
                     ?: initialRejectCandidates
+                val currentOrderedPhotoIds = savedStateHandleRef.get<List<Long>>("initial_ordered_photo_ids")
+                    ?: initialOrderedPhotoIds
 
                 // 각 Photo의 recommendationScore를 DB에서 로드하고 Reject Candidate 반영
                 val photosWithScores = allPhotos.map { photo ->
@@ -126,24 +144,28 @@ class ViewerViewModel @Inject constructor(
                 } else {
                     photosWithScores
                 }
+                val orderedFilteredPhotos = applyOrderedPhotoIds(
+                    photos = filteredPhotos,
+                    orderedPhotoIds = currentOrderedPhotoIds
+                )
                 
-                if (filteredPhotos.isEmpty()) {
+                if (orderedFilteredPhotos.isEmpty()) {
                     _uiState.value = ViewerUiState.Error("사진이 없는 폴더입니다.")
                 } else {
                     // 초기 인덱스 계산
                     val initialIndex = if (initialPhotoId != null) {
-                        val index = filteredPhotos.indexOfFirst { it.id == initialPhotoId }
+                        val index = orderedFilteredPhotos.indexOfFirst { it.id == initialPhotoId }
                         if (index != -1) index else 0
                     } else {
                         0
                     }
                     
                     _uiState.value = ViewerUiState.Success(
-                        photos = filteredPhotos,
+                        photos = orderedFilteredPhotos,
                         initialIndex = initialIndex,
                         selectionMap = if (selectedOnly) {
                             currentSelectionMap.filterKeys { key ->
-                                filteredPhotos.any { it.id == key }
+                                orderedFilteredPhotos.any { it.id == key }
                             }
                         } else {
                             currentSelectionMap
@@ -156,13 +178,29 @@ class ViewerViewModel @Inject constructor(
         }
     }
 
-    private fun applyRejectCandidate(photo: com.cola.pickly.core.model.Photo, candidates: Map<Long, RejectReason>): com.cola.pickly.core.model.Photo {
+    private fun applyRejectCandidate(photo: Photo, candidates: Map<Long, RejectReason>): Photo {
         val candidateReason = candidates[photo.id] ?: return photo
         
-        val currentScore = photo.recommendationScore ?: com.cola.pickly.core.model.RecommendationScore.DEFAULT
+        val currentScore = photo.recommendationScore ?: RecommendationScore.DEFAULT
         return photo.copy(
             recommendationScore = currentScore.copy(rejectReason = candidateReason)
         )
+    }
+
+    private fun applyOrderedPhotoIds(
+        photos: List<Photo>,
+        orderedPhotoIds: List<Long>
+    ): List<Photo> {
+        if (photos.isEmpty() || orderedPhotoIds.isEmpty()) return photos
+
+        val photoById = photos.associateBy { it.id }
+        val orderedPhotos = orderedPhotoIds.mapNotNull { id -> photoById[id] }
+        if (orderedPhotos.isEmpty()) return photos
+
+        // 전달된 순서에 없는 항목은 기존 정렬 순서를 유지한 채 뒤에 붙입니다.
+        val orderedIdSet = orderedPhotos.map { it.id }.toSet()
+        val remainingPhotos = photos.filterNot { orderedIdSet.contains(it.id) }
+        return orderedPhotos + remainingPhotos
     }
 
     fun toggleSelection(photoId: Long) {

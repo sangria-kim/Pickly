@@ -1,7 +1,5 @@
 package com.cola.pickly.feature.archive
 
-import com.cola.pickly.core.model.Photo
-
 /**
  * S-06 아카이브 화면의 UI 상태
  * 
@@ -19,23 +17,22 @@ sealed interface ArchiveUiState {
     /**
      * 아카이브 데이터가 준비된 상태
      * 
-     * @param folderGroups 폴더별로 그룹핑된 채택된 사진 리스트
-     *                     키: 폴더명, 값: 해당 폴더의 채택된 사진 리스트
+     * @param folderSections bucketId 기준으로 그룹핑된 채택된 사진 섹션
      */
     data class ArchiveReady(
-        val folderGroups: Map<String, List<Photo>>
+        val folderSections: List<ArchiveFolderSection>
     ) : ArchiveUiState {
         /**
          * 폴더 개수
          */
         val folderCount: Int
-            get() = folderGroups.size
+            get() = folderSections.size
 
         /**
          * 전체 채택된 사진 개수
          */
         val totalPhotoCount: Int
-            get() = folderGroups.values.sumOf { it.size }
+            get() = folderSections.sumOf { it.photos.size }
     }
 
     /**
