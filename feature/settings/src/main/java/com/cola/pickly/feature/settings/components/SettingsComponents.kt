@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -32,13 +33,17 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.cola.pickly.core.model.SensitivityLevel
 import com.cola.pickly.core.ui.theme.TealAccent
+import kotlin.math.roundToInt
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
@@ -93,14 +98,12 @@ fun SettingsRadioItem(
     val primaryColor = MaterialTheme.colorScheme.onSurface
     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-    val itemModifier = if (subtitle != null) {
-        modifier.fillMaxWidth().heightIn(min = 52.dp, max = 60.dp)
-    } else {
-        modifier.fillMaxWidth().heightIn(min = 40.dp, max = 48.dp)
-    }
+    val minHeight = if (subtitle != null) 72.dp else 56.dp
 
     ListItem(
-        modifier = itemModifier
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = minHeight)
             .semantics {
                 role = Role.RadioButton
                 this.selected = selected
@@ -311,7 +314,9 @@ fun SettingsCheckboxItem(
                 checked = checked,
                 onCheckedChange = null,
                 colors = CheckboxDefaults.colors(
-                    checkedColor = TealAccent
+                    checkedColor = TealAccent,
+                    checkmarkColor = Color.White,
+                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         },
@@ -486,7 +491,7 @@ fun SettingsCardSection(
 
 @Composable
 fun SettingsCardHeader(title: String, description: String? = null, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 0.dp)) {
+    Column(modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
@@ -497,7 +502,7 @@ fun SettingsCardHeader(title: String, description: String? = null, modifier: Mod
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp)
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
@@ -507,7 +512,7 @@ fun SettingsCardHeader(title: String, description: String? = null, modifier: Mod
 fun SettingsCardTuningHeader(title: String? = null, actionText: String, onActionClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp).fillMaxWidth(),
-        horizontalArrangement = if (title != null) androidx.compose.foundation.layout.Arrangement.SpaceBetween else androidx.compose.foundation.layout.Arrangement.End
+        horizontalArrangement = if (title != null) Arrangement.SpaceBetween else Arrangement.End
     ) {
         if (title != null) {
             Text(
@@ -524,4 +529,163 @@ fun SettingsCardTuningHeader(title: String? = null, actionText: String, onAction
         )
     }
 }
+
+/**
+ * 스마트 제외 기준 항목 — 체크박스 + 아코디언 민감도 슬라이더.
+ *
+ * - [sensitivityLevel]이 null이면 슬라이더를 표시하지 않습니다(OCCLUDED, CROPPED).
+ * - 슬라이더는 접힌 상태(기본)에서 민감도 레벨 텍스트 + 화살표를 표시합니다.
+ * - 체크 해제 시 슬라이더가 자동으로 접힙니다.
+ * - 7단계 Discrete Slider: steps = 5 (Compose Slider steps = 총 단계 수 - 2)
+ */
+@Composable
+fun SmartDiscardCriterionItem(
+    label: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    sensitivityLevel: SensitivityLevel?,
+    onSensitivityChange: ((SensitivityLevel) -> Unit)?,
+    sensitivityDescription: String? = null,
+    modifier: Modifier = Modifier
+) {
+    val primaryColor = MaterialTheme.colorScheme.onSurface
+    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val hasSensitivity = sensitivityLevel != null && onSensitivityChange != null
+
+    var isSliderExpanded by remember { mutableStateOf(false) }
+
+    // 체크 해제 시 슬라이더 자동 접힘
+    LaunchedEffect(isChecked) {
+        if (!isChecked) isSliderExpanded = false
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // 체크박스 + 기준 이름 + 민감도 레벨/화살표
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCheckedChange(!isChecked) }
+                .padding(horizontal = 16.dp)
+                .heightIn(min = 56.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = isChecked,
+                onCheckedChange = null,
+                colors = CheckboxDefaults.colors(
+                    checkedColor = TealAccent,
+                    checkmarkColor = Color.White,
+                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            Text(
+                text = label,
+                color = primaryColor,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            )
+            if (hasSensitivity) {
+                Row(
+                    modifier = Modifier
+                        .clickable(enabled = isChecked) {
+                            isSliderExpanded = !isSliderExpanded
+                        }
+                        .padding(start = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = sensitivityLevel!!.label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isChecked) TealAccent else secondaryColor.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Icon(
+                        imageVector = if (isSliderExpanded && isChecked) Icons.Default.KeyboardArrowUp
+                        else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = if (isChecked) TealAccent else secondaryColor.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+
+        // 민감도 슬라이더 (체크 상태 + 펼침 상태일 때만 표시)
+        if (hasSensitivity) {
+            AnimatedVisibility(
+                visible = isChecked && isSliderExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
+                ) {
+                    if (!sensitivityDescription.isNullOrBlank()) {
+                        Text(
+                            text = sensitivityDescription,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = secondaryColor,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+
+                    // 방향 라벨을 슬라이더 좌우 바깥으로 배치
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "덜 엄격",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = secondaryColor
+                        )
+                        Slider(
+                            value = (sensitivityLevel.step - 1).toFloat(),
+                            onValueChange = { raw ->
+                                val step = raw.roundToInt() + 1
+                                onSensitivityChange!!(SensitivityLevel.fromStep(step))
+                            },
+                            valueRange = 0f..6f,
+                            steps = 5,
+                            colors = SliderDefaults.colors(
+                                thumbColor = TealAccent,
+                                activeTrackColor = TealAccent
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp)
+                        )
+                        Text(
+                            text = "더 엄격",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = secondaryColor
+                        )
+                    }
+
+                    // 보조 문구 (모든 단계에 문구 배정, 높이 고정)
+                    val hint = when (sensitivityLevel.step) {
+                        1 -> "확실히 문제 있는 사진만 잡아요"
+                        2 -> "눈에 띄는 사진 위주로 잡아요"
+                        3 -> "조금 여유 있게 판단해요"
+                        4 -> "적당한 기준으로 판단해요"
+                        5 -> "꼼꼼하게 살펴봐요"
+                        6 -> "까다롭게 골라내요"
+                        7 -> "조금이라도 아쉬우면 잡아요"
+                        else -> "적당한 기준으로 판단해요"
+                    }
+                    Text(
+                        text = hint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = secondaryColor,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 

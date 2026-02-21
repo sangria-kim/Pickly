@@ -1,5 +1,7 @@
 package com.cola.pickly.core.data.settings
 
+import com.cola.pickly.core.model.SensitivityLevel
+
 /**
  * S-08 설정 화면에서 사용하는 정책(Policy) 값들.
  *
@@ -49,7 +51,8 @@ data class Settings(
     val smartDiscardResultMode: SmartDiscardResultMode = SmartDiscardResultMode.ShowAsCandidates,
     val hasShownAutoRejectWarning: Boolean = false,
     val debugOptions: DebugOptions = DebugOptions(),
-    val hasSeenWelcomeSplash: Boolean = false
+    val hasSeenWelcomeSplash: Boolean = false,
+    val smartDiscardSensitivities: SmartDiscardSensitivities = SmartDiscardSensitivities()
 )
 
 /**
@@ -63,6 +66,18 @@ data class SmartDiscardThresholds(
     val headAngleLimit: Float = 30.0f,
     val eyeOpenThreshold: Float = 0.50f,
     val smileExceptionThreshold: Float = 0.70f
+)
+
+/**
+ * 스마트 제외 기준별 사용자 민감도 설정.
+ *
+ * 각 필드는 SensitivityLevel(7단계)로 저장되며, 기본값은 LEVEL_4(보통)입니다.
+ */
+data class SmartDiscardSensitivities(
+    val blur: SensitivityLevel = SensitivityLevel.default,
+    val eyeOpen: SensitivityLevel = SensitivityLevel.default,
+    val headAngle: SensitivityLevel = SensitivityLevel.default,
+    val minFaceSize: SensitivityLevel = SensitivityLevel.default,
 )
 
 /**

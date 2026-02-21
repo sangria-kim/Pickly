@@ -5,13 +5,16 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.core.model.SensitivityLevel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 
 /**
  * SettingsRepository의 DataStore(Preferences) 기반 구현체.
@@ -45,7 +48,33 @@ class DataStoreSettingsRepository @Inject constructor(
                 showFaceBoundingBox = prefs[KEY_SHOW_FACE_BOX] ?: true,
                 showScoreOverlay = prefs[KEY_SHOW_SCORE] ?: false
             ),
-            hasSeenWelcomeSplash = prefs[KEY_HAS_SEEN_WELCOME_SPLASH] ?: false
+            hasSeenWelcomeSplash = prefs[KEY_HAS_SEEN_WELCOME_SPLASH] ?: false,
+            smartDiscardSensitivities = SmartDiscardSensitivities(
+                blur = prefs[KEY_SENSITIVITY_BLUR]
+                    ?.let { SensitivityLevel.fromStep(it) }
+                    ?: migrateSensitivityFromFloat(
+                        prefs[KEY_BLUR_THRESHOLD],
+                        BLUR_FLOAT_PRESETS
+                    ),
+                eyeOpen = prefs[KEY_SENSITIVITY_EYE_OPEN]
+                    ?.let { SensitivityLevel.fromStep(it) }
+                    ?: migrateSensitivityFromFloat(
+                        prefs[KEY_EYE_OPEN_THRESHOLD],
+                        EYE_OPEN_FLOAT_PRESETS
+                    ),
+                headAngle = prefs[KEY_SENSITIVITY_HEAD_ANGLE]
+                    ?.let { SensitivityLevel.fromStep(it) }
+                    ?: migrateSensitivityFromFloat(
+                        prefs[KEY_HEAD_ANGLE_LIMIT],
+                        HEAD_ANGLE_FLOAT_PRESETS
+                    ),
+                minFaceSize = prefs[KEY_SENSITIVITY_MIN_FACE_SIZE]
+                    ?.let { SensitivityLevel.fromStep(it) }
+                    ?: migrateSensitivityFromFloat(
+                        prefs[KEY_MIN_FACE_SIZE],
+                        MIN_FACE_FLOAT_PRESETS
+                    ),
+            )
         )
     }
 
@@ -91,6 +120,15 @@ class DataStoreSettingsRepository @Inject constructor(
         dataStore.edit { it[KEY_HAS_SEEN_WELCOME_SPLASH] = seen }
     }
 
+    override suspend fun setSensitivities(sensitivities: SmartDiscardSensitivities) {
+        dataStore.edit { prefs ->
+            prefs[KEY_SENSITIVITY_BLUR] = sensitivities.blur.step
+            prefs[KEY_SENSITIVITY_EYE_OPEN] = sensitivities.eyeOpen.step
+            prefs[KEY_SENSITIVITY_HEAD_ANGLE] = sensitivities.headAngle.step
+            prefs[KEY_SENSITIVITY_MIN_FACE_SIZE] = sensitivities.minFaceSize.step
+        }
+    }
+
     private fun <T : Enum<T>> Preferences.getEnum(key: Preferences.Key<String>, default: T): T {
         val raw = this[key] ?: return default
         // 기존 AutoRename 데이터를 Skip으로 마이그레이션
@@ -123,6 +161,33 @@ class DataStoreSettingsRepository @Inject constructor(
 
         // Onboarding keys
         val KEY_HAS_SEEN_WELCOME_SPLASH = booleanPreferencesKey("settings.has_seen_welcome_splash")
+
+        // SmartDiscardSensitivities keys (Int: SensitivityLevel.step)
+        val KEY_SENSITIVITY_BLUR = intPreferencesKey("settings.sensitivity.blur")
+        val KEY_SENSITIVITY_EYE_OPEN = intPreferencesKey("settings.sensitivity.eye_open")
+        val KEY_SENSITIVITY_HEAD_ANGLE = intPreferencesKey("settings.sensitivity.head_angle")
+        val KEY_SENSITIVITY_MIN_FACE_SIZE = intPreferencesKey("settings.sensitivity.min_face_size")
+
+        // 마이그레이션용: 기존 float 값 → 가장 가까운 SensitivityLevel 매핑 테이블
+        // 순서: LEVEL_1 ~ LEVEL_7
+        val BLUR_FLOAT_PRESETS = listOf(220f, 185f, 150f, 100f, 70f, 50f, 35f)
+        val EYE_OPEN_FLOAT_PRESETS = listOf(0.10f, 0.25f, 0.38f, 0.50f, 0.63f, 0.75f, 0.85f)
+        val HEAD_ANGLE_FLOAT_PRESETS = listOf(55f, 45f, 37f, 30f, 22f, 16f, 11f)
+        val MIN_FACE_FLOAT_PRESETS = listOf(0.02f, 0.03f, 0.04f, 0.05f, 0.08f, 0.11f, 0.14f)
+    }
+
+    /**
+     * 기존 float 값을 가장 가까운 SensitivityLevel로 변환합니다 (1회성 마이그레이션).
+     * 신규 Int 키가 없을 때만 호출됩니다.
+     */
+    private fun migrateSensitivityFromFloat(
+        floatValue: Float?,
+        presets: List<Float>
+    ): SensitivityLevel {
+        if (floatValue == null) return SensitivityLevel.default
+        val nearestIndex = presets.indices.minByOrNull { abs(presets[it] - floatValue) }
+            ?: return SensitivityLevel.default
+        return SensitivityLevel.fromStep(nearestIndex + 1)
     }
 }
 

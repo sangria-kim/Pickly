@@ -6,7 +6,10 @@ import com.cola.pickly.core.data.cache.CacheRepository
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
 import com.cola.pickly.core.data.settings.SettingsRepository
 import com.cola.pickly.core.data.settings.SmartDiscardResultMode
+import com.cola.pickly.core.data.settings.SmartDiscardSensitivities
 import com.cola.pickly.core.data.settings.ThemeMode
+import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.core.model.SensitivityLevel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -60,7 +63,8 @@ class SettingsViewModel @Inject constructor(
                         smartDiscardResultMode = settings.smartDiscardResultMode,
                         hasShownAutoRejectWarning = settings.hasShownAutoRejectWarning,
                         debugOptions = settings.debugOptions,
-                        smartDiscardThresholds = settings.smartDiscardThresholds
+                        smartDiscardThresholds = settings.smartDiscardThresholds,
+                        smartDiscardSensitivities = settings.smartDiscardSensitivities
                     )
                 }
             }
@@ -184,6 +188,30 @@ class SettingsViewModel @Inject constructor(
     fun resetSmartDiscardThresholds() {
         viewModelScope.launch {
             settingsRepository.setSmartDiscardThresholds(com.cola.pickly.core.data.settings.SmartDiscardThresholds())
+        }
+    }
+
+    fun setSensitivity(reason: RejectReason, level: SensitivityLevel) {
+        viewModelScope.launch {
+            val current = _uiState.value.smartDiscardSensitivities
+            val updated = when (reason) {
+                RejectReason.BLURRY -> current.copy(blur = level)
+                RejectReason.EYES_CLOSED -> current.copy(eyeOpen = level)
+                RejectReason.HEAD_TURNED -> current.copy(headAngle = level)
+                RejectReason.TOO_SMALL -> current.copy(minFaceSize = level)
+                else -> return@launch
+            }
+            settingsRepository.setSensitivities(updated)
+            // 디버그 슬라이더와 동기화
+            settingsRepository.setSmartDiscardThresholds(SensitivityPresets.toThresholds(updated))
+        }
+    }
+
+    fun resetSensitivities() {
+        viewModelScope.launch {
+            val defaults = SmartDiscardSensitivities()
+            settingsRepository.setSensitivities(defaults)
+            settingsRepository.setSmartDiscardThresholds(SensitivityPresets.toThresholds(defaults))
         }
     }
 }

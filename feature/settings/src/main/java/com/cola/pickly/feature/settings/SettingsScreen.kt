@@ -1,9 +1,15 @@
 package com.cola.pickly.feature.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -11,39 +17,45 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.collectLatest
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
+import com.cola.pickly.core.data.settings.SmartDiscardResultMode
 import com.cola.pickly.core.data.settings.ThemeMode
 import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.core.model.SensitivityLevel
 import com.cola.pickly.core.ui.theme.DebugPinkBackground
 import com.cola.pickly.core.ui.theme.DebugPinkOutline
 import com.cola.pickly.core.ui.theme.PicklyTheme
+import com.cola.pickly.feature.settings.components.AutoRejectWarningDialog
 import com.cola.pickly.feature.settings.components.SettingsActionItem
 import com.cola.pickly.feature.settings.components.SettingsCardHeader
-import com.cola.pickly.feature.settings.components.AutoRejectWarningDialog
 import com.cola.pickly.feature.settings.components.SettingsCardSection
 import com.cola.pickly.feature.settings.components.SettingsCardTuningHeader
-import com.cola.pickly.feature.settings.components.SettingsExpandableChecklist
-import com.cola.pickly.feature.settings.components.SettingsGroupLabel
 import com.cola.pickly.feature.settings.components.SettingsRadioItem
 import com.cola.pickly.feature.settings.components.SettingsSectionHeader
 import com.cola.pickly.feature.settings.components.SettingsSliderItem
+import com.cola.pickly.feature.settings.components.SmartDiscardCriterionItem
 import com.cola.pickly.feature.settings.components.SettingsSwitchItem
 import com.cola.pickly.feature.settings.components.SettingsTextItem
 
@@ -96,6 +108,8 @@ fun SettingsScreen(
         onThemeChanged = viewModel::setThemeMode,
         onSmartDiscardCriterionToggle = viewModel::toggleSmartDiscardCriterion,
         onSmartDiscardResultModeChanged = viewModel::setSmartDiscardResultMode,
+        onSensitivityChanged = viewModel::setSensitivity,
+        onResetSensitivities = viewModel::resetSensitivities,
         onClearCache = viewModel::clearCache,
         onVersionTap = viewModel::onVersionTap,
         onDebugOptionChanged = viewModel::setDebugOption,
@@ -114,6 +128,8 @@ internal fun SettingsScreenContent(
     onThemeChanged: (ThemeMode) -> Unit,
     onSmartDiscardCriterionToggle: (RejectReason) -> Unit,
     onSmartDiscardResultModeChanged: (com.cola.pickly.core.data.settings.SmartDiscardResultMode) -> Unit = {},
+    onSensitivityChanged: (RejectReason, SensitivityLevel) -> Unit = { _, _ -> },
+    onResetSensitivities: () -> Unit = {},
     onClearCache: () -> Unit,
     onVersionTap: () -> Unit = {},
     onDebugOptionChanged: (DebugOptionType, Boolean) -> Unit = { _, _ -> },
@@ -163,32 +179,130 @@ internal fun SettingsScreenContent(
 
             // 2. 스마트 제외
             SettingsSectionHeader(title = "스마트 제외")
-            val criteriaList = (RejectReason.entries - RejectReason.NO_FACE).map { reason ->
-                reason to (reason in uiState.smartDiscardCriteria)
-            }
+
+            val orderedCriteria = listOf(
+                RejectReason.BLURRY,
+                RejectReason.EYES_CLOSED,
+                RejectReason.HEAD_TURNED,
+                RejectReason.TOO_SMALL,
+                RejectReason.OCCLUDED,
+                RejectReason.CROPPED,
+            )
+            val sensitivityLabels = mapOf(
+                RejectReason.BLURRY to "흔들린 사진을 잡는 정도",
+                RejectReason.EYES_CLOSED to "눈 감은 사진을 잡는 정도",
+                RejectReason.HEAD_TURNED to "고개 돌린 사진을 잡는 정도",
+                RejectReason.TOO_SMALL to "얼굴이 작은 사진을 잡는 정도",
+            )
+            var isCriteriaExpanded by rememberSaveable { mutableStateOf(false) }
+            val selectedCriteriaCount = orderedCriteria.count { it in uiState.smartDiscardCriteria }
+
+            // 카드 1: 후보 기준 + 민감도 초기화
             SettingsCardSection {
-                SettingsExpandableChecklist(
-                    title = "후보 기준",
-                    subtitle = "이 기준에 걸린 사진은 제외해요.",
-                    items = criteriaList.map { (reason, checked) -> reason.label to checked },
-                    onItemCheckedChange = { index, _ ->
-                        onSmartDiscardCriterionToggle(criteriaList[index].first)
-                    },
-                    trailingLabel = "${uiState.smartDiscardCriteria.count { it != RejectReason.NO_FACE }}개 선택됨"
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isCriteriaExpanded = !isCriteriaExpanded }
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = "후보 기준",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.Text(
+                                text = "${selectedCriteriaCount}개 선택됨",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Icon(
+                                imageVector = if (isCriteriaExpanded) {
+                                    Icons.Default.KeyboardArrowUp
+                                } else {
+                                    Icons.Default.KeyboardArrowDown
+                                },
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    androidx.compose.material3.Text(
+                        text = "이 기준에 걸린 사진은 제외해요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                if (isCriteriaExpanded) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+                    orderedCriteria.forEachIndexed { index, reason ->
+                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+                        val sensitivityLevel: SensitivityLevel? = if (reason.hasSensitivity) {
+                            when (reason) {
+                                RejectReason.BLURRY -> uiState.smartDiscardSensitivities.blur
+                                RejectReason.EYES_CLOSED -> uiState.smartDiscardSensitivities.eyeOpen
+                                RejectReason.HEAD_TURNED -> uiState.smartDiscardSensitivities.headAngle
+                                RejectReason.TOO_SMALL -> uiState.smartDiscardSensitivities.minFaceSize
+                                else -> null
+                            }
+                        } else null
+
+                        SmartDiscardCriterionItem(
+                            label = reason.label,
+                            isChecked = reason in uiState.smartDiscardCriteria,
+                            onCheckedChange = { onSmartDiscardCriterionToggle(reason) },
+                            sensitivityLevel = sensitivityLevel,
+                            onSensitivityChange = if (reason.hasSensitivity) {
+                                { level -> onSensitivityChanged(reason, level) }
+                            } else null,
+                            sensitivityDescription = sensitivityLabels[reason]
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = "민감도 초기화",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = com.cola.pickly.core.ui.theme.TealAccent,
+                            modifier = Modifier.clickable(onClick = onResetSensitivities)
+                        )
+                    }
+                }
+            }
+
+            // 카드 2: 분석 결과 처리 방식 (독립 카드)
+            Spacer(modifier = Modifier.height(8.dp))
+            SettingsCardSection {
+                SettingsCardHeader(
+                    title = "분석 결과 처리 방식",
+                    description = "분석된 사진을 어떻게 처리할지 선택하세요."
                 )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                SettingsCardHeader(title = "분석 결과 처리 방식", description = "분석된 사진을 어떻게 처리할지 선택하세요.")
                 SettingsRadioItem(
                     title = "아쉬움 후보로 표시만 하기",
                     subtitle = "분석 결과를 뱃지로 표시하고, 직접 선택할 수 있어요.",
-                    selected = uiState.smartDiscardResultMode == com.cola.pickly.core.data.settings.SmartDiscardResultMode.ShowAsCandidates,
-                    onClick = { onSmartDiscardResultModeChanged(com.cola.pickly.core.data.settings.SmartDiscardResultMode.ShowAsCandidates) }
+                    selected = uiState.smartDiscardResultMode == SmartDiscardResultMode.ShowAsCandidates,
+                    onClick = { onSmartDiscardResultModeChanged(SmartDiscardResultMode.ShowAsCandidates) }
                 )
                 SettingsRadioItem(
                     title = "자동으로 제외하기",
                     subtitle = "분석 결과에 따라 자동으로 제외 상태로 변경돼요.",
-                    selected = uiState.smartDiscardResultMode == com.cola.pickly.core.data.settings.SmartDiscardResultMode.AutoReject,
-                    onClick = { onSmartDiscardResultModeChanged(com.cola.pickly.core.data.settings.SmartDiscardResultMode.AutoReject) }
+                    selected = uiState.smartDiscardResultMode == SmartDiscardResultMode.AutoReject,
+                    onClick = { onSmartDiscardResultModeChanged(SmartDiscardResultMode.AutoReject) }
                 )
             }
 

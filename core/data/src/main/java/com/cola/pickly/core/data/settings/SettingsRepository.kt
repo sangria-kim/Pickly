@@ -26,6 +26,8 @@ interface SettingsRepository {
     suspend fun setDebugOptions(options: DebugOptions)
 
     suspend fun setHasSeenWelcomeSplash(seen: Boolean)
+
+    suspend fun setSensitivities(sensitivities: SmartDiscardSensitivities)
 }
 
 

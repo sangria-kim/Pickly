@@ -3,6 +3,7 @@ package com.cola.pickly.feature.settings
 import com.cola.pickly.core.data.settings.DebugOptions
 import com.cola.pickly.core.data.settings.DuplicateFilenamePolicy
 import com.cola.pickly.core.data.settings.SmartDiscardResultMode
+import com.cola.pickly.core.data.settings.SmartDiscardSensitivities
 import com.cola.pickly.core.data.settings.SmartDiscardThresholds
 import com.cola.pickly.core.data.settings.ThemeMode
 
@@ -21,6 +22,8 @@ data class SettingsUiState(
     val isCacheSizeLoading: Boolean = true,
     val cacheSizeBytes: Long? = null,
     val isClearingCache: Boolean = false,
+
+    val smartDiscardSensitivities: SmartDiscardSensitivities = SmartDiscardSensitivities(),
 
     // 디버그 관련
     val appVersion: String = "1.0.0",
