@@ -45,26 +45,26 @@ object ThresholdSpecs {
  *
  * | Level | 레이블       | BLUR↓ | EYE_OPEN↑ | HEAD_ANGLE↓ | MIN_FACE↑ |
  * |-------|------------|--------|-----------|-------------|-----------|
- * | 1     | 많이 낮음  | 220    | 0.10      | 55          | 0.02      |
- * | 2     | 낮음       | 185    | 0.25      | 45          | 0.03      |
- * | 3     | 약간 낮음  | 150    | 0.38      | 37          | 0.04      |
- * | 4     | 보통(권장) | 100    | 0.50      | 30          | 0.05      |
- * | 5     | 약간 높음  | 70     | 0.63      | 22          | 0.08      |
- * | 6     | 높음       | 50     | 0.75      | 16          | 0.11      |
- * | 7     | 매우 높음  | 35     | 0.85      | 11          | 0.14      |
+ * | 1     | 많이 낮음  | 120    | 0.10      | 55          | 0.02      |
+ * | 2     | 낮음       | 100    | 0.25      | 45          | 0.03      |
+ * | 3     | 약간 낮음  | 80     | 0.38      | 37          | 0.04      |
+ * | 4     | 보통(권장) | 55     | 0.50      | 30          | 0.05      |
+ * | 5     | 약간 높음  | 40     | 0.63      | 22          | 0.08      |
+ * | 6     | 높음       | 30     | 0.75      | 16          | 0.11      |
+ * | 7     | 매우 높음  | 20     | 0.85      | 11          | 0.14      |
  *
  * smileExceptionThreshold는 eyeOpen Level과 연동해 자동 계산됩니다.
  * (Level이 높아질수록 예외를 더 좁게 적용 → 값이 낮아짐)
  */
 object SensitivityPresets {
     fun blurFor(level: SensitivityLevel): Float = when (level) {
-        SensitivityLevel.LEVEL_1 -> 220f
-        SensitivityLevel.LEVEL_2 -> 185f
-        SensitivityLevel.LEVEL_3 -> 150f
-        SensitivityLevel.LEVEL_4 -> 100f
-        SensitivityLevel.LEVEL_5 -> 70f
-        SensitivityLevel.LEVEL_6 -> 50f
-        SensitivityLevel.LEVEL_7 -> 35f
+        SensitivityLevel.LEVEL_1 -> 120f
+        SensitivityLevel.LEVEL_2 -> 100f
+        SensitivityLevel.LEVEL_3 -> 80f
+        SensitivityLevel.LEVEL_4 -> 55f
+        SensitivityLevel.LEVEL_5 -> 40f
+        SensitivityLevel.LEVEL_6 -> 30f
+        SensitivityLevel.LEVEL_7 -> 20f
     }
 
     fun eyeOpenFor(level: SensitivityLevel): Float = when (level) {

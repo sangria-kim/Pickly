@@ -27,6 +27,7 @@ import kotlin.math.sqrt
  */
 class PhotoQualityAnalyzer(
     private val faceDetectorHelper: FaceDetectorHelper,
+    private val poseDetectorHelper: PoseDetectorHelper,
     private val thresholds: SmartDiscardThresholds,
     private val enabledCriteria: Set<RejectReason> = RejectReason.entries.toSet()
 ) {
@@ -51,7 +52,21 @@ class PhotoQualityAnalyzer(
 
             // 4. 우선순위 1위: NO_FACE (얼굴 미검출)
             if (allDetectedFaces.isEmpty()) {
-                Log.d(TAG, "analyze: ID=${photo.id}, No face detected")
+                // 얼굴 미검출 시 Pose Detection으로 2차 확인 (뒷모습/옆모습 오탐 방지)
+                val hasPose = poseDetectorHelper.hasPose(
+                    bitmap,
+                    confidenceThreshold = POSE_CONFIDENCE_THRESHOLD,
+                    minLandmarkCount = POSE_MIN_LANDMARK_COUNT
+                )
+                if (hasPose) {
+                    Log.d(TAG, "analyze: ID=${photo.id}, No face but pose detected → skip NO_FACE")
+                    return@withContext RecommendationScore(
+                        faceCount = 0,
+                        isCutoff = false,
+                        rawSharpness = sharpnessRaw
+                    )
+                }
+                Log.d(TAG, "analyze: ID=${photo.id}, No face detected, no pose detected")
                 return@withContext RecommendationScore(
                     faceCount = 0,
                     isCutoff = true,
@@ -127,28 +142,43 @@ class PhotoQualityAnalyzer(
             }
 
             // 9. 우선순위 4위: EYES_CLOSED (눈감음)
-            val isEyesClosed = (leftEyeOpen < thresholds.eyeOpenThreshold || rightEyeOpen < thresholds.eyeOpenThreshold)
+            // 양쪽 눈 모두 threshold 미만이어야 EYES_CLOSED로 판별 (안경 비대칭 반사 대응)
+            val bothEyesClosed = leftEyeOpen < thresholds.eyeOpenThreshold
+                                 && rightEyeOpen < thresholds.eyeOpenThreshold
+
+            // 한쪽 눈만 매우 낮은 경우 (윙크 등): 더 엄격한 임계값 적용
+            val oneEyeVeryClosed = (leftEyeOpen < SINGLE_EYE_STRICT_THRESHOLD
+                                    || rightEyeOpen < SINGLE_EYE_STRICT_THRESHOLD)
+            val eyeAsymmetry = abs(leftEyeOpen - rightEyeOpen)
+            val isAsymmetricBlink = oneEyeVeryClosed && eyeAsymmetry > EYE_ASYMMETRY_THRESHOLD
+
+            val isEyesClosed = bothEyesClosed || isAsymmetricBlink
             val isSmiling = smileProb > thresholds.smileExceptionThreshold
 
             if (isEyesClosed && !isSmiling && RejectReason.EYES_CLOSED in enabledCriteria) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Eyes closed (L=$leftEyeOpen, R=$rightEyeOpen)")
-                return@withContext RecommendationScore(
-                    faceCount = validFaces.size,
-                    isCutoff = true,
-                    cutoffReason = "Eyes closed",
-                    rejectReason = RejectReason.EYES_CLOSED,
-                    rawSharpness = sharpnessRaw,
-                    analyzedWidth = originalSize.width,
-                    analyzedHeight = originalSize.height,
-                    eyeOpenProb = eyeOpenProb.toDouble(),
-                    leftEyeOpenProb = leftEyeOpen.toDouble(),
-                    rightEyeOpenProb = rightEyeOpen.toDouble(),
-                    smileProb = smileProb.toDouble(),
-                    headEulerAngleX = headEulerX,
-                    headEulerAngleY = headEulerY,
-                    faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
-                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
-                )
+                // 선글라스 착용 시 EYES_CLOSED 오탐 방지: 눈 영역 픽셀 분석
+                if (isSunglassesLikely(bitmap, bestFace)) {
+                    Log.d(TAG, "analyze: ID=${photo.id}, Eyes closed but sunglasses detected → skip EYES_CLOSED")
+                } else {
+                    Log.d(TAG, "analyze: ID=${photo.id}, Eyes closed (L=$leftEyeOpen, R=$rightEyeOpen)")
+                    return@withContext RecommendationScore(
+                        faceCount = validFaces.size,
+                        isCutoff = true,
+                        cutoffReason = "Eyes closed",
+                        rejectReason = RejectReason.EYES_CLOSED,
+                        rawSharpness = sharpnessRaw,
+                        analyzedWidth = originalSize.width,
+                        analyzedHeight = originalSize.height,
+                        eyeOpenProb = eyeOpenProb.toDouble(),
+                        leftEyeOpenProb = leftEyeOpen.toDouble(),
+                        rightEyeOpenProb = rightEyeOpen.toDouble(),
+                        smileProb = smileProb.toDouble(),
+                        headEulerAngleX = headEulerX,
+                        headEulerAngleY = headEulerY,
+                        faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
+                        allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
+                    )
+                }
             }
 
             // 10. 우선순위 5위: OCCLUDED (얼굴가림)
@@ -445,6 +475,53 @@ class PhotoQualityAnalyzer(
         return ((1.0 - (minDistance / (maxDist * 0.5))) * 100).coerceIn(0.0, 100.0)
     }
     
+    private data class BrightnessStats(val mean: Float, val variance: Float)
+
+    private fun isSunglassesLikely(bitmap: Bitmap, face: Face): Boolean {
+        val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)?.position ?: return false
+        val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)?.position ?: return false
+        val faceWidth = face.boundingBox.width()
+        val halfSize = (faceWidth * EYE_REGION_RATIO / 2).toInt().coerceAtLeast(1)
+
+        val leftStats = getRegionBrightnessStats(bitmap, leftEye.x.toInt(), leftEye.y.toInt(), halfSize)
+            ?: return false
+        val rightStats = getRegionBrightnessStats(bitmap, rightEye.x.toInt(), rightEye.y.toInt(), halfSize)
+            ?: return false
+
+        return leftStats.mean < SUNGLASSES_DARK_THRESHOLD
+               && rightStats.mean < SUNGLASSES_DARK_THRESHOLD
+               && leftStats.variance < SUNGLASSES_VARIANCE_THRESHOLD
+               && rightStats.variance < SUNGLASSES_VARIANCE_THRESHOLD
+    }
+
+    private fun getRegionBrightnessStats(bitmap: Bitmap, cx: Int, cy: Int, halfSize: Int): BrightnessStats? {
+        val left = (cx - halfSize).coerceAtLeast(0)
+        val top = (cy - halfSize).coerceAtLeast(0)
+        val right = (cx + halfSize).coerceAtMost(bitmap.width)
+        val bottom = (cy + halfSize).coerceAtMost(bitmap.height)
+        val width = right - left
+        val height = bottom - top
+        if (width <= 0 || height <= 0) return null
+
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, left, top, width, height)
+
+        var sum = 0f
+        for (pixel in pixels) {
+            sum += (0.299f * Color.red(pixel) + 0.587f * Color.green(pixel) + 0.114f * Color.blue(pixel))
+        }
+        val mean = sum / pixels.size
+
+        var varianceSum = 0f
+        for (pixel in pixels) {
+            val lum = 0.299f * Color.red(pixel) + 0.587f * Color.green(pixel) + 0.114f * Color.blue(pixel)
+            varianceSum += (lum - mean) * (lum - mean)
+        }
+        val variance = varianceSum / pixels.size
+
+        return BrightnessStats(mean, variance)
+    }
+
     private fun loadBitmap(path: String): Pair<Bitmap, Size>? {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
@@ -486,5 +563,16 @@ class PhotoQualityAnalyzer(
 
     companion object {
         private const val TAG = "PhotoQualityAnalyzer"
+        private const val POSE_CONFIDENCE_THRESHOLD = 0.5f
+        private const val POSE_MIN_LANDMARK_COUNT = 5
+
+        // 일반 안경 대응: EYES_CLOSED 판별 강화
+        private const val SINGLE_EYE_STRICT_THRESHOLD = 0.15f
+        private const val EYE_ASYMMETRY_THRESHOLD = 0.3f
+
+        // 선글라스 감지 파라미터
+        private const val EYE_REGION_RATIO = 0.15f
+        private const val SUNGLASSES_DARK_THRESHOLD = 60f
+        private const val SUNGLASSES_VARIANCE_THRESHOLD = 400f
     }
 }

@@ -25,6 +25,6 @@ data class PhotoScoreEntity(
     val schemaVersion: Int = CURRENT_SCHEMA_VERSION  // 분석 로직 버전
 ) {
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 1
+        const val CURRENT_SCHEMA_VERSION = 2
     }
 }

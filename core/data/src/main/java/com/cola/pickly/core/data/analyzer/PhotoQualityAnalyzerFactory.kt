@@ -12,7 +12,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class PhotoQualityAnalyzerFactory @Inject constructor(
-    private val faceDetectorHelper: FaceDetectorHelper
+    private val faceDetectorHelper: FaceDetectorHelper,
+    private val poseDetectorHelper: PoseDetectorHelper
 ) {
     /**
      * 주어진 임계값 설정으로 PhotoQualityAnalyzer 인스턴스를 생성합니다.
@@ -21,6 +22,6 @@ class PhotoQualityAnalyzerFactory @Inject constructor(
         thresholds: SmartDiscardThresholds,
         enabledCriteria: Set<RejectReason> = RejectReason.entries.toSet()
     ): PhotoQualityAnalyzer {
-        return PhotoQualityAnalyzer(faceDetectorHelper, thresholds, enabledCriteria)
+        return PhotoQualityAnalyzer(faceDetectorHelper, poseDetectorHelper, thresholds, enabledCriteria)
     }
 }

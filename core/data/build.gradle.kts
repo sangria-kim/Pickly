@@ -39,6 +39,7 @@ dependencies {
 
     // ML Kit
     implementation(libs.mlkit.face.detection)
+    implementation(libs.mlkit.pose.detection)
 
     // Exif Interface
     implementation(libs.androidx.exifinterface)

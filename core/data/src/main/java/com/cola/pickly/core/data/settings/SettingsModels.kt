@@ -61,7 +61,7 @@ data class Settings(
  * 디버그 메뉴에서 튜닝 가능하며, 각 임계값은 사진 분석 시 사용됩니다.
  */
 data class SmartDiscardThresholds(
-    val blurThreshold: Float = 100.0f,
+    val blurThreshold: Float = 55.0f,
     val minFaceSize: Float = 0.05f,
     val headAngleLimit: Float = 30.0f,
     val eyeOpenThreshold: Float = 0.50f,

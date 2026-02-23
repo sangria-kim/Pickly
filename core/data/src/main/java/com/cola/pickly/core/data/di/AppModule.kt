@@ -3,6 +3,7 @@ package com.cola.pickly.core.data.di
 import android.content.ContentResolver
 import android.content.Context
 import com.cola.pickly.core.data.analyzer.FaceDetectorHelper
+import com.cola.pickly.core.data.analyzer.PoseDetectorHelper
 import com.cola.pickly.core.data.analyzer.PhotoQualityAnalyzerFactory
 import com.cola.pickly.core.data.database.DatabaseModule
 import com.cola.pickly.core.data.settings.SettingsRepository
@@ -34,6 +35,12 @@ object AppModule {
     @Singleton
     fun provideFaceDetectorHelper(): FaceDetectorHelper {
         return FaceDetectorHelper()
+    }
+
+    @Provides
+    @Singleton
+    fun providePoseDetectorHelper(): PoseDetectorHelper {
+        return PoseDetectorHelper()
     }
 
     @Provides

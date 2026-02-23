@@ -35,7 +35,7 @@ class DataStoreSettingsRepository @Inject constructor(
                 runCatching { RejectReason.valueOf(name) }.getOrNull()
             }?.toSet() ?: RejectReason.entries.toSet(),
             smartDiscardThresholds = SmartDiscardThresholds(
-                blurThreshold = prefs[KEY_BLUR_THRESHOLD] ?: 100.0f,
+                blurThreshold = prefs[KEY_BLUR_THRESHOLD] ?: 55.0f,
                 minFaceSize = prefs[KEY_MIN_FACE_SIZE] ?: 0.05f,
                 headAngleLimit = prefs[KEY_HEAD_ANGLE_LIMIT] ?: 30.0f,
                 eyeOpenThreshold = prefs[KEY_EYE_OPEN_THRESHOLD] ?: 0.50f,
@@ -170,7 +170,7 @@ class DataStoreSettingsRepository @Inject constructor(
 
         // 마이그레이션용: 기존 float 값 → 가장 가까운 SensitivityLevel 매핑 테이블
         // 순서: LEVEL_1 ~ LEVEL_7
-        val BLUR_FLOAT_PRESETS = listOf(220f, 185f, 150f, 100f, 70f, 50f, 35f)
+        val BLUR_FLOAT_PRESETS = listOf(120f, 100f, 80f, 55f, 40f, 30f, 20f)
         val EYE_OPEN_FLOAT_PRESETS = listOf(0.10f, 0.25f, 0.38f, 0.50f, 0.63f, 0.75f, 0.85f)
         val HEAD_ANGLE_FLOAT_PRESETS = listOf(55f, 45f, 37f, 30f, 22f, 16f, 11f)
         val MIN_FACE_FLOAT_PRESETS = listOf(0.02f, 0.03f, 0.04f, 0.05f, 0.08f, 0.11f, 0.14f)

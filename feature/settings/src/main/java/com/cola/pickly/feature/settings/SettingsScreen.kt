@@ -415,7 +415,7 @@ internal fun SettingsScreenContent(
                         valueRange = blurSpec.range,
                         steps = blurSpec.steps,
                         valueFormatter = { "%.1f".format(it) },
-                        defaultValue = 100.0f,
+                        defaultValue = 55.0f,
                         subtitle = "값을 올리면 더 많이 '흔들림'으로 잡고, 내리면 심하게 흔들린 사진만 잡아요."
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
