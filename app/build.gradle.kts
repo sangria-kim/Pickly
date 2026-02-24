@@ -16,15 +16,16 @@ android {
         applicationId = "com.cola.pickly"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10301
-        versionName = "1.3.1"
+        versionCode = 10400
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
