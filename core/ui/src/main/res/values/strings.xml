@@ -20,6 +20,8 @@
     <string name="organize_empty_cta">폴더 선택하러 가기</string>
     <string name="photo_count_format">%d장</string>
     <string name="selected_count_format">%d개 선택됨</string>
+    <string name="bulk_action_accept">채택</string>
+    <string name="bulk_action_reject">제외</string>
     <string name="bulk_action_share">공유</string>
     <string name="bulk_action_move">이동</string>
     <string name="bulk_action_copy">복사</string>

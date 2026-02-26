@@ -1,4 +1,4 @@
-package com.cola.pickly.feature.organize.domain.usecase
+package com.cola.pickly.core.data.usecase
 
 import android.net.Uri
 import com.cola.pickly.core.data.photo.PhotoActionRepository

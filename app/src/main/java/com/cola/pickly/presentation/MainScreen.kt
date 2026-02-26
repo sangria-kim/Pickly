@@ -3,9 +3,7 @@ package com.cola.pickly.presentation
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inventory2
@@ -24,18 +22,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -45,9 +42,11 @@ import androidx.navigation.compose.rememberNavController
 import com.cola.pickly.R
 import com.cola.pickly.core.ui.R as CoreUiR
 import com.cola.pickly.feature.archive.ArchiveScreen
+import com.cola.pickly.feature.archive.ArchiveViewModel
 import com.cola.pickly.feature.organize.OrganizeScreen
 import com.cola.pickly.feature.organize.OrganizeViewModel
-import com.cola.pickly.feature.organize.components.BulkActionBar
+import com.cola.pickly.core.ui.components.BulkAction
+import com.cola.pickly.core.ui.components.BulkActionBar
 import com.cola.pickly.feature.settings.SettingsScreen
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
@@ -144,25 +143,40 @@ fun MainScreen(
     selectionUpdates: Map<Long, PhotoSelectionState>? = null
 ) {
     val navController = rememberNavController()
-    
+
     // OrganizeViewModel을 한 번만 생성하여 OrganizeScreen과 ArchiveScreen이 같은 인스턴스를 공유하도록 함
     val organizeViewModel: OrganizeViewModel = hiltViewModel()
-    
+
+    // 현재 탭 추적
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentTab = navBackStackEntry?.destination?.route
+
     // Multi Select Mode 상태 관리
-    var isMultiSelectMode by remember { mutableStateOf(false) }
+    var isOrganizeMultiSelectMode by remember { mutableStateOf(false) }
+    var isArchiveMultiSelectMode by remember { mutableStateOf(false) }
+
+    val isMultiSelectMode = isOrganizeMultiSelectMode || isArchiveMultiSelectMode
+
+    // Archive bulk action 콜백
+    var onArchiveShareClick: (() -> Unit)? by remember { mutableStateOf(null) }
+    var onArchiveMoveClick: (() -> Unit)? by remember { mutableStateOf(null) }
+    var onArchiveCopyClick: (() -> Unit)? by remember { mutableStateOf(null) }
+    var onArchiveDeleteClick: (() -> Unit)? by remember { mutableStateOf(null) }
+    var archiveActionInProgress by remember { mutableStateOf(false) }
+
+    // 탭 전환 시 다중 선택 모드 자동 해제
+    LaunchedEffect(currentTab) {
+        if (isOrganizeMultiSelectMode) {
+            organizeViewModel.exitMultiSelectMode()
+        }
+        // Archive는 ArchiveViewModel의 exitMultiSelectMode()를 직접 호출할 수 없으므로
+        // isArchiveMultiSelectMode 상태를 리셋 (ArchiveScreen의 LaunchedEffect가 감지)
+        isArchiveMultiSelectMode = false
+    }
 
     // 종료 다이얼로그 상태 관리
     var showExitDialog by remember { mutableStateOf(false) }
     val activity = LocalContext.current as? Activity
-
-    // Bulk Action 콜백 상태 관리
-    var onShareClick: (() -> Unit)? by remember { mutableStateOf(null) }
-    var onMoveClick: (() -> Unit)? by remember { mutableStateOf(null) }
-    var onCopyClick: (() -> Unit)? by remember { mutableStateOf(null) }
-    var onDeleteClick: (() -> Unit)? by remember { mutableStateOf(null) }
-    
-    // 액션 진행 상태 관찰
-    val isActionInProgress by organizeViewModel.isActionInProgress.collectAsStateWithLifecycle()
 
     // Multi Select Mode가 아닐 때만 종료 다이얼로그 표시
     BackHandler(enabled = !isMultiSelectMode) {
@@ -175,13 +189,24 @@ fun MainScreen(
         // Bottom Area: Normal Mode일 때 Bottom Navigation Bar, Multi Select Mode일 때 Bulk Action Bar
         bottomBar = {
             if (isMultiSelectMode) {
-                // Multi Select Mode: Bulk Action Bar 표시
+                val actions = when (currentTab) {
+                    MainTab.Organize.route -> BulkAction.organizeActions
+                    MainTab.Archive.route -> BulkAction.archiveActions
+                    else -> emptyList()
+                }
                 BulkActionBar(
-                    onShareClick = { onShareClick?.invoke() },
-                    onMoveClick = { onMoveClick?.invoke() },
-                    onCopyClick = { onCopyClick?.invoke() },
-                    onDeleteClick = { onDeleteClick?.invoke() },
-                    isActionInProgress = isActionInProgress
+                    actions = actions,
+                    onActionClick = { action ->
+                        when (action) {
+                            is BulkAction.Accept -> organizeViewModel.bulkAcceptSelected()
+                            is BulkAction.Reject -> organizeViewModel.bulkRejectSelected()
+                            is BulkAction.Share -> onArchiveShareClick?.invoke()
+                            is BulkAction.Move -> onArchiveMoveClick?.invoke()
+                            is BulkAction.Copy -> onArchiveCopyClick?.invoke()
+                            is BulkAction.Delete -> onArchiveDeleteClick?.invoke()
+                        }
+                    },
+                    isActionInProgress = archiveActionInProgress
                 )
             } else {
                 // Normal Mode: Bottom Navigation Bar 표시
@@ -203,25 +228,30 @@ fun MainScreen(
                     selectedFolder = selectedFolder,
                     selectionUpdates = selectionUpdates,
                     onMultiSelectModeChanged = { isMultiSelect ->
-                        isMultiSelectMode = isMultiSelect
-                    },
-                    onShareClick = { action ->
-                        onShareClick = action
-                    },
-                    onMoveClick = { action ->
-                        onMoveClick = action
-                    },
-                    onCopyClick = { action ->
-                        onCopyClick = action
-                    },
-                    onDeleteClick = { action ->
-                        onDeleteClick = action
+                        isOrganizeMultiSelectMode = isMultiSelect
                     }
                 )
             }
             composable(MainTab.Archive.route) {
+                val archiveViewModel: ArchiveViewModel = hiltViewModel()
                 val globalSelectionMap by organizeViewModel.globalSelectionMap.collectAsStateWithLifecycle()
+                val archiveIsActionInProgress by archiveViewModel.isActionInProgress.collectAsStateWithLifecycle()
+
+                // Archive의 액션 진행 상태를 MainScreen에 반영
+                LaunchedEffect(archiveIsActionInProgress) {
+                    archiveActionInProgress = archiveIsActionInProgress
+                }
+
+                // Archive bulk action 콜백 등록
+                LaunchedEffect(Unit) {
+                    onArchiveShareClick = { archiveViewModel.shareSelectedPhotos() }
+                    onArchiveMoveClick = { archiveViewModel.requestDestinationForMove() }
+                    onArchiveCopyClick = { archiveViewModel.requestDestinationForCopy() }
+                    onArchiveDeleteClick = { archiveViewModel.requestDeleteConfirmation() }
+                }
+
                 ArchiveScreen(
+                    viewModel = archiveViewModel,
                     globalSelectionMap = globalSelectionMap,
                     onNavigateToPhotoDetail = { folderId, photoId, selectionMap, selectedOnly, rejectCandidates, orderedPhotoIds ->
                         onNavigateToPhotoDetail(folderId, photoId, selectionMap, selectedOnly, ViewerContext.ARCHIVE, rejectCandidates, orderedPhotoIds)
@@ -235,6 +265,9 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onMultiSelectModeChanged = { isMultiSelect ->
+                        isArchiveMultiSelectMode = isMultiSelect
                     }
                 )
             }

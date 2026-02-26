@@ -1,7 +1,9 @@
-package com.cola.pickly.feature.organize.components
+package com.cola.pickly.core.ui.components
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Cancel
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileMove
@@ -22,40 +24,30 @@ sealed class BulkAction(
     @StringRes val labelResId: Int,
     val icon: ImageVector
 ) {
+    object Accept : BulkAction(R.string.bulk_action_accept, Icons.Outlined.CheckCircle)
+    object Reject : BulkAction(R.string.bulk_action_reject, Icons.Outlined.Cancel)
     object Share : BulkAction(R.string.bulk_action_share, Icons.Outlined.Share)
     object Move : BulkAction(R.string.bulk_action_move, Icons.Outlined.DriveFileMove)
     object Copy : BulkAction(R.string.bulk_action_copy, Icons.Outlined.ContentCopy)
     object Delete : BulkAction(R.string.bulk_action_delete, Icons.Outlined.Delete)
 
     companion object {
-        val actions = listOf(Share, Move, Copy, Delete)
+        val organizeActions = listOf(Accept, Reject)
+        val archiveActions = listOf(Share, Move, Copy, Delete)
     }
 }
 
-/**
- * Bulk Action Bar Composable
- * Multi Select Mode에서 Bottom Area에 표시되는 일괄 액션 바
- */
 @Composable
 fun BulkActionBar(
-    onShareClick: () -> Unit,
-    onMoveClick: () -> Unit,
-    onCopyClick: () -> Unit,
-    onDeleteClick: () -> Unit,
+    actions: List<BulkAction>,
+    onActionClick: (BulkAction) -> Unit,
     isActionInProgress: Boolean = false
 ) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.outline
     ) {
-        BulkAction.actions.forEach { action ->
-            val onClickHandler = when (action) {
-                is BulkAction.Share -> onShareClick
-                is BulkAction.Move -> onMoveClick
-                is BulkAction.Copy -> onCopyClick
-                is BulkAction.Delete -> onDeleteClick
-            }
-
+        actions.forEach { action ->
             val itemColor = when (action) {
                 is BulkAction.Delete -> MaterialTheme.colorScheme.error
                 else -> MaterialTheme.colorScheme.outline
@@ -66,7 +58,7 @@ fun BulkActionBar(
                 icon = { Icon(action.icon, contentDescription = stringResource(action.labelResId)) },
                 label = { Text(stringResource(action.labelResId)) },
                 selected = false,
-                onClick = if (isActionInProgress) { {} } else onClickHandler,
+                onClick = if (isActionInProgress) { {} } else { { onActionClick(action) } },
                 enabled = !isActionInProgress,
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = itemColor,
@@ -81,4 +73,3 @@ fun BulkActionBar(
         }
     }
 }
-

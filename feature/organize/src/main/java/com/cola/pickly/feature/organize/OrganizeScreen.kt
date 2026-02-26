@@ -1,16 +1,11 @@
 package com.cola.pickly.feature.organize
 
-import android.app.Activity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -29,7 +24,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -38,19 +32,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import com.cola.pickly.feature.organize.FolderSelectUiState
 import com.cola.pickly.feature.organize.FolderSelectViewModel
-import com.cola.pickly.feature.organize.components.CreateFolderDialog
 import com.cola.pickly.feature.organize.components.FolderSelectScreen
-import com.cola.pickly.feature.organize.components.FolderSelectMode
 import com.cola.pickly.feature.organize.components.OrganizeEmptyScreen
 import com.cola.pickly.feature.organize.components.OrganizeGridScreen
 import com.cola.pickly.feature.organize.components.OrganizeTopBar
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.R
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import androidx.compose.material3.SnackbarResult
 
 @Composable
 fun OrganizeScreen(
@@ -59,25 +47,16 @@ fun OrganizeScreen(
     onNavigateToPhotoDetail: (String, Long, Map<Long, PhotoSelectionState>, Boolean, Map<Long, RejectReason>, List<Long>?) -> Unit,
     selectedFolder: Pair<String, String>? = null,
     selectionUpdates: Map<Long, PhotoSelectionState>? = null,
-    onMultiSelectModeChanged: ((Boolean) -> Unit)? = null,
-    onShareClick: (((() -> Unit)) -> Unit)? = null,
-    onMoveClick: (((() -> Unit)) -> Unit)? = null,
-    onCopyClick: (((() -> Unit)) -> Unit)? = null,
-    onDeleteClick: (((() -> Unit)) -> Unit)? = null
+    onMultiSelectModeChanged: ((Boolean) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
-    val showDeleteConfirm by viewModel.showDeleteConfirm.collectAsStateWithLifecycle()
     val showAutoRejectDialog by viewModel.showAutoRejectDialog.collectAsStateWithLifecycle()
     val showInterruptDialog by viewModel.showInterruptDialog.collectAsStateWithLifecycle()
-    val destinationMode by viewModel.destinationSelectionMode.collectAsStateWithLifecycle()
     val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val selectedCount = (uiState as? OrganizeUiState.GridReady)?.selectedCount ?: 0
 
     var showFolderSheet by rememberSaveable { mutableStateOf(false) }
-    var showDestinationSelectSheet by rememberSaveable { mutableStateOf(false) }
-    var showCreateFolderDialog by rememberSaveable { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         folderSelectViewModel.refreshFolders(silent = true)
@@ -95,68 +74,9 @@ fun OrganizeScreen(
         }
     }
 
-    val context = LocalContext.current
-
-    val storageAccessLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
-            viewModel.onStorageAccessResult(result.resultCode == Activity.RESULT_OK)
-        }
-
-    val shareTitle = stringResource(R.string.bulk_action_share)
-
-    LaunchedEffect(Unit) {
-        viewModel.shareEvents.collectLatest { uris ->
-            if (uris.isEmpty()) return@collectLatest
-
-            val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                type = "image/*"
-                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(
-                Intent.createChooser(
-                    intent,
-                    shareTitle
-                )
-            )
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.storageAccessRequests.collectLatest { intentSender ->
-            storageAccessLauncher.launch(
-                IntentSenderRequest.Builder(intentSender).build()
-            )
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.moveStorageAccessRequests.collectLatest { intentSender ->
-            storageAccessLauncher.launch(
-                IntentSenderRequest.Builder(intentSender).build()
-            )
-        }
-    }
-
     LaunchedEffect(Unit) {
         viewModel.snackbarMessages.collectLatest { message ->
             snackbarHostState.showSnackbar(message)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.permissionRecoveryEvents.collect {
-            val result = snackbarHostState.showSnackbar(
-                message = "저장소 접근 권한이 필요해요.",
-                actionLabel = "설정으로 이동"
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                val intent = Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", context.packageName, null)
-                )
-                context.startActivity(intent)
-            }
         }
     }
 
@@ -170,24 +90,6 @@ fun OrganizeScreen(
     // isMultiSelectMode 변경 시 MainScreen에 알림
     LaunchedEffect(isMultiSelectMode) {
         onMultiSelectModeChanged?.invoke(isMultiSelectMode)
-    }
-    
-    // Bulk Action 콜백 설정
-    LaunchedEffect(Unit) {
-        onShareClick?.invoke { if (!isActionInProgress) viewModel.shareSelectedPhotos() }
-        onMoveClick?.invoke {
-            if (!isActionInProgress) {
-                viewModel.requestDestinationForMove()
-                showDestinationSelectSheet = true
-            }
-        }
-        onCopyClick?.invoke {
-            if (!isActionInProgress) {
-                viewModel.requestDestinationForCopy()
-                showDestinationSelectSheet = true
-            }
-        }
-        onDeleteClick?.invoke { if (!isActionInProgress) viewModel.requestDeleteConfirmation() }
     }
     
     BackHandler(enabled = isMultiSelectMode) {
@@ -333,84 +235,6 @@ fun OrganizeScreen(
                 onFolderClick = { folder ->
                     viewModel.selectFolder(folderId = folder.id, folderName = folder.name)
                     showFolderSheet = false
-                }
-            )
-        }
-
-        if (showDestinationSelectSheet) {
-            val folders = if (folderSelectState is FolderSelectUiState.Success) {
-                (folderSelectState as FolderSelectUiState.Success).folders
-            } else {
-                emptyList()
-            }
-
-            val isLoading = folderSelectState is FolderSelectUiState.Loading
-
-            FolderSelectScreen(
-                folders = folders,
-                isLoading = isLoading,
-                mode = FolderSelectMode.DestinationSelection,
-                onClose = {
-                    showDestinationSelectSheet = false
-                    viewModel.cancelDestinationSelection()
-                },
-                onFolderClick = { folder ->
-                    when (destinationMode) {
-                        is OrganizeViewModel.DestinationSelectionMode.Move -> viewModel.moveToDestination(folder)
-                        is OrganizeViewModel.DestinationSelectionMode.Copy -> viewModel.copyToDestination(folder)
-                        null -> {}
-                    }
-                    showDestinationSelectSheet = false
-                },
-                onCreateFolderClick = { showCreateFolderDialog = true }
-            )
-        }
-
-        if (showCreateFolderDialog) {
-            CreateFolderDialog(
-                onDismiss = { showCreateFolderDialog = false },
-                onConfirm = { folderName ->
-                    showCreateFolderDialog = false
-                    showDestinationSelectSheet = false
-                    viewModel.createFolderAndExecute(folderName)
-                }
-            )
-        }
-
-        if (showDeleteConfirm) {
-            AlertDialog(
-                onDismissRequest = {
-                    if (!isActionInProgress) {
-                        viewModel.dismissDeleteConfirmation()
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = { viewModel.deleteSelectedPhotos() },
-                        enabled = !isActionInProgress
-                    ) {
-                        Text(
-                            text = stringResource(R.string.delete_confirm_button)
-                        )
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { viewModel.dismissDeleteConfirmation() },
-                        enabled = !isActionInProgress
-                    ) {
-                        Text(
-                            text = stringResource(R.string.delete_confirm_cancel)
-                        )
-                    }
-                },
-                text = {
-                    Text(
-                        text = stringResource(
-                            R.string.delete_confirm_message,
-                            selectedCount
-                        )
-                    )
                 }
             )
         }

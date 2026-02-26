@@ -29,41 +29,81 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
+import com.cola.pickly.core.ui.components.FilterTriStateCheckboxItem
+import com.cola.pickly.core.ui.components.MultiSelectTopBarContent
 import com.cola.pickly.core.ui.theme.TealAccent
 
-/**
- * S-06 아카이브 화면 전용 Top Bar
- * 
- * Wireframe.md S-06 참고:
- * - 좌측: "모아보기" 타이틀
- * - 우측: 필터 아이콘 (V1에서는 "폴더별" 옵션만, 향후 확장 가능)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveTopBar(
     hasAcceptedPhotos: Boolean = false,
+    isMultiSelectMode: Boolean = false,
+    selectedCount: Int = 0,
+    selectAllState: ToggleableState = ToggleableState.Off,
+    onCancelSelection: () -> Unit = {},
+    onSelectAllToggle: () -> Unit = {},
     onFilterClick: () -> Unit = {}
 ) {
     var showFilterMenu by remember { mutableStateOf(false) }
 
+    val containerColor = if (isMultiSelectMode) TealAccent else MaterialTheme.colorScheme.surface
+    val contentColor = if (isMultiSelectMode) Color.White else MaterialTheme.colorScheme.onSurface
+    val actionIconColor = if (isMultiSelectMode) Color.White else MaterialTheme.colorScheme.outline
+
     TopAppBar(
         modifier = Modifier.statusBarsPadding(),
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.outline
+            containerColor = containerColor,
+            titleContentColor = contentColor,
+            actionIconContentColor = actionIconColor
         ),
         title = {
-            Text(
-                text = stringResource(R.string.archive_title),
-                style = MaterialTheme.typography.titleMedium
-            )
+            if (isMultiSelectMode) {
+                MultiSelectTopBarContent(
+                    selectedCount = selectedCount,
+                    onCancelClick = onCancelSelection,
+                    contentColor = contentColor
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.archive_title),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
         },
         actions = {
-            // 채택된 사진이 있을 때만 필터 버튼 노출
-            if (hasAcceptedPhotos) {
+            if (isMultiSelectMode) {
+                // 다중 선택 모드: 전체 선택 체크박스
+                Box {
+                    IconButton(onClick = { showFilterMenu = !showFilterMenu }) {
+                        Icon(
+                            Icons.Outlined.ViewAgenda,
+                            contentDescription = "Select All"
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showFilterMenu,
+                        onDismissRequest = { showFilterMenu = false },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(modifier = Modifier.width(156.dp)) {
+                            FilterTriStateCheckboxItem(
+                                label = stringResource(R.string.filter_select_all),
+                                state = selectAllState,
+                                onToggle = {
+                                    onSelectAllToggle()
+                                    showFilterMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            } else if (hasAcceptedPhotos) {
+                // Normal Mode: 기존 필터 버튼
                 Box {
                     IconButton(onClick = { showFilterMenu = true }) {
                         Icon(
@@ -78,7 +118,6 @@ fun ArchiveTopBar(
                         shape = MaterialTheme.shapes.medium
                     ) {
                         Column(modifier = Modifier.width(156.dp)) {
-                            // V1에서는 "폴더별" 옵션만 제공 (향후 확장 가능)
                             ArchiveFilterItem(
                                 label = "폴더별",
                                 selected = true,
@@ -95,9 +134,6 @@ fun ArchiveTopBar(
     )
 }
 
-/**
- * 아카이브 필터 아이템 (정리하기 탭의 스타일과 통일)
- */
 @Composable
 private fun ArchiveFilterItem(
     label: String,
@@ -124,4 +160,3 @@ private fun ArchiveFilterItem(
         )
     }
 }
-

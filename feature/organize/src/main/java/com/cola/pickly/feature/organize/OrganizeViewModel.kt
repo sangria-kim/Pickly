@@ -13,10 +13,10 @@ import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoFolder
 import com.cola.pickly.core.model.PhotoDisplayOrderComparator
-import com.cola.pickly.feature.organize.domain.usecase.MoveSelectedPhotosUseCase
-import com.cola.pickly.feature.organize.domain.usecase.ShareSelectedPhotosUseCase
-import com.cola.pickly.feature.organize.domain.usecase.CopySelectedPhotosUseCase
-import com.cola.pickly.feature.organize.domain.usecase.SoftDeleteSelectedPhotosUseCase
+import com.cola.pickly.core.data.usecase.MoveSelectedPhotosUseCase
+import com.cola.pickly.core.data.usecase.ShareSelectedPhotosUseCase
+import com.cola.pickly.core.data.usecase.CopySelectedPhotosUseCase
+import com.cola.pickly.core.data.usecase.SoftDeleteSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.AnalyzePhotosForAutoRejectUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -305,6 +305,30 @@ class OrganizeViewModel @Inject constructor(
                 selectedIds = emptySet()
             )
         }
+    }
+
+    /**
+     * 선택된 사진 일괄 채택 (Selected 상태로 변경)
+     */
+    fun bulkAcceptSelected() {
+        val currentState = _uiState.value
+        if (currentState !is OrganizeUiState.GridReady) return
+        if (currentState.selectedIds.isEmpty()) return
+        val updates = currentState.selectedIds.associateWith { PhotoSelectionState.Selected }
+        applySelectionUpdates(updates)
+        exitMultiSelectMode()
+    }
+
+    /**
+     * 선택된 사진 일괄 제외 (Rejected 상태로 변경)
+     */
+    fun bulkRejectSelected() {
+        val currentState = _uiState.value
+        if (currentState !is OrganizeUiState.GridReady) return
+        if (currentState.selectedIds.isEmpty()) return
+        val updates = currentState.selectedIds.associateWith { PhotoSelectionState.Rejected }
+        applySelectionUpdates(updates)
+        exitMultiSelectMode()
     }
 
     /**
