@@ -9,3 +9,12 @@ package com.cola.pickly.core.model
 val PhotoDisplayOrderComparator: Comparator<Photo> =
     compareByDescending<Photo> { it.takenAt }
         .thenByDescending { it.id }
+
+val PhotoDisplayOrderAscComparator: Comparator<Photo> =
+    compareBy<Photo> { it.takenAt }
+        .thenBy { it.id }
+
+fun photoComparatorFor(sortOrder: SortOrder): Comparator<Photo> = when (sortOrder) {
+    SortOrder.DESCENDING -> PhotoDisplayOrderComparator
+    SortOrder.ASCENDING -> PhotoDisplayOrderAscComparator
+}

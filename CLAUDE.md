@@ -12,9 +12,18 @@ Detailed documentation is available in `/docs/`:
 - 커밋 작성: `rules.md` 확인
 
 ## 작업 시작 전 필수 확인 (rules.md 기반)
+
 ### 브랜치 체크
 - 현재 브랜치가 `main`인가? → ❌ 작업 중단
 - `feature/xxx` 형태인가? → ✅ 작업 진행
+
+### 버전 체크 (rules.md 기반)
+- 버전 증가는 `main`에 Squash Merge로 들어가는 **단일 커밋 기준**으로만 수행한다.
+  - feature 브랜치의 개별 커밋에서는 버전을 올리지 않는다.
+- Squash Merge 커밋 타입에 따라 올릴 버전을 결정한다.
+  - `fix:` → PATCH (`1.0.0` → `1.0.1`)
+  - `feat:` → MINOR (`1.0.0` → `1.1.0`)
+  - MAJOR 수준 변경(호환성/정책/데이터 의미 변경)은 `feat:` + 본문에 영향(마이그레이션 포함)을 2~3줄로 명시하고 MAJOR를 올린다.
 
 ### Claude 동작 규칙
 - main 브랜치 감지 시:
@@ -24,6 +33,7 @@ Detailed documentation is available in `/docs/`:
 
 ##  커밋 메시지 작성 (rules.md 준수)
 모든 코드 제안 시 커밋 메시지 예시 제공 필수
+(Squash Merge 기준) 커밋 타입은 버전 증가 규칙([3-1])과 연결되므로, 최종 merge 커밋 메시지 타입을 먼저 결정한다.
 
 ### 템플릿
 \`\`\`

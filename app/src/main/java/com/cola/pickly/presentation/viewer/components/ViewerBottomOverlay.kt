@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.offset
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.components.RejectReasonBadge
+import com.cola.pickly.core.ui.theme.RejectRed
+import com.cola.pickly.core.ui.theme.TealAccent
 
 @Composable
 fun ViewerBottomOverlay(
@@ -59,7 +61,7 @@ fun ViewerBottomOverlay(
             ViewerControlButton(
                 icon = Icons.Outlined.Check,
                 isActive = isSelected,
-                activeColor = Color(0xFF2ED3B7), // Requested: #2ED3B7
+                activeColor = TealAccent,
                 contentDescription = "Select",
                 enabled = !isButtonLocked,
                 onClick = onSelectClick
@@ -72,7 +74,7 @@ fun ViewerBottomOverlay(
                 ViewerControlButton(
                     icon = Icons.Outlined.Close,
                     isActive = isRejected,
-                    activeColor = Color(0xFFFF5252), // Requested: #FF5252
+                    activeColor = RejectRed,
                     contentDescription = "Reject",
                     enabled = !isButtonLocked,
                     onClick = onRejectClick

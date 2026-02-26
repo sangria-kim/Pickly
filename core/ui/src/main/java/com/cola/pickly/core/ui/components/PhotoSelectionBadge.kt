@@ -11,10 +11,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.ui.theme.RejectRed
 import com.cola.pickly.core.ui.theme.TealAccent
 
 /**
@@ -36,11 +37,12 @@ fun PhotoSelectionBadge(
 
     val safeAlpha = backgroundAlpha.coerceIn(0f, 1f)
 
-    val (backgroundColor, icon) = when (selectionState) {
-        PhotoSelectionState.Selected -> TealAccent to Icons.Outlined.Check
-        PhotoSelectionState.Rejected -> Color(0xFFFF5252) to Icons.Outlined.Close
-        PhotoSelectionState.None -> return
-    }
+    val (backgroundColor, icon) =
+        when (selectionState) {
+            PhotoSelectionState.Selected -> TealAccent to Icons.Outlined.Check
+            PhotoSelectionState.Rejected -> RejectRed to Icons.Outlined.Close
+            PhotoSelectionState.None -> return
+        }
 
     Box(
         modifier = modifier

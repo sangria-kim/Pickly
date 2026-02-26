@@ -15,9 +15,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,11 +52,15 @@ fun OrganizeScreen(
     onMultiSelectModeChanged: ((Boolean) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
     val showAutoRejectDialog by viewModel.showAutoRejectDialog.collectAsStateWithLifecycle()
     val showInterruptDialog by viewModel.showInterruptDialog.collectAsStateWithLifecycle()
     val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // sortOrder가 변경되면 gridState를 재생성하여 스크롤 위치를 초기화
+    val gridState = key(sortOrder) { rememberLazyGridState() }
 
     var showFolderSheet by rememberSaveable { mutableStateOf(false) }
 
@@ -113,6 +119,9 @@ fun OrganizeScreen(
                         selectedIds = state.selectedIds,
                         selectionMap = state.selectionMap,
                         isAnalyzing = state.isAnalyzing,
+                        activePhotoFilter = state.activePhotoFilter,
+                        sortOrder = sortOrder,
+                        onSortToggle = { viewModel.toggleSortOrder() },
                         onFolderSelectClick = {
                             viewModel.requestInterruptConfirmation {
                                 showFolderSheet = true
@@ -133,6 +142,8 @@ fun OrganizeScreen(
                         photos = emptyList(),
                         selectedIds = emptySet(),
                         selectionMap = emptyMap(),
+                        sortOrder = sortOrder,
+                        onSortToggle = { viewModel.toggleSortOrder() },
                         onFolderSelectClick = {
                             viewModel.requestInterruptConfirmation {
                                 showFolderSheet = true
@@ -152,6 +163,8 @@ fun OrganizeScreen(
                         photos = emptyList(),
                         selectedIds = emptySet(),
                         selectionMap = emptyMap(),
+                        sortOrder = sortOrder,
+                        onSortToggle = { viewModel.toggleSortOrder() },
                         onFolderSelectClick = {
                             viewModel.requestInterruptConfirmation {
                                 showFolderSheet = true
@@ -190,12 +203,13 @@ fun OrganizeScreen(
                 }
                 is OrganizeUiState.GridReady -> {
                     OrganizeGridScreen(
-                        photos = state.photos,
+                        photos = state.displayedPhotos,
                         selectedIds = state.selectedIds,
                         selectionMap = state.selectionMap,
                         isMultiSelectMode = state.isMultiSelectMode,
                         isAnalyzing = state.isAnalyzing,
                         autoRejectCandidates = state.autoRejectCandidates,
+                        gridState = gridState,
                         onPhotoClick = { photo ->
                             viewModel.requestInterruptConfirmation {
                                 onNavigateToPhotoDetail(
@@ -204,7 +218,7 @@ fun OrganizeScreen(
                                     state.selectionMap,
                                     false,
                                     state.autoRejectCandidates,
-                                    state.photos.map { it.id }
+                                    state.displayedPhotos.map { it.id }
                                 )
                             }
                         },

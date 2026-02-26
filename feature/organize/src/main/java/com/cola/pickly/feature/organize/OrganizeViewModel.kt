@@ -13,6 +13,8 @@ import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoFolder
 import com.cola.pickly.core.model.PhotoDisplayOrderComparator
+import com.cola.pickly.core.model.SortOrder
+import com.cola.pickly.core.model.photoComparatorFor
 import com.cola.pickly.core.data.usecase.MoveSelectedPhotosUseCase
 import com.cola.pickly.core.data.usecase.ShareSelectedPhotosUseCase
 import com.cola.pickly.core.data.usecase.CopySelectedPhotosUseCase
@@ -92,6 +94,9 @@ class OrganizeViewModel @Inject constructor(
     private val _showInterruptDialog = MutableStateFlow(false)
     val showInterruptDialog: StateFlow<Boolean> = _showInterruptDialog.asStateFlow()
 
+    private val _sortOrder = MutableStateFlow(SortOrder.DESCENDING)
+    val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
     private var selectedFolder: SelectedFolder? = null
 
     private var pendingAction: PendingAction? = null
@@ -132,7 +137,7 @@ class OrganizeViewModel @Inject constructor(
             // 선택된 폴더의 사진 목록 로드 (Bucket ID 기반)
             val photos = photoRepository
                 .getPhotosByBucketId(folderId)
-                .sortedWith(PhotoDisplayOrderComparator)
+                .sortedWith(photoComparatorFor(_sortOrder.value))
 
             if (photos.isEmpty()) {
                 _uiState.value = OrganizeUiState.EmptyFolder(
@@ -164,6 +169,17 @@ class OrganizeViewModel @Inject constructor(
         }
     }
 
+    fun toggleSortOrder() {
+        val newOrder = if (_sortOrder.value == SortOrder.DESCENDING) SortOrder.ASCENDING else SortOrder.DESCENDING
+        _sortOrder.value = newOrder
+        val currentState = _uiState.value
+        if (currentState is OrganizeUiState.GridReady) {
+            _uiState.value = currentState.copy(
+                photos = currentState.photos.sortedWith(photoComparatorFor(newOrder))
+            )
+        }
+    }
+
     // 폴더 선택 취소 테스트용
     fun resetToEmpty() {
         _uiState.value = OrganizeUiState.NoFolderSelected
@@ -176,10 +192,17 @@ class OrganizeViewModel @Inject constructor(
      * - Tri-state 체크박스로 동작
      * - 모두 선택되어 있으면 → 전체 해제
      * - 하나라도 선택 안 되어 있으면 → 전체 선택
+     * - 일반 모드 + 필터 활성화 → 필터 해제
      */
     fun toggleSelectAll() {
         val currentState = _uiState.value
         if (currentState !is OrganizeUiState.GridReady) return
+
+        if (!currentState.isMultiSelectMode && currentState.activePhotoFilter != null) {
+            // 일반 모드 + 필터 활성화 → 필터 해제
+            _uiState.value = currentState.copy(activePhotoFilter = null)
+            return
+        }
 
         val allPhotoIds = currentState.photos.map { it.id }.toSet()
 
@@ -197,51 +220,59 @@ class OrganizeViewModel @Inject constructor(
     /**
      * 채택 사진 선택 토글
      *
-     * Wireframe.md S-02 참고:
-     * - 채택 사진이 모두 선택되어 있으면 → 선택 해제
-     * - 하나라도 선택 안 되어 있으면 → 모두 선택
+     * - 멀티셀렉트 모드: 채택 사진이 모두 선택된 경우 → 해제 (uncheck), 아니면 추가 (check)
+     * - 일반 모드: 채택 필터 토글 (채택 필터가 이미 활성화면 해제)
      */
     fun toggleAcceptedSelection() {
         val currentState = _uiState.value
         if (currentState !is OrganizeUiState.GridReady) return
 
-        val acceptedPhotoIds = currentState.selectionMap
-            .filter { it.value == PhotoSelectionState.Selected }
-            .keys
-            .toSet()
-
-        val newSelectedIds = if (currentState.selectedIds.containsAll(acceptedPhotoIds)) {
-            currentState.selectedIds - acceptedPhotoIds  // OFF: 제거
+        if (currentState.isMultiSelectMode) {
+            val acceptedPhotoIds = currentState.selectionMap
+                .filter { it.value == PhotoSelectionState.Selected }
+                .keys.toSet()
+            val isAllAcceptedSelected = acceptedPhotoIds.isNotEmpty() &&
+                currentState.selectedIds.containsAll(acceptedPhotoIds)
+            val newSelectedIds = if (isAllAcceptedSelected) {
+                currentState.selectedIds - acceptedPhotoIds
+            } else {
+                currentState.selectedIds + acceptedPhotoIds
+            }
+            _uiState.value = currentState.copy(selectedIds = newSelectedIds)
         } else {
-            currentState.selectedIds + acceptedPhotoIds  // ON: 추가
+            val newFilter = if (currentState.activePhotoFilter is PhotoFilter.Accepted) null
+                            else PhotoFilter.Accepted
+            _uiState.value = currentState.copy(activePhotoFilter = newFilter)
         }
-
-        _uiState.value = currentState.copy(selectedIds = newSelectedIds)
     }
 
     /**
      * 제외 사진 선택 토글
      *
-     * Wireframe.md S-02 참고:
-     * - 제외 사진이 모두 선택되어 있으면 → 선택 해제
-     * - 하나라도 선택 안 되어 있으면 → 모두 선택
+     * - 멀티셀렉트 모드: 제외 사진이 모두 선택된 경우 → 해제 (uncheck), 아니면 추가 (check)
+     * - 일반 모드: 제외 필터 토글 (제외 필터가 이미 활성화면 해제)
      */
     fun toggleRejectedSelection() {
         val currentState = _uiState.value
         if (currentState !is OrganizeUiState.GridReady) return
 
-        val rejectedPhotoIds = currentState.selectionMap
-            .filter { it.value == PhotoSelectionState.Rejected }
-            .keys
-            .toSet()
-
-        val newSelectedIds = if (currentState.selectedIds.containsAll(rejectedPhotoIds)) {
-            currentState.selectedIds - rejectedPhotoIds
+        if (currentState.isMultiSelectMode) {
+            val rejectedPhotoIds = currentState.selectionMap
+                .filter { it.value == PhotoSelectionState.Rejected }
+                .keys.toSet()
+            val isAllRejectedSelected = rejectedPhotoIds.isNotEmpty() &&
+                currentState.selectedIds.containsAll(rejectedPhotoIds)
+            val newSelectedIds = if (isAllRejectedSelected) {
+                currentState.selectedIds - rejectedPhotoIds
+            } else {
+                currentState.selectedIds + rejectedPhotoIds
+            }
+            _uiState.value = currentState.copy(selectedIds = newSelectedIds)
         } else {
-            currentState.selectedIds + rejectedPhotoIds
+            val newFilter = if (currentState.activePhotoFilter is PhotoFilter.Rejected) null
+                            else PhotoFilter.Rejected
+            _uiState.value = currentState.copy(activePhotoFilter = newFilter)
         }
-
-        _uiState.value = currentState.copy(selectedIds = newSelectedIds)
     }
     fun toggleSelection(photoId: Long) {
         val currentState = _uiState.value
@@ -327,6 +358,18 @@ class OrganizeViewModel @Inject constructor(
         if (currentState !is OrganizeUiState.GridReady) return
         if (currentState.selectedIds.isEmpty()) return
         val updates = currentState.selectedIds.associateWith { PhotoSelectionState.Rejected }
+        applySelectionUpdates(updates)
+        exitMultiSelectMode()
+    }
+
+    /**
+     * 선택된 사진 일괄 평가 해제 (None 상태로 변경)
+     */
+    fun bulkUnmarkSelected() {
+        val currentState = _uiState.value
+        if (currentState !is OrganizeUiState.GridReady) return
+        if (currentState.selectedIds.isEmpty()) return
+        val updates = currentState.selectedIds.associateWith { PhotoSelectionState.None }
         applySelectionUpdates(updates)
         exitMultiSelectMode()
     }

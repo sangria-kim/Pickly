@@ -14,7 +14,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,11 +35,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
+import com.cola.pickly.core.model.SortOrder
+import com.cola.pickly.feature.organize.PhotoFilter
 import com.cola.pickly.core.ui.R
 import com.cola.pickly.core.ui.components.FilterCheckboxItem
 import com.cola.pickly.core.ui.components.FilterTriStateCheckboxItem
@@ -55,6 +59,9 @@ fun OrganizeTopBar(
     selectedIds: Set<Long> = emptySet(),
     selectionMap: Map<Long, PhotoSelectionState> = emptyMap(),
     isAnalyzing: Boolean = false,
+    activePhotoFilter: PhotoFilter? = null,
+    sortOrder: SortOrder = SortOrder.DESCENDING,
+    onSortToggle: () -> Unit = {},
     onFolderSelectClick: () -> Unit,
     onSelectAllToggle: () -> Unit,
     onAcceptedToggle: () -> Unit,
@@ -70,16 +77,6 @@ fun OrganizeTopBar(
     }
 
     // 체크박스 상태 계산
-    val selectAllState = remember(selectedIds, photos) {
-        val allPhotoIds = photos.map { it.id }.toSet()
-        when {
-            allPhotoIds.isEmpty() -> ToggleableState.Off
-            selectedIds.containsAll(allPhotoIds) -> ToggleableState.On
-            selectedIds.isEmpty() -> ToggleableState.Off
-            else -> ToggleableState.Indeterminate
-        }
-    }
-
     val acceptedPhotoIds = remember(selectionMap) {
         selectionMap.filter { it.value == PhotoSelectionState.Selected }.keys.toSet()
     }
@@ -88,12 +85,36 @@ fun OrganizeTopBar(
         selectionMap.filter { it.value == PhotoSelectionState.Rejected }.keys.toSet()
     }
 
-    val isAcceptedChecked = remember(selectedIds, acceptedPhotoIds) {
-        acceptedPhotoIds.isNotEmpty() && selectedIds.containsAll(acceptedPhotoIds)
+    val selectAllState = remember(isMultiSelectMode, selectedIds, photos, activePhotoFilter) {
+        if (!isMultiSelectMode) {
+            // 일반 모드: 필터 활성화 여부 표시
+            if (activePhotoFilter != null) ToggleableState.Indeterminate else ToggleableState.Off
+        } else {
+            // 멀티셀렉트 모드: 기존 로직
+            val allPhotoIds = photos.map { it.id }.toSet()
+            when {
+                allPhotoIds.isEmpty() -> ToggleableState.Off
+                selectedIds.containsAll(allPhotoIds) -> ToggleableState.On
+                selectedIds.isEmpty() -> ToggleableState.Off
+                else -> ToggleableState.Indeterminate
+            }
+        }
     }
 
-    val isRejectedChecked = remember(selectedIds, rejectedPhotoIds) {
-        rejectedPhotoIds.isNotEmpty() && selectedIds.containsAll(rejectedPhotoIds)
+    val isAcceptedChecked = remember(isMultiSelectMode, selectedIds, acceptedPhotoIds, activePhotoFilter) {
+        if (isMultiSelectMode) {
+            acceptedPhotoIds.isNotEmpty() && selectedIds.containsAll(acceptedPhotoIds)
+        } else {
+            activePhotoFilter is PhotoFilter.Accepted
+        }
+    }
+
+    val isRejectedChecked = remember(isMultiSelectMode, selectedIds, rejectedPhotoIds, activePhotoFilter) {
+        if (isMultiSelectMode) {
+            rejectedPhotoIds.isNotEmpty() && selectedIds.containsAll(rejectedPhotoIds)
+        } else {
+            activePhotoFilter is PhotoFilter.Rejected
+        }
     }
 
     val hasAcceptedPhotos = remember(acceptedPhotoIds) {
@@ -178,6 +199,18 @@ fun OrganizeTopBar(
                 }
             }
 
+            // 정렬 토글 버튼 (Normal Mode, Multi Select Mode 모두 표시)
+            if (selectedFolderName != null || isMultiSelectMode) {
+                IconButton(onClick = onSortToggle, enabled = !isAnalyzing) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                        contentDescription = if (sortOrder == SortOrder.DESCENDING) "최신순" else "오래된순",
+                        modifier = if (sortOrder == SortOrder.ASCENDING)
+                            Modifier.graphicsLayer { scaleY = -1f } else Modifier
+                    )
+                }
+            }
+
             // 필터 버튼은 Normal Mode와 Multi Select Mode 모두에서 표시
             if (selectedFolderName != null || isMultiSelectMode) {
                 Box {
@@ -186,7 +219,7 @@ fun OrganizeTopBar(
                         enabled = !isAnalyzing  // 분석 중일 때 비활성화
                     ) {
                         Icon(
-                            Icons.Default.FilterList,
+                            Icons.Default.FilterAlt,
                             contentDescription = "Filter",
                         )
                     }

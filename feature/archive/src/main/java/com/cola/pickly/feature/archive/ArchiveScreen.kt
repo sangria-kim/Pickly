@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.key
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.AlertDialog
@@ -44,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,12 +68,16 @@ fun ArchiveScreen(
     onMultiSelectModeChanged: ((Boolean) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
     val showDeleteConfirm by viewModel.showDeleteConfirm.collectAsStateWithLifecycle()
     val destinationMode by viewModel.destinationSelectionMode.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    // sortOrder가 변경되면 listState를 재생성하여 스크롤 위치를 초기화
+    val listState = key(sortOrder) { rememberLazyListState() }
 
     var showDestinationDialog by rememberSaveable { mutableStateOf(false) }
     var destinationFolders by remember { mutableStateOf<List<PhotoFolder>>(emptyList()) }
@@ -133,18 +138,6 @@ fun ArchiveScreen(
         viewModel.exitMultiSelectMode()
     }
 
-    // 전체 선택 상태 계산
-    val selectAllState = remember(uiState) {
-        val state = uiState as? ArchiveUiState.ArchiveReady ?: return@remember ToggleableState.Off
-        val allIds = state.allPhotoIds
-        when {
-            allIds.isEmpty() -> ToggleableState.Off
-            state.selectedIds.containsAll(allIds) -> ToggleableState.On
-            state.selectedIds.isEmpty() -> ToggleableState.Off
-            else -> ToggleableState.Indeterminate
-        }
-    }
-
     val selectedCount = (uiState as? ArchiveUiState.ArchiveReady)?.selectedCount ?: 0
 
     Scaffold(
@@ -157,9 +150,9 @@ fun ArchiveScreen(
                 hasAcceptedPhotos = archiveReady?.totalPhotoCount?.let { it > 0 } ?: false,
                 isMultiSelectMode = isMultiSelectMode,
                 selectedCount = archiveReady?.selectedCount ?: 0,
-                selectAllState = selectAllState,
                 onCancelSelection = { viewModel.exitMultiSelectMode() },
-                onSelectAllToggle = { viewModel.toggleSelectAll() }
+                sortOrder = sortOrder,
+                onSortToggle = { viewModel.toggleSortOrder() }
             )
         }
     ) { innerPadding ->
@@ -187,7 +180,8 @@ fun ArchiveScreen(
                         )
                     } else {
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            state = listState
                         ) {
                             items(
                                 items = state.folderSections,

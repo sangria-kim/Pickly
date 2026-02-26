@@ -199,6 +199,7 @@ fun MainScreen(
                     onActionClick = { action ->
                         when (action) {
                             is BulkAction.Accept -> organizeViewModel.bulkAcceptSelected()
+                            is BulkAction.Unmark -> organizeViewModel.bulkUnmarkSelected()
                             is BulkAction.Reject -> organizeViewModel.bulkRejectSelected()
                             is BulkAction.Share -> onArchiveShareClick?.invoke()
                             is BulkAction.Move -> onArchiveMoveClick?.invoke()

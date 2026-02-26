@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoDisplayOrderComparator
+import com.cola.pickly.core.model.SortOrder
+import com.cola.pickly.core.model.photoComparatorFor
 import com.cola.pickly.core.domain.repository.PhotoRepository
 import com.cola.pickly.core.domain.refresh.PhotoDataRefreshNotifier
 import com.cola.pickly.core.domain.refresh.RefreshReason
@@ -59,6 +61,9 @@ class ArchiveViewModel @Inject constructor(
     private val _destinationSelectionMode = MutableStateFlow<DestinationSelectionMode?>(null)
     val destinationSelectionMode: StateFlow<DestinationSelectionMode?> = _destinationSelectionMode.asStateFlow()
 
+    private val _sortOrder = MutableStateFlow(SortOrder.DESCENDING)
+    val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
     private var pendingAction: PendingAction? = null
 
     private var lastGlobalSelectionMap: Map<Long, PhotoSelectionState> = emptyMap()
@@ -73,7 +78,7 @@ class ArchiveViewModel @Inject constructor(
             try {
                 val (allPhotos, folders) = coroutineScope {
                     val photos = async {
-                        photoRepository.getAllPhotos().sortedWith(PhotoDisplayOrderComparator)
+                        photoRepository.getAllPhotos().sortedWith(photoComparatorFor(_sortOrder.value))
                     }
                     val folderList = async {
                         photoRepository.getFolders()
@@ -122,6 +127,21 @@ class ArchiveViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = ArchiveUiState.EmptyArchive
             }
+        }
+    }
+
+    fun toggleSortOrder() {
+        val newOrder = if (_sortOrder.value == SortOrder.DESCENDING) SortOrder.ASCENDING else SortOrder.DESCENDING
+        _sortOrder.value = newOrder
+        _uiState.update { state ->
+            if (state is ArchiveUiState.ArchiveReady) {
+                val comparator = photoComparatorFor(newOrder)
+                state.copy(
+                    folderSections = state.folderSections.map { section ->
+                        section.copy(photos = section.photos.sortedWith(comparator))
+                    }
+                )
+            } else state
         }
     }
 
