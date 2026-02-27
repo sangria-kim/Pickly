@@ -21,6 +21,15 @@ sealed interface ArchiveUiState {
 
         val allPhotoIds: Set<Long>
             get() = folderSections.flatMap { s -> s.photos.map { it.id } }.toSet()
+
+        val isAllSelected: Boolean
+            get() = allPhotoIds.isNotEmpty() && selectedIds.containsAll(allPhotoIds)
+
+        fun isAllInFolderSelected(sectionId: String): Boolean {
+            val folderIds = folderSections.find { it.sectionId == sectionId }
+                ?.photos?.map { it.id }?.toSet() ?: return false
+            return folderIds.isNotEmpty() && selectedIds.containsAll(folderIds)
+        }
     }
 
     data object EmptyArchive : ArchiveUiState

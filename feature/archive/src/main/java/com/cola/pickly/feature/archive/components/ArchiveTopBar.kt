@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,7 +48,9 @@ fun ArchiveTopBar(
     onCancelSelection: () -> Unit = {},
     onFilterClick: () -> Unit = {},
     sortOrder: SortOrder = SortOrder.DESCENDING,
-    onSortToggle: () -> Unit = {}
+    onSortToggle: () -> Unit = {},
+    isAllSelected: Boolean = false,
+    onSelectAll: () -> Unit = {}
 ) {
     var showFilterMenu by remember { mutableStateOf(false) }
 
@@ -66,7 +70,17 @@ fun ArchiveTopBar(
                 MultiSelectTopBarContent(
                     selectedCount = selectedCount,
                     onCancelClick = onCancelSelection,
-                    contentColor = contentColor
+                    contentColor = contentColor,
+                    actions = {
+                        IconButton(onClick = onSelectAll) {
+                            Icon(
+                                imageVector = if (isAllSelected) Icons.Default.CheckBox
+                                              else Icons.Default.CheckBoxOutlineBlank,
+                                contentDescription = if (isAllSelected) "전체 선택 해제" else "전체 선택",
+                                tint = contentColor
+                            )
+                        }
+                    }
                 )
             } else {
                 Text(

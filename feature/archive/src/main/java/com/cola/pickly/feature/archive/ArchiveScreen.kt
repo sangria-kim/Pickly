@@ -6,27 +6,17 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.key
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -46,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
@@ -58,6 +47,9 @@ import com.cola.pickly.core.model.PhotoFolder
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.R
+import com.cola.pickly.core.ui.components.CreateFolderDialog
+import com.cola.pickly.core.ui.components.FolderSelectMode
+import com.cola.pickly.core.ui.components.FolderSelectScreen
 
 @Composable
 fun ArchiveScreen(
@@ -79,8 +71,9 @@ fun ArchiveScreen(
     // sortOrder가 변경되면 listState를 재생성하여 스크롤 위치를 초기화
     val listState = key(sortOrder) { rememberLazyListState() }
 
-    var showDestinationDialog by rememberSaveable { mutableStateOf(false) }
+    var isFolderLoading by remember { mutableStateOf(false) }
     var destinationFolders by remember { mutableStateOf<List<PhotoFolder>>(emptyList()) }
+    var showCreateFolderDialog by rememberSaveable { mutableStateOf(false) }
 
     // 전역 selectionMap이 변경될 때마다 아카이브 업데이트
     LaunchedEffect(globalSelectionMap) {
@@ -119,11 +112,14 @@ fun ArchiveScreen(
         }
     }
 
-    // 목적지 선택 모드 변경 시 폴더 목록 로드 및 다이얼로그 표시
+    // 목적지 선택 모드 변경 시 폴더 목록 로드
     LaunchedEffect(destinationMode) {
         if (destinationMode != null) {
+            isFolderLoading = true
             destinationFolders = viewModel.loadFolders()
-            showDestinationDialog = true
+            isFolderLoading = false
+        } else {
+            destinationFolders = emptyList()
         }
     }
 
@@ -152,7 +148,9 @@ fun ArchiveScreen(
                 selectedCount = archiveReady?.selectedCount ?: 0,
                 onCancelSelection = { viewModel.exitMultiSelectMode() },
                 sortOrder = sortOrder,
-                onSortToggle = { viewModel.toggleSortOrder() }
+                onSortToggle = { viewModel.toggleSortOrder() },
+                isAllSelected = archiveReady?.isAllSelected ?: false,
+                onSelectAll = { viewModel.toggleSelectAll() }
             )
         }
     ) { innerPadding ->
@@ -211,6 +209,10 @@ fun ArchiveScreen(
                                     },
                                     onToggleSelection = { photoId ->
                                         viewModel.toggleSelection(photoId)
+                                    },
+                                    isAllInFolderSelected = state.isAllInFolderSelected(section.sectionId),
+                                    onToggleFolderSelection = {
+                                        viewModel.toggleSelectAllInFolder(section.sectionId)
                                     }
                                 )
                             }
@@ -258,70 +260,35 @@ fun ArchiveScreen(
         }
 
         // 목적지 폴더 선택 다이얼로그
-        if (showDestinationDialog) {
-            val modeLabel = when (destinationMode) {
-                is ArchiveViewModel.DestinationSelectionMode.Move -> "이동"
-                is ArchiveViewModel.DestinationSelectionMode.Copy -> "복사"
-                null -> ""
-            }
-            AlertDialog(
-                onDismissRequest = {
-                    showDestinationDialog = false
-                    viewModel.cancelDestinationSelection()
+        if (destinationMode != null) {
+            FolderSelectScreen(
+                folders = destinationFolders,
+                isLoading = isFolderLoading,
+                mode = when (destinationMode) {
+                    is ArchiveViewModel.DestinationSelectionMode.Move -> FolderSelectMode.MoveDestination
+                    is ArchiveViewModel.DestinationSelectionMode.Copy -> FolderSelectMode.CopyDestination
+                    else -> FolderSelectMode.FolderSelection
                 },
-                title = { Text(text = "폴더 선택 ($modeLabel)") },
-                text = {
-                    if (destinationFolders.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
-                        LazyColumn {
-                            items(destinationFolders) { folder ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            showDestinationDialog = false
-                                            when (destinationMode) {
-                                                is ArchiveViewModel.DestinationSelectionMode.Move ->
-                                                    viewModel.moveToDestination(folder.relativePath)
-                                                is ArchiveViewModel.DestinationSelectionMode.Copy ->
-                                                    viewModel.copyToDestination(folder.relativePath)
-                                                null -> {}
-                                            }
-                                        }
-                                        .padding(vertical = 12.dp, horizontal = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Folder,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = folder.name,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            }
-                        }
+                onClose = { viewModel.cancelDestinationSelection() },
+                onFolderClick = { folder ->
+                    when (destinationMode) {
+                        is ArchiveViewModel.DestinationSelectionMode.Move ->
+                            viewModel.moveToDestination(folder.relativePath)
+                        is ArchiveViewModel.DestinationSelectionMode.Copy ->
+                            viewModel.copyToDestination(folder.relativePath)
+                        else -> {}
                     }
                 },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            showDestinationDialog = false
-                            viewModel.cancelDestinationSelection()
-                        }
-                    ) {
-                        Text(text = stringResource(R.string.delete_confirm_cancel))
-                    }
+                onCreateFolderClick = { showCreateFolderDialog = true }
+            )
+        }
+
+        if (showCreateFolderDialog) {
+            CreateFolderDialog(
+                onDismiss = { showCreateFolderDialog = false },
+                onConfirm = { folderName ->
+                    showCreateFolderDialog = false
+                    viewModel.createFolderAndExecute(folderName)
                 }
             )
         }

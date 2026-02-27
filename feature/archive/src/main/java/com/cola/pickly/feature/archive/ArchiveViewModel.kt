@@ -172,6 +172,22 @@ class ArchiveViewModel @Inject constructor(
         }
     }
 
+    fun toggleSelectAllInFolder(sectionId: String) {
+        _uiState.update { state ->
+            if (state is ArchiveUiState.ArchiveReady) {
+                val folderIds = state.folderSections
+                    .find { it.sectionId == sectionId }
+                    ?.photos?.map { it.id }?.toSet() ?: return@update state
+                val newSelectedIds = if (state.selectedIds.containsAll(folderIds)) {
+                    state.selectedIds - folderIds
+                } else {
+                    state.selectedIds + folderIds
+                }
+                state.copy(selectedIds = newSelectedIds)
+            } else state
+        }
+    }
+
     fun exitMultiSelectMode() {
         _uiState.update { state ->
             if (state is ArchiveUiState.ArchiveReady) {

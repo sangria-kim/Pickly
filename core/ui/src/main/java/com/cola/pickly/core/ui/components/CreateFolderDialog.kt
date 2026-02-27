@@ -1,4 +1,4 @@
-package com.cola.pickly.feature.organize.components
+package com.cola.pickly.core.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth

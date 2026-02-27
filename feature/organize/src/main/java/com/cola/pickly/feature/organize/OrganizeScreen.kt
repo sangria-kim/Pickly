@@ -34,7 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import com.cola.pickly.feature.organize.FolderSelectUiState
 import com.cola.pickly.feature.organize.FolderSelectViewModel
-import com.cola.pickly.feature.organize.components.FolderSelectScreen
+import com.cola.pickly.core.ui.components.FolderSelectScreen
 import com.cola.pickly.feature.organize.components.OrganizeEmptyScreen
 import com.cola.pickly.feature.organize.components.OrganizeGridScreen
 import com.cola.pickly.feature.organize.components.OrganizeTopBar

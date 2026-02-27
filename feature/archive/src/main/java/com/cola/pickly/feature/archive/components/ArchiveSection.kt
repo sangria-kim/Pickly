@@ -1,12 +1,18 @@
 package com.cola.pickly.feature.archive.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
 import com.cola.pickly.core.model.Photo
+import com.cola.pickly.core.ui.theme.TealAccent
 import com.cola.pickly.core.ui.theme.TextPrimary
 import kotlin.math.floor
 
@@ -30,7 +37,9 @@ fun ArchiveSection(
     modifier: Modifier = Modifier,
     selectedIds: Set<Long> = emptySet(),
     isMultiSelectMode: Boolean = false,
-    onToggleSelection: ((Long) -> Unit)? = null
+    onToggleSelection: ((Long) -> Unit)? = null,
+    isAllInFolderSelected: Boolean = false,
+    onToggleFolderSelection: (() -> Unit)? = null
 ) {
     val windowInfo = LocalWindowInfo.current
     val density = LocalDensity.current
@@ -51,11 +60,25 @@ fun ArchiveSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = folderName,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Normal),
-                color = TextPrimary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isMultiSelectMode) {
+                    Icon(
+                        imageVector = if (isAllInFolderSelected) Icons.Default.CheckBox
+                                      else Icons.Default.CheckBoxOutlineBlank,
+                        contentDescription = if (isAllInFolderSelected) "폴더 전체 선택 해제" else "폴더 전체 선택",
+                        tint = if (isAllInFolderSelected) TealAccent else MaterialTheme.colorScheme.outline,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { onToggleFolderSelection?.invoke() }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    text = folderName,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Normal),
+                    color = TextPrimary
+                )
+            }
             Text(
                 text = stringResource(R.string.archive_section_picks_format, photos.size),
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Normal),

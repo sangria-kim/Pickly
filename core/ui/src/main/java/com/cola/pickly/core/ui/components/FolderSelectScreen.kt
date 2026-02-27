@@ -1,6 +1,5 @@
-package com.cola.pickly.feature.organize.components
+package com.cola.pickly.core.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,10 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -31,7 +27,8 @@ import com.cola.pickly.core.model.PhotoFolder
 
 enum class FolderSelectMode {
     FolderSelection,      // "폴더 선택"
-    DestinationSelection  // "목적지 폴더 선택" + "만들기" 버튼
+    MoveDestination,      // "이동할 폴더 선택" + "만들기" 버튼
+    CopyDestination       // "복사할 폴더 선택" + "만들기" 버튼
 }
 
 @Composable
@@ -73,7 +70,8 @@ fun FolderSelectScreen(
                         Text(
                             text = when (mode) {
                                 FolderSelectMode.FolderSelection -> "폴더 선택"
-                                FolderSelectMode.DestinationSelection -> "목적지 폴더 선택"
+                                FolderSelectMode.MoveDestination -> "이동할 폴더 선택"
+                                FolderSelectMode.CopyDestination -> "복사할 폴더 선택"
                             },
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
@@ -81,7 +79,7 @@ fun FolderSelectScreen(
                             )
                         )
 
-                        if (mode == FolderSelectMode.DestinationSelection && onCreateFolderClick != null) {
+                        if (mode != FolderSelectMode.FolderSelection && onCreateFolderClick != null) {
                             TextButton(onClick = onCreateFolderClick) {
                                 Text(
                                     text = "만들기",
@@ -125,7 +123,7 @@ fun FolderSelectScreen(
                             }
                         }
                     }
-                    
+
                     // Footer (Cancel Button)
                     Box(
                         modifier = Modifier.fillMaxWidth(),
