@@ -20,7 +20,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -47,6 +46,7 @@ import com.cola.pickly.core.model.SensitivityLevel
 import com.cola.pickly.core.ui.theme.DebugPinkBackground
 import com.cola.pickly.core.ui.theme.DebugPinkOutline
 import com.cola.pickly.core.ui.theme.PicklyTheme
+import com.cola.pickly.core.ui.components.PicklySnackbarHost
 import com.cola.pickly.feature.settings.components.AutoRejectWarningDialog
 import com.cola.pickly.feature.settings.components.SettingsActionItem
 import com.cola.pickly.feature.settings.components.SettingsCardHeader
@@ -145,7 +145,7 @@ internal fun SettingsScreenContent(
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
         contentWindowInsets = WindowInsets.safeDrawing,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { PicklySnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier

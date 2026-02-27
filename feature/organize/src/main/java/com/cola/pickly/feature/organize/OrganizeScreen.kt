@@ -12,7 +12,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -41,6 +40,7 @@ import com.cola.pickly.feature.organize.components.OrganizeTopBar
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.R
+import com.cola.pickly.core.ui.components.PicklySnackbarHost
 
 @Composable
 fun OrganizeScreen(
@@ -105,7 +105,7 @@ fun OrganizeScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { PicklySnackbarHost(hostState = snackbarHostState) },
         // Bottom Area는 MainScreen에서 관리됨
         // Normal Mode: Bottom Navigation Bar, Multi Select Mode: Bulk Action Bar
         topBar = {

@@ -20,7 +20,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,6 +49,7 @@ import com.cola.pickly.core.ui.R
 import com.cola.pickly.core.ui.components.CreateFolderDialog
 import com.cola.pickly.core.ui.components.FolderSelectMode
 import com.cola.pickly.core.ui.components.FolderSelectScreen
+import com.cola.pickly.core.ui.components.PicklySnackbarHost
 
 @Composable
 fun ArchiveScreen(
@@ -139,7 +139,7 @@ fun ArchiveScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { PicklySnackbarHost(hostState = snackbarHostState) },
         topBar = {
             val archiveReady = uiState as? ArchiveUiState.ArchiveReady
             ArchiveTopBar(
