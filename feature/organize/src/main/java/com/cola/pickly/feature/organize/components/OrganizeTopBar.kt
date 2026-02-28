@@ -1,19 +1,14 @@
 package com.cola.pickly.feature.organize.components
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -52,7 +47,7 @@ import com.cola.pickly.core.ui.theme.TealAccent
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrganizeTopBar(
-    selectedFolderName: String?,
+    hasSelectedFolder: Boolean = false,
     isMultiSelectMode: Boolean = false,
     selectedCount: Int = 0,
     photos: List<Photo> = emptyList(),
@@ -62,7 +57,6 @@ fun OrganizeTopBar(
     activePhotoFilter: PhotoFilter? = null,
     sortOrder: SortOrder = SortOrder.DESCENDING,
     onSortToggle: () -> Unit = {},
-    onFolderSelectClick: () -> Unit,
     onSelectAllToggle: () -> Unit,
     onAcceptedToggle: () -> Unit,
     onRejectedToggle: () -> Unit,
@@ -158,33 +152,16 @@ fun OrganizeTopBar(
                     contentColor = contentColor
                 )
             } else {
-                // Normal Mode: 폴더 선택
-                Row(
-                    modifier = Modifier
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null, // Ripple 제거
-                            onClick = onFolderSelectClick
-                        ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = selectedFolderName ?: stringResource(R.string.folder_selection),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = contentColor
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        tint = contentColor
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.organize_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = contentColor
+                )
             }
         },
         actions = {
             // 스마트 제외 버튼 (폴더 선택됐을 때만, Multi Select Mode 아닐 때만)
-            if (selectedFolderName != null && !isMultiSelectMode) {
+            if (hasSelectedFolder && !isMultiSelectMode) {
                 IconButton(
                     onClick = onAutoRejectClick,
                     enabled = true  // 분석 중에도 클릭 가능 (취소 용도)
@@ -200,7 +177,7 @@ fun OrganizeTopBar(
             }
 
             // 정렬 토글 버튼 (Normal Mode, Multi Select Mode 모두 표시)
-            if (selectedFolderName != null || isMultiSelectMode) {
+            if (hasSelectedFolder || isMultiSelectMode) {
                 IconButton(onClick = onSortToggle, enabled = !isAnalyzing) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Sort,
@@ -212,7 +189,7 @@ fun OrganizeTopBar(
             }
 
             // 필터 버튼은 Normal Mode와 Multi Select Mode 모두에서 표시
-            if (selectedFolderName != null || isMultiSelectMode) {
+            if (hasSelectedFolder || isMultiSelectMode) {
                 Box {
                     IconButton(
                         onClick = { showFilterMenu = !showFilterMenu },

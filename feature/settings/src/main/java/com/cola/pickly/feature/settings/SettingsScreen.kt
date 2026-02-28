@@ -13,14 +13,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -33,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.collectLatest
@@ -47,6 +53,7 @@ import com.cola.pickly.core.ui.theme.DebugPinkBackground
 import com.cola.pickly.core.ui.theme.DebugPinkOutline
 import com.cola.pickly.core.ui.theme.PicklyTheme
 import com.cola.pickly.core.ui.components.PicklySnackbarHost
+import com.cola.pickly.core.ui.R
 import com.cola.pickly.feature.settings.components.AutoRejectWarningDialog
 import com.cola.pickly.feature.settings.components.SettingsActionItem
 import com.cola.pickly.feature.settings.components.SettingsCardHeader
@@ -121,6 +128,7 @@ fun SettingsScreen(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 internal fun SettingsScreenContent(
     uiState: SettingsUiState,
     snackbarHostState: SnackbarHostState,
@@ -144,8 +152,23 @@ internal fun SettingsScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-        contentWindowInsets = WindowInsets.safeDrawing,
-        snackbarHost = { PicklySnackbarHost(hostState = snackbarHostState) }
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { PicklySnackbarHost(hostState = snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                modifier = Modifier.statusBarsPadding(),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                title = {
+                    Text(
+                        text = stringResource(R.string.settings_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            )
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -153,13 +176,7 @@ internal fun SettingsScreenContent(
                 .padding(padding)
                 .verticalScroll(scrollState)
         ) {
-            // 최상단 제목
-            androidx.compose.material3.Text(
-                "설정",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
-            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             // 1. 사진 정리
             SettingsSectionHeader(title = "사진 정리")

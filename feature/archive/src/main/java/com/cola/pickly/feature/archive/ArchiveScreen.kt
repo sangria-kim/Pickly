@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
@@ -149,8 +151,6 @@ fun ArchiveScreen(
                 onCancelSelection = { viewModel.exitMultiSelectMode() },
                 sortOrder = sortOrder,
                 onSortToggle = { viewModel.toggleSortOrder() },
-                isAllSelected = archiveReady?.isAllSelected ?: false,
-                onSelectAll = { viewModel.toggleSelectAll() }
             )
         }
     ) { innerPadding ->
@@ -179,7 +179,8 @@ fun ArchiveScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            state = listState
+                            state = listState,
+                            contentPadding = PaddingValues(top = 4.dp)
                         ) {
                             items(
                                 items = state.folderSections,
@@ -210,7 +211,6 @@ fun ArchiveScreen(
                                     onToggleSelection = { photoId ->
                                         viewModel.toggleSelection(photoId)
                                     },
-                                    isAllInFolderSelected = state.isAllInFolderSelected(section.sectionId),
                                     onToggleFolderSelection = {
                                         viewModel.toggleSelectAllInFolder(section.sectionId)
                                     }

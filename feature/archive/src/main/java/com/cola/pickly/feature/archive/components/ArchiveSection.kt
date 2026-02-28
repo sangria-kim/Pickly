@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.IndeterminateCheckBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.ui.R
@@ -38,7 +41,6 @@ fun ArchiveSection(
     selectedIds: Set<Long> = emptySet(),
     isMultiSelectMode: Boolean = false,
     onToggleSelection: ((Long) -> Unit)? = null,
-    isAllInFolderSelected: Boolean = false,
     onToggleFolderSelection: (() -> Unit)? = null
 ) {
     val windowInfo = LocalWindowInfo.current
@@ -50,23 +52,43 @@ fun ArchiveSection(
     val columns = floor((screenWidth - horizontalPadding + spacing) / (itemSize + spacing)).toInt().coerceAtLeast(3)
     val itemWidth = (screenWidth - horizontalPadding - spacing * (columns - 1)) / columns
 
+    val photoIds = photos.map { it.id }.toSet()
+    val folderSelectionState = when {
+        photoIds.isEmpty() -> ToggleableState.Off
+        selectedIds.containsAll(photoIds) -> ToggleableState.On
+        photoIds.any { it in selectedIds } -> ToggleableState.Indeterminate
+        else -> ToggleableState.Off
+    }
+
     Column(
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                // 정리하기 탭 헤더(48dp)와 높이 맞춤: 12(top) + 24(ArrowDropDown) + 12(bottom) = 48dp
+                .heightIn(min = 48.dp)
+                // 멀티셀렉트: start=9dp → 사진 체크박스와 동일 위치(column 4dp + 5dp = 9dp)
+                .padding(start = if (isMultiSelectMode) 9.dp else 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (isMultiSelectMode) {
                     Icon(
-                        imageVector = if (isAllInFolderSelected) Icons.Default.CheckBox
-                                      else Icons.Default.CheckBoxOutlineBlank,
-                        contentDescription = if (isAllInFolderSelected) "폴더 전체 선택 해제" else "폴더 전체 선택",
-                        tint = if (isAllInFolderSelected) TealAccent else MaterialTheme.colorScheme.outline,
+                        imageVector = when (folderSelectionState) {
+                            ToggleableState.On -> Icons.Default.CheckBox
+                            ToggleableState.Indeterminate -> Icons.Default.IndeterminateCheckBox
+                            ToggleableState.Off -> Icons.Default.CheckBoxOutlineBlank
+                        },
+                        contentDescription = when (folderSelectionState) {
+                            ToggleableState.On -> "폴더 전체 선택 해제"
+                            else -> "폴더 전체 선택"
+                        },
+                        tint = when (folderSelectionState) {
+                            ToggleableState.On, ToggleableState.Indeterminate -> TealAccent
+                            ToggleableState.Off -> MaterialTheme.colorScheme.outline
+                        },
                         modifier = Modifier
                             .size(20.dp)
                             .clickable { onToggleFolderSelection?.invoke() }
@@ -89,7 +111,7 @@ fun ArchiveSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(spacing)
         ) {
             photos.chunked(columns).forEach { rowPhotos ->

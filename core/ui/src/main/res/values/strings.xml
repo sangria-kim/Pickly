@@ -7,6 +7,7 @@
     <string name="archive_section_picks_format">%1$d Picks</string>
     
     <!-- Organize Screen -->
+    <string name="organize_title">정리하기</string>
     <string name="folder_selection">폴더 선택</string>
     <string name="filter_all">전체</string>
     <string name="filter_selected">선택됨</string>

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
@@ -35,6 +36,7 @@ import com.cola.pickly.feature.organize.FolderSelectUiState
 import com.cola.pickly.feature.organize.FolderSelectViewModel
 import com.cola.pickly.core.ui.components.FolderSelectScreen
 import com.cola.pickly.feature.organize.components.OrganizeEmptyScreen
+import com.cola.pickly.feature.organize.components.OrganizeFolderSectionHeader
 import com.cola.pickly.feature.organize.components.OrganizeGridScreen
 import com.cola.pickly.feature.organize.components.OrganizeTopBar
 import com.cola.pickly.core.model.PhotoSelectionState
@@ -112,7 +114,7 @@ fun OrganizeScreen(
             when (val state = uiState) {
                 is OrganizeUiState.GridReady -> {
                     OrganizeTopBar(
-                        selectedFolderName = state.folderName,
+                        hasSelectedFolder = true,
                         isMultiSelectMode = state.isMultiSelectMode,
                         selectedCount = state.selectedCount,
                         photos = state.photos,
@@ -122,11 +124,6 @@ fun OrganizeScreen(
                         activePhotoFilter = state.activePhotoFilter,
                         sortOrder = sortOrder,
                         onSortToggle = { viewModel.toggleSortOrder() },
-                        onFolderSelectClick = {
-                            viewModel.requestInterruptConfirmation {
-                                showFolderSheet = true
-                            }
-                        },
                         onSelectAllToggle = { viewModel.toggleSelectAll() },
                         onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
                         onRejectedToggle = { viewModel.toggleRejectedSelection() },
@@ -136,7 +133,7 @@ fun OrganizeScreen(
                 }
                 is OrganizeUiState.EmptyFolder -> {
                     OrganizeTopBar(
-                        selectedFolderName = state.folderName,
+                        hasSelectedFolder = true,
                         isMultiSelectMode = false,
                         selectedCount = 0,
                         photos = emptyList(),
@@ -144,11 +141,6 @@ fun OrganizeScreen(
                         selectionMap = emptyMap(),
                         sortOrder = sortOrder,
                         onSortToggle = { viewModel.toggleSortOrder() },
-                        onFolderSelectClick = {
-                            viewModel.requestInterruptConfirmation {
-                                showFolderSheet = true
-                            }
-                        },
                         onSelectAllToggle = { viewModel.toggleSelectAll() },
                         onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
                         onRejectedToggle = { viewModel.toggleRejectedSelection() },
@@ -157,7 +149,7 @@ fun OrganizeScreen(
                 }
                 else -> {
                     OrganizeTopBar(
-                        selectedFolderName = null,
+                        hasSelectedFolder = false,
                         isMultiSelectMode = false,
                         selectedCount = 0,
                         photos = emptyList(),
@@ -165,11 +157,6 @@ fun OrganizeScreen(
                         selectionMap = emptyMap(),
                         sortOrder = sortOrder,
                         onSortToggle = { viewModel.toggleSortOrder() },
-                        onFolderSelectClick = {
-                            viewModel.requestInterruptConfirmation {
-                                showFolderSheet = true
-                            }
-                        },
                         onSelectAllToggle = { viewModel.toggleSelectAll() },
                         onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
                         onRejectedToggle = { viewModel.toggleRejectedSelection() },
@@ -202,7 +189,15 @@ fun OrganizeScreen(
                     CircularProgressIndicator()
                 }
                 is OrganizeUiState.GridReady -> {
+                    val allPhotoIds = state.photos.map { it.id }.toSet()
+                    val selectAllState = when {
+                        allPhotoIds.isEmpty() -> ToggleableState.Off
+                        state.selectedIds.containsAll(allPhotoIds) -> ToggleableState.On
+                        state.selectedIds.isEmpty() -> ToggleableState.Off
+                        else -> ToggleableState.Indeterminate
+                    }
                     OrganizeGridScreen(
+                        selectedFolderName = state.folderName,
                         photos = state.displayedPhotos,
                         selectedIds = state.selectedIds,
                         selectionMap = state.selectionMap,
@@ -210,6 +205,12 @@ fun OrganizeScreen(
                         isAnalyzing = state.isAnalyzing,
                         autoRejectCandidates = state.autoRejectCandidates,
                         gridState = gridState,
+                        selectAllState = selectAllState,
+                        onFolderSelectClick = {
+                            viewModel.requestInterruptConfirmation {
+                                showFolderSheet = true
+                            }
+                        },
                         onPhotoClick = { photo ->
                             viewModel.requestInterruptConfirmation {
                                 onNavigateToPhotoDetail(
@@ -224,11 +225,26 @@ fun OrganizeScreen(
                         },
                         onToggleSelection = { photoId ->
                             viewModel.toggleSelection(photoId)
-                        }
+                        },
+                        onSelectAllToggle = { viewModel.toggleSelectAll() }
                     )
                 }
                 is OrganizeUiState.EmptyFolder -> {
-                    Text(text = "선택된 폴더에 사진이 없습니다.")
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        OrganizeFolderSectionHeader(
+                            folderName = state.folderName,
+                            onFolderSelectClick = {
+                                viewModel.requestInterruptConfirmation {
+                                    showFolderSheet = true
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.TopStart)
+                        )
+                        Text(
+                            text = "선택된 폴더에 사진이 없습니다.",
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                 }
             }
         }
