@@ -41,6 +41,8 @@ import com.cola.pickly.feature.organize.components.OrganizeGridScreen
 import com.cola.pickly.feature.organize.components.OrganizeTopBar
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.feature.organize.components.BurstDebugInfo
+import com.cola.pickly.core.ui.components.BurstRecommendRank
 import com.cola.pickly.core.ui.R
 import com.cola.pickly.core.ui.components.PicklySnackbarHost
 
@@ -55,6 +57,7 @@ fun OrganizeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
+    val debugOptions by viewModel.debugOptions.collectAsStateWithLifecycle()
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
     val showAutoRejectDialog by viewModel.showAutoRejectDialog.collectAsStateWithLifecycle()
     val showInterruptDialog by viewModel.showInterruptDialog.collectAsStateWithLifecycle()
@@ -196,6 +199,27 @@ fun OrganizeScreen(
                         state.selectedIds.isEmpty() -> ToggleableState.Off
                         else -> ToggleableState.Indeterminate
                     }
+                    val burstRecommendMap = remember(state.burstGroups) {
+                        buildMap {
+                            state.burstGroups.forEach { group ->
+                                put(group.bestPhotoId, BurstRecommendRank.Best)
+                                group.runnerUpPhotoId?.let { put(it, BurstRecommendRank.RunnerUp) }
+                            }
+                        }
+                    }
+                    val burstDebugMap = remember(state.burstGroupByPhotoId, debugOptions) {
+                        if (debugOptions.showDebugOverlay && debugOptions.showBurstGroupOverlay) {
+                            state.burstGroupByPhotoId.entries.mapNotNull { (photoId, group) ->
+                                val rank = group.rankOf(photoId) ?: return@mapNotNull null
+                                photoId to BurstDebugInfo(
+                                    groupLabel = "G${group.groupIndex + 1}",
+                                    groupIndex = group.groupIndex,
+                                    rankInGroup = rank,
+                                    isBest = group.bestPhotoId == photoId
+                                )
+                            }.toMap()
+                        } else emptyMap()
+                    }
                     OrganizeGridScreen(
                         selectedFolderName = state.folderName,
                         photos = state.displayedPhotos,
@@ -204,6 +228,8 @@ fun OrganizeScreen(
                         isMultiSelectMode = state.isMultiSelectMode,
                         isAnalyzing = state.isAnalyzing,
                         autoRejectCandidates = state.autoRejectCandidates,
+                        burstRecommendMap = burstRecommendMap,
+                        burstDebugMap = burstDebugMap,
                         gridState = gridState,
                         selectAllState = selectAllState,
                         onFolderSelectClick = {

@@ -1,5 +1,6 @@
 package com.cola.pickly.feature.organize
 
+import com.cola.pickly.core.model.BurstGroup
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
@@ -31,7 +32,9 @@ sealed interface OrganizeUiState {
         val selectionMap: Map<Long, PhotoSelectionState> = emptyMap(),
         val autoRejectCandidates: Map<Long, RejectReason> = emptyMap(), // 스마트 제외 후보 ID와 제외 사유
         val isAnalyzing: Boolean = false, // 스마트 제외 분석 진행 중 여부
-        val activePhotoFilter: PhotoFilter? = null
+        val activePhotoFilter: PhotoFilter? = null,
+        val burstGroups: List<BurstGroup> = emptyList(), // 연사 그룹 목록
+        val burstGroupByPhotoId: Map<Long, BurstGroup> = emptyMap() // 사진 ID → 연사 그룹 매핑
     ) : OrganizeUiState {
         /**
          * Multi Select Mode 활성화 여부

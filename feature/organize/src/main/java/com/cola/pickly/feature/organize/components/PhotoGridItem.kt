@@ -35,6 +35,8 @@ import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
 import com.cola.pickly.core.ui.components.PhotoSelectionBadge
+import com.cola.pickly.core.ui.components.BurstRecommendBadge
+import com.cola.pickly.core.ui.components.BurstRecommendRank
 import com.cola.pickly.core.ui.components.RejectReasonBadge
 import com.cola.pickly.core.ui.theme.TealAccent
 import com.cola.pickly.core.ui.transition.ContainerTransformSpec
@@ -51,6 +53,8 @@ fun PhotoGridItem(
     isMultiSelectMode: Boolean = false,
     isAnalyzing: Boolean = false,
     autoRejectReason: RejectReason? = null,
+    burstRecommendRank: BurstRecommendRank? = null,
+    burstDebugInfo: BurstDebugInfo? = null,
     onClick: () -> Unit,
     onToggleSelection: (() -> Unit)? = null
 ) {
@@ -174,14 +178,51 @@ fun PhotoGridItem(
             )
         }
 
-        // 스마트 제외 후보 pill 배지 (우하단)
-        autoRejectReason?.let { reason ->
-            RejectReasonBadge(
-                reason = reason,
+        // 우하단 pill 배지 (제외 뱃지 우선, 없으면 추천 뱃지)
+        when {
+            autoRejectReason != null -> RejectReasonBadge(
+                reason = autoRejectReason,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(6.dp)
             )
+            burstRecommendRank != null -> BurstRecommendBadge(
+                rank = burstRecommendRank,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(6.dp)
+            )
+        }
+
+        // 연사 그룹 디버그 오버레이 (보더 + 라벨)
+        burstDebugInfo?.let { info ->
+            val groupColor = BurstDebugColors.forIndex(info.groupIndex)
+            // 그룹 색상 보더
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .border(2.dp, groupColor)
+            )
+            // 그룹 라벨 pill (우상단)
+            val label = if (info.isBest) "${info.groupLabel}\u2605" else "${info.groupLabel}-${info.rankInGroup}"
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .background(
+                        color = groupColor.copy(alpha = 0.85f),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = label,
+                    color = Color.White,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 11.sp
+                )
+            }
         }
     }
 }

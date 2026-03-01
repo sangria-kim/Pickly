@@ -409,6 +409,13 @@ internal fun SettingsScreenContent(
                             checked = uiState.debugOptions.showScoreOverlay,
                             onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_SCORE, it) }
                         )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                        SettingsSwitchItem(
+                            title = "  연사 그룹 표시 (그리드)",
+                            subtitle = "그리드에서 연속 촬영 사진을 같은 색상으로 표시합니다.",
+                            checked = uiState.debugOptions.showBurstGroupOverlay,
+                            onCheckedChange = { onDebugOptionChanged(DebugOptionType.SHOW_BURST_GROUP_OVERLAY, it) }
+                        )
                     }
                 }
 

@@ -46,7 +46,8 @@ class DataStoreSettingsRepository @Inject constructor(
             debugOptions = DebugOptions(
                 showDebugOverlay = prefs[KEY_SHOW_DEBUG_OVERLAY] ?: false,
                 showFaceBoundingBox = prefs[KEY_SHOW_FACE_BOX] ?: true,
-                showScoreOverlay = prefs[KEY_SHOW_SCORE] ?: false
+                showScoreOverlay = prefs[KEY_SHOW_SCORE] ?: false,
+                showBurstGroupOverlay = prefs[KEY_SHOW_BURST_GROUP] ?: true
             ),
             hasSeenWelcomeSplash = prefs[KEY_HAS_SEEN_WELCOME_SPLASH] ?: false,
             smartDiscardSensitivities = SmartDiscardSensitivities(
@@ -113,6 +114,7 @@ class DataStoreSettingsRepository @Inject constructor(
             prefs[KEY_SHOW_DEBUG_OVERLAY] = options.showDebugOverlay
             prefs[KEY_SHOW_FACE_BOX] = options.showFaceBoundingBox
             prefs[KEY_SHOW_SCORE] = options.showScoreOverlay
+            prefs[KEY_SHOW_BURST_GROUP] = options.showBurstGroupOverlay
         }
     }
 
@@ -158,6 +160,7 @@ class DataStoreSettingsRepository @Inject constructor(
         val KEY_SHOW_DEBUG_OVERLAY = booleanPreferencesKey("settings.debug.show_debug_overlay")
         val KEY_SHOW_FACE_BOX = booleanPreferencesKey("settings.debug.show_face_box")
         val KEY_SHOW_SCORE = booleanPreferencesKey("settings.debug.show_score")
+        val KEY_SHOW_BURST_GROUP = booleanPreferencesKey("settings.debug.show_burst_group")
 
         // Onboarding keys
         val KEY_HAS_SEEN_WELCOME_SPLASH = booleanPreferencesKey("settings.has_seen_welcome_splash")

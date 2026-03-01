@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoSelectionState
 import com.cola.pickly.core.model.RejectReason
+import com.cola.pickly.core.ui.components.BurstRecommendRank
 
 @Composable
 fun OrganizeGridScreen(
@@ -26,6 +27,8 @@ fun OrganizeGridScreen(
     isMultiSelectMode: Boolean = false,
     isAnalyzing: Boolean = false,
     autoRejectCandidates: Map<Long, RejectReason> = emptyMap(),
+    burstRecommendMap: Map<Long, BurstRecommendRank> = emptyMap(),
+    burstDebugMap: Map<Long, BurstDebugInfo> = emptyMap(),
     gridState: LazyGridState = rememberLazyGridState(),
     selectAllState: ToggleableState = ToggleableState.Off,
     onFolderSelectClick: () -> Unit,
@@ -66,6 +69,8 @@ fun OrganizeGridScreen(
                 isMultiSelectMode = isMultiSelectMode,
                 isAnalyzing = isAnalyzing,
                 autoRejectReason = autoRejectCandidates[photo.id],
+                burstRecommendRank = burstRecommendMap[photo.id],
+                burstDebugInfo = burstDebugMap[photo.id],
                 onClick = { onPhotoClick(photo) },
                 onToggleSelection = { onToggleSelection(photo.id) }
             )

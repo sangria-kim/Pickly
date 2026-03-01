@@ -15,19 +15,24 @@ import com.cola.pickly.core.model.PhotoFolder
 import com.cola.pickly.core.model.PhotoDisplayOrderComparator
 import com.cola.pickly.core.model.SortOrder
 import com.cola.pickly.core.model.photoComparatorFor
+import com.cola.pickly.core.data.settings.DebugOptions
 import com.cola.pickly.core.data.usecase.MoveSelectedPhotosUseCase
 import com.cola.pickly.core.data.usecase.ShareSelectedPhotosUseCase
 import com.cola.pickly.core.data.usecase.CopySelectedPhotosUseCase
 import com.cola.pickly.core.data.usecase.SoftDeleteSelectedPhotosUseCase
 import com.cola.pickly.feature.organize.domain.usecase.AnalyzePhotosForAutoRejectUseCase
+import com.cola.pickly.feature.organize.domain.usecase.DetectBurstAndRecommendUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -41,6 +46,7 @@ class OrganizeViewModel @Inject constructor(
     private val copySelectedPhotosUseCase: CopySelectedPhotosUseCase,
     private val softDeleteSelectedPhotosUseCase: SoftDeleteSelectedPhotosUseCase,
     private val analyzePhotosForAutoRejectUseCase: AnalyzePhotosForAutoRejectUseCase,
+    private val detectBurstAndRecommendUseCase: DetectBurstAndRecommendUseCase,
     private val settingsRepository: com.cola.pickly.core.data.settings.SettingsRepository
 ) : ViewModel() {
 
@@ -96,6 +102,10 @@ class OrganizeViewModel @Inject constructor(
 
     private val _sortOrder = MutableStateFlow(SortOrder.DESCENDING)
     val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
+    val debugOptions: StateFlow<DebugOptions> = settingsRepository.settings
+        .map { it.debugOptions }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DebugOptions())
 
     private var selectedFolder: SelectedFolder? = null
 
@@ -758,6 +768,10 @@ class OrganizeViewModel @Inject constructor(
 
                 logD("Auto-reject analysis: ${result.candidates.size}/${result.totalAnalyzed} photos, ${result.analysisDurationMs}ms")
 
+                // 버스트 감지 (UseCase가 DB에서 점수를 로드하여 Photo에 반영)
+                val burstResult = detectBurstAndRecommendUseCase(currentState.photos)
+                logD("Burst detection: ${burstResult.groups.size} groups found")
+
                 // 설정 읽기
                 val settings = settingsRepository.settings.first()
                 val isAutoRejectMode = settings.smartDiscardResultMode == com.cola.pickly.core.data.settings.SmartDiscardResultMode.AutoReject
@@ -780,16 +794,21 @@ class OrganizeViewModel @Inject constructor(
                         state.copy(
                             isAnalyzing = false,
                             autoRejectCandidates = result.candidates,
-                            selectionMap = newSelectionMap
+                            selectionMap = newSelectionMap,
+                            burstGroups = burstResult.groups,
+                            burstGroupByPhotoId = burstResult.burstGroupByPhotoId
                         )
                     } else state
                 }
 
                 // 결과 안내 메시지
+                val burstInfo = if (burstResult.groups.isNotEmpty()) {
+                    " 연사 그룹 ${burstResult.groups.size}개를 감지했어요."
+                } else ""
                 val message = when {
-                    result.candidates.isEmpty() -> "후보로 표시할 사진이 없어요."
-                    isAutoRejectMode -> "아쉬운 사진 ${result.candidates.size}개를 자동으로 제외했어요."
-                    else -> "아쉬운 사진 후보를 표시했어요."
+                    result.candidates.isEmpty() -> "후보로 표시할 사진이 없어요.$burstInfo"
+                    isAutoRejectMode -> "아쉬운 사진 ${result.candidates.size}개를 자동으로 제외했어요.$burstInfo"
+                    else -> "아쉬운 사진 후보를 표시했어요.$burstInfo"
                 }
                 _snackbarMessages.emit(message)
 

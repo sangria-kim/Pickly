@@ -89,7 +89,8 @@ data class SmartDiscardSensitivities(
 data class DebugOptions(
     val showDebugOverlay: Boolean = false,
     val showFaceBoundingBox: Boolean = true,
-    val showScoreOverlay: Boolean = false
+    val showScoreOverlay: Boolean = false,
+    val showBurstGroupOverlay: Boolean = true
 )
 
 

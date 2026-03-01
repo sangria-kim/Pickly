@@ -165,6 +165,7 @@ class SettingsViewModel @Inject constructor(
                 DebugOptionType.SHOW_DEBUG_OVERLAY -> currentOptions.copy(showDebugOverlay = enabled)
                 DebugOptionType.SHOW_FACE_BOX -> currentOptions.copy(showFaceBoundingBox = enabled)
                 DebugOptionType.SHOW_SCORE -> currentOptions.copy(showScoreOverlay = enabled)
+                DebugOptionType.SHOW_BURST_GROUP_OVERLAY -> currentOptions.copy(showBurstGroupOverlay = enabled)
             }
             settingsRepository.setDebugOptions(newOptions)
         }
@@ -223,7 +224,8 @@ sealed interface SettingsEvent {
 enum class DebugOptionType {
     SHOW_DEBUG_OVERLAY,
     SHOW_FACE_BOX,
-    SHOW_SCORE
+    SHOW_SCORE,
+    SHOW_BURST_GROUP_OVERLAY
 }
 
 enum class ThresholdType {

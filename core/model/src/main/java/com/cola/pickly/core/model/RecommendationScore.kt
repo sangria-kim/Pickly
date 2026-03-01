@@ -9,14 +9,26 @@ package com.cola.pickly.core.model
  */
 data class RecommendationScore(
     val totalScore: Double = 0.0,
-    
+
     // 세부 점수 항목
     val sharpnessScore: Double = 0.0,   // 선명도
     val expressionScore: Double = 0.0,  // 표정/눈
     val lightingScore: Double = 0.0,    // 조명
     val compositionScore: Double = 0.0, // 구도
     val backgroundScore: Double = 0.0,  // 배경
-    
+
+    // 사진 유형
+    val photoType: PhotoType = PhotoType.LANDSCAPE,
+
+    // 다중 얼굴 통계 (단체 사진용)
+    val allEyesOpenProbs: List<Double> = emptyList(),   // 모든 얼굴의 눈 뜸 확률
+    val allSmileProbs: List<Double> = emptyList(),      // 모든 얼굴의 웃음 확률
+    val minEyeOpenProb: Double = 0.0,                   // 최소 눈 뜸 (최악의 얼굴)
+    val avgEyeOpenProb: Double = 0.0,                   // 평균 눈 뜸
+
+    // 얼굴 영역 선명도
+    val faceSharpness: Double = 0.0,                    // 대표 얼굴 영역 Laplacian variance
+
     // 메타 정보
     val faceCount: Int = 0,             // 검출된 얼굴 수
     val isCutoff: Boolean = false,      // 컷오프(추천 제외) 여부
