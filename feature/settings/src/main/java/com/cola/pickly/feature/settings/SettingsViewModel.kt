@@ -178,7 +178,6 @@ class SettingsViewModel @Inject constructor(
             val newThresholds = when (type) {
                 ThresholdType.BLUR -> currentThresholds.copy(blurThreshold = normalized)
                 ThresholdType.MIN_FACE_SIZE -> currentThresholds.copy(minFaceSize = normalized)
-                ThresholdType.HEAD_ANGLE -> currentThresholds.copy(headAngleLimit = normalized)
                 ThresholdType.EYE_OPEN -> currentThresholds.copy(eyeOpenThreshold = normalized)
                 ThresholdType.SMILE_EXCEPTION -> currentThresholds.copy(smileExceptionThreshold = normalized)
             }
@@ -198,7 +197,6 @@ class SettingsViewModel @Inject constructor(
             val updated = when (reason) {
                 RejectReason.BLURRY -> current.copy(blur = level)
                 RejectReason.EYES_CLOSED -> current.copy(eyeOpen = level)
-                RejectReason.HEAD_TURNED -> current.copy(headAngle = level)
                 RejectReason.TOO_SMALL -> current.copy(minFaceSize = level)
                 else -> return@launch
             }
@@ -231,7 +229,6 @@ enum class DebugOptionType {
 enum class ThresholdType {
     BLUR,
     MIN_FACE_SIZE,
-    HEAD_ANGLE,
     EYE_OPEN,
     SMILE_EXCEPTION
 }

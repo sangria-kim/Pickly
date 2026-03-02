@@ -63,9 +63,8 @@ data class Settings(
 data class SmartDiscardThresholds(
     val blurThreshold: Float = 55.0f,
     val minFaceSize: Float = 0.05f,
-    val headAngleLimit: Float = 30.0f,
-    val eyeOpenThreshold: Float = 0.50f,
-    val smileExceptionThreshold: Float = 0.70f
+    val eyeOpenThreshold: Float = 0.35f,
+    val smileExceptionThreshold: Float = 0.60f
 )
 
 /**
@@ -76,7 +75,6 @@ data class SmartDiscardThresholds(
 data class SmartDiscardSensitivities(
     val blur: SensitivityLevel = SensitivityLevel.default,
     val eyeOpen: SensitivityLevel = SensitivityLevel.default,
-    val headAngle: SensitivityLevel = SensitivityLevel.default,
     val minFaceSize: SensitivityLevel = SensitivityLevel.default,
 )
 

@@ -151,13 +151,11 @@ fun DebugOverlay(
                                 appendLine("Eye(Avg): %.2f".format(score.eyeOpenProb))
                                 appendLine("Eye(L/R): %.2f / %.2f".format(score.leftEyeOpenProb, score.rightEyeOpenProb))
                                 appendLine("Smile: %.2f".format(score.smileProb))
-                                appendLine("Head: P=%.0f, Y=%.0f".format(score.headEulerAngleX, score.headEulerAngleY))
                                 appendLine("----------")
                                 appendLine("[Thresholds]")
                                 appendLine("Blur < ${"%.1f".format(thresholds.blurThreshold)}")
                                 appendLine("Eye > ${"%.2f".format(thresholds.eyeOpenThreshold)}")
                                 appendLine("Smile > ${"%.2f".format(thresholds.smileExceptionThreshold)}")
-                                appendLine("Head < ${"%.0f".format(thresholds.headAngleLimit)}°")
                                 appendLine("MinFace > ${"%.1f".format(thresholds.minFaceSize * 100)}%")
                             },
                             color = Color.White,

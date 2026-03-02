@@ -41,9 +41,7 @@ data class RecommendationScore(
     val leftEyeOpenProb: Double = 0.0,  // 왼쪽 눈 뜸 확률
     val rightEyeOpenProb: Double = 0.0, // 오른쪽 눈 뜸 확률
     val smileProb: Double = 0.0,        // 웃음 확률
-    val headEulerAngleX: Float = 0f,    // 고개 숙임/젖힘 (Pitch)
-    val headEulerAngleY: Float = 0f,    // 고개 돌림 (Yaw)
-    
+
     // 디버깅용 얼굴 위치 정보 (원본 이미지 기준 좌표) - Rect 대신 순수 데이터로 표현
     val faceBoundingBox: FaceBoundingBox? = null,                  // 대표 얼굴 (점수 계산 대상)
     val allFaceBoundingBoxes: List<FaceBoundingBox> = emptyList(), // 모든 얼굴

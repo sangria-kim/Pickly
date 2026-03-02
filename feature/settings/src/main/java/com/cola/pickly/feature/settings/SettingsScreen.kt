@@ -200,7 +200,6 @@ internal fun SettingsScreenContent(
             val orderedCriteria = listOf(
                 RejectReason.BLURRY,
                 RejectReason.EYES_CLOSED,
-                RejectReason.HEAD_TURNED,
                 RejectReason.TOO_SMALL,
                 RejectReason.OCCLUDED,
                 RejectReason.CROPPED,
@@ -208,7 +207,6 @@ internal fun SettingsScreenContent(
             val sensitivityLabels = mapOf(
                 RejectReason.BLURRY to "흔들린 사진을 잡는 정도",
                 RejectReason.EYES_CLOSED to "눈 감은 사진을 잡는 정도",
-                RejectReason.HEAD_TURNED to "고개 돌린 사진을 잡는 정도",
                 RejectReason.TOO_SMALL to "얼굴이 작은 사진을 잡는 정도",
             )
             var isCriteriaExpanded by rememberSaveable { mutableStateOf(false) }
@@ -267,7 +265,6 @@ internal fun SettingsScreenContent(
                             when (reason) {
                                 RejectReason.BLURRY -> uiState.smartDiscardSensitivities.blur
                                 RejectReason.EYES_CLOSED -> uiState.smartDiscardSensitivities.eyeOpen
-                                RejectReason.HEAD_TURNED -> uiState.smartDiscardSensitivities.headAngle
                                 RejectReason.TOO_SMALL -> uiState.smartDiscardSensitivities.minFaceSize
                                 else -> null
                             }
@@ -428,7 +425,6 @@ internal fun SettingsScreenContent(
                     )
                     val blurSpec = ThresholdSpecs.forType(ThresholdType.BLUR)
                     val minFaceSpec = ThresholdSpecs.forType(ThresholdType.MIN_FACE_SIZE)
-                    val headAngleSpec = ThresholdSpecs.forType(ThresholdType.HEAD_ANGLE)
                     val eyeOpenSpec = ThresholdSpecs.forType(ThresholdType.EYE_OPEN)
                     val smileExceptionSpec = ThresholdSpecs.forType(ThresholdType.SMILE_EXCEPTION)
 
@@ -455,24 +451,13 @@ internal fun SettingsScreenContent(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     SettingsSliderItem(
-                        title = "고개 각도 제한",
-                        value = uiState.smartDiscardThresholds.headAngleLimit,
-                        onValueChange = { onThresholdChanged(ThresholdType.HEAD_ANGLE, it) },
-                        valueRange = headAngleSpec.range,
-                        steps = headAngleSpec.steps,
-                        valueFormatter = { "%.1f°".format(it) },
-                        defaultValue = 30.0f,
-                        subtitle = "값을 올리면 고개를 더 돌려도 통과하고, 내리면 조금만 돌아도 '고개돌림'으로 잡아요."
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                    SettingsSliderItem(
                         title = "눈 뜸 임계값",
                         value = uiState.smartDiscardThresholds.eyeOpenThreshold,
                         onValueChange = { onThresholdChanged(ThresholdType.EYE_OPEN, it) },
                         valueRange = eyeOpenSpec.range,
                         steps = eyeOpenSpec.steps,
                         valueFormatter = { "%.2f".format(it) },
-                        defaultValue = 0.50f,
+                        defaultValue = 0.35f,
                         subtitle = "값을 올리면 살짝 감긴 눈도 '눈감음'으로 잡고, 내리면 확실히 감긴 경우만 잡아요."
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
@@ -483,7 +468,7 @@ internal fun SettingsScreenContent(
                         valueRange = smileExceptionSpec.range,
                         steps = smileExceptionSpec.steps,
                         valueFormatter = { "%.2f".format(it) },
-                        defaultValue = 0.70f,
+                        defaultValue = 0.60f,
                         subtitle = "값을 올리면 웃고 있어도 '눈감음'으로 잡힐 수 있고, 내리면 웃는 사진은 더 많이 통과해요."
                     )
                 }

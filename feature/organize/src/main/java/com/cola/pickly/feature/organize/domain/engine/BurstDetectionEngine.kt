@@ -1,11 +1,14 @@
 package com.cola.pickly.feature.organize.domain.engine
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
+import com.cola.photoanalyzer.internal.BitmapLoader
 import com.cola.pickly.core.model.BurstGroup
 import com.cola.pickly.core.model.Photo
+import com.cola.pickly.core.model.RecommendationScore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,31 +16,28 @@ import javax.inject.Singleton
 /**
  * 연속 촬영(버스트) 사진 그룹을 감지하는 엔진.
  *
- * 시간 적응형 dHash 체이닝 방식:
- * - ≤ 3초: 완화된 dHash 임계값([DHASH_THRESHOLD_RELAXED])으로 체이닝 (구도 변경 허용)
- * - 3~10초: 기본 dHash 임계값([DHASH_THRESHOLD])으로 체이닝 (유사한 장면만)
- * - > 10초: 체인 끊김 (별개 촬영으로 간주)
- *
- * 그룹 내 베스트 사진은 recommendationScore.totalScore가 가장 높은 사진입니다.
+ * 2단계 분리:
+ * - [detectGroups]: dHash 기반 그룹핑 (점수 불필요)
+ * - [selectBestPhotos]: 점수 기반 베스트 선정
  */
 @Singleton
 class BurstDetectionEngine @Inject constructor() {
 
     /**
-     * 사진 목록에서 연사 그룹을 감지합니다.
-     *
-     * @param photos 분석할 사진 목록 (촬영 시각 정렬 권장)
-     * @return 감지된 연사 그룹 목록 (2장 이상인 그룹만 반환)
+     * 1단계: dHash 기반 그룹 감지 (점수 불필요).
+     * @return Raw 버스트 그룹 (photoIds만 포함, bestPhotoId 미설정)
      */
-    suspend fun detect(photos: List<Photo>): List<BurstGroup> = withContext(Dispatchers.Default) {
+    suspend fun detectGroups(photos: List<Photo>): List<RawBurstGroup> = withContext(Dispatchers.Default) {
         if (photos.size < 2) return@withContext emptyList()
 
         val sorted = photos.sortedBy { it.takenAt }
 
-        // 모든 사진의 dHash를 한번에 계산
-        val hashes = sorted.map { computeDHash(it.filePath) }
+        // dHash 병렬 계산
+        val hashes = sorted.map { photo ->
+            async { computeDHash(photo.filePath) }
+        }.awaitAll()
 
-        // 인접 사진 체이닝: 시간 + dHash 동시 조건
+        // 인접 사진 체이닝
         val groups = mutableListOf<MutableList<Photo>>()
         var currentGroup = mutableListOf(sorted.first())
 
@@ -69,56 +69,61 @@ class BurstDetectionEngine @Inject constructor() {
         }
         if (currentGroup.size >= MIN_GROUP_SIZE) groups.add(currentGroup)
 
-        // BurstGroup 생성
         groups.mapIndexed { index, groupPhotos ->
-            val scoreComparator = compareByDescending<Photo> {
-                it.recommendationScore?.totalScore ?: 0.0
-            }.thenByDescending {
-                it.recommendationScore?.rawSharpness ?: 0.0
-            }
-            val bestPhoto = groupPhotos.maxWithOrNull(scoreComparator) ?: groupPhotos.first()
-            val sortedByScore = groupPhotos.sortedWith(scoreComparator)
-            BurstGroup(
-                groupId = "burst_${bestPhoto.id}",
+            RawBurstGroup(
                 groupIndex = index,
-                photoIds = groupPhotos.map { it.id },
-                bestPhotoId = bestPhoto.id,
-                runnerUpPhotoId = sortedByScore.getOrNull(1)?.id,
-                bestScore = bestPhoto.recommendationScore?.totalScore ?: 0.0
+                photoIds = groupPhotos.map { it.id }
             )
         }
     }
 
     /**
-     * 이미지의 dHash(차이 해시)를 계산합니다.
-     * 8x9 크기로 축소 후 인접 픽셀 밝기 비교로 64비트 해시 생성.
+     * 2단계: 점수 기반 베스트 사진 선정.
+     * @param rawGroups [detectGroups]의 결과
+     * @param scoreMap photoId → RecommendationScore 매핑
      */
+    fun selectBestPhotos(
+        rawGroups: List<RawBurstGroup>,
+        scoreMap: Map<Long, RecommendationScore>
+    ): List<BurstGroup> {
+        return rawGroups.map { raw ->
+            val scoreComparator = compareByDescending<Long> {
+                scoreMap[it]?.totalScore ?: 0.0
+            }.thenByDescending {
+                scoreMap[it]?.rawSharpness ?: 0.0
+            }
+            val sortedIds = raw.photoIds.sortedWith(scoreComparator)
+            val bestId = sortedIds.first()
+            BurstGroup(
+                groupId = "burst_$bestId",
+                groupIndex = raw.groupIndex,
+                photoIds = raw.photoIds,
+                bestPhotoId = bestId,
+                runnerUpPhotoId = sortedIds.getOrNull(1),
+                bestScore = scoreMap[bestId]?.totalScore ?: 0.0
+            )
+        }
+    }
+
+    /**
+     * 기존 호환용: 1단계 + 2단계를 한번에 수행.
+     */
+    suspend fun detect(photos: List<Photo>): List<BurstGroup> {
+        val rawGroups = detectGroups(photos)
+        val scoreMap = photos.associate { it.id to (it.recommendationScore ?: RecommendationScore()) }
+        return selectBestPhotos(rawGroups, scoreMap)
+    }
+
     private fun computeDHash(filePath: String): Long? {
         return try {
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
-            BitmapFactory.decodeFile(filePath, options)
-
-            // 작은 이미지로 디코드
-            val sampleSize = maxOf(
-                options.outWidth / DHASH_DECODE_SIZE,
-                options.outHeight / DHASH_DECODE_SIZE,
-                1
-            )
-            val decodeOptions = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-                inPreferredConfig = Bitmap.Config.RGB_565
-            }
-            val bitmap = BitmapFactory.decodeFile(filePath, decodeOptions) ?: return null
-            val scaled = Bitmap.createScaledBitmap(bitmap, DHASH_WIDTH, DHASH_HEIGHT, true)
-            if (scaled != bitmap) bitmap.recycle()
+            val bitmap = BitmapLoader.loadThumbnail(filePath, DHASH_WIDTH, DHASH_HEIGHT)
+                ?: return null
 
             var hash = 0L
             for (y in 0 until DHASH_HEIGHT) {
                 for (x in 0 until DHASH_WIDTH - 1) {
-                    val leftPixel = scaled.getPixel(x, y)
-                    val rightPixel = scaled.getPixel(x + 1, y)
+                    val leftPixel = bitmap.getPixel(x, y)
+                    val rightPixel = bitmap.getPixel(x + 1, y)
                     val leftGray = grayscale(leftPixel)
                     val rightGray = grayscale(rightPixel)
                     if (leftGray > rightGray) {
@@ -126,7 +131,7 @@ class BurstDetectionEngine @Inject constructor() {
                     }
                 }
             }
-            scaled.recycle()
+            bitmap.recycle()
             hash
         } catch (e: Exception) {
             null
@@ -145,24 +150,19 @@ class BurstDetectionEngine @Inject constructor() {
     }
 
     companion object {
-        /** 인접 사진 체이닝 최대 시간 간격 (밀리초) */
         const val CHAIN_TIME_MS = 10_000L
-
-        /** 빠른 연사 시간 간격 (이하이면 dHash 검증 건너뜀) */
         const val FAST_BURST_TIME_MS = 3_000L
-
-        /** dHash 해밍 거리 임계값 (이하이면 유사) */
         const val DHASH_THRESHOLD = 12
-
-        /** 완화된 dHash 해밍 거리 임계값 (3~10초 구간에서 사용) */
         const val DHASH_THRESHOLD_RELAXED = 18
-
-        /** 최소 그룹 크기 */
         const val MIN_GROUP_SIZE = 2
-
-        private const val DHASH_DECODE_SIZE = 64
         private const val DHASH_WIDTH = 9
         private const val DHASH_HEIGHT = 8
         private const val TAG = "BurstDetection"
     }
 }
+
+/** dHash 기반 Raw 그룹 (점수 없음) */
+data class RawBurstGroup(
+    val groupIndex: Int,
+    val photoIds: List<Long>
+)

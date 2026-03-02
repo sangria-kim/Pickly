@@ -24,6 +24,7 @@ import com.cola.pickly.feature.organize.domain.usecase.AnalyzePhotosForAutoRejec
 import com.cola.pickly.feature.organize.domain.usecase.DetectBurstAndRecommendUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -764,12 +765,19 @@ class OrganizeViewModel @Inject constructor(
                 // 1회성 스낵바: 취소 방법 안내
                 _snackbarMessages.emit("분석 중… ✨을 다시 누르면 취소할 수 있어요.")
 
-                val result = analyzePhotosForAutoRejectUseCase(currentState.photos)
+                // 파이프라인 병렬 실행: 품질 분석 + 버스트 그룹 감지(dHash)
+                val analysisDeferred = async { analyzePhotosForAutoRejectUseCase(currentState.photos) }
+                val burstGroupsDeferred = async { detectBurstAndRecommendUseCase.detectGroups(currentState.photos) }
+
+                val result = analysisDeferred.await()
+                val rawBurstGroups = burstGroupsDeferred.await()
 
                 logD("Auto-reject analysis: ${result.candidates.size}/${result.totalAnalyzed} photos, ${result.analysisDurationMs}ms")
 
-                // 버스트 감지 (UseCase가 DB에서 점수를 로드하여 Photo에 반영)
-                val burstResult = detectBurstAndRecommendUseCase(currentState.photos)
+                // 버스트 2단계: 분석 완료 후 점수 기반 베스트 선정
+                val burstResult = detectBurstAndRecommendUseCase.selectBestPhotos(
+                    rawBurstGroups, currentState.photos
+                )
                 logD("Burst detection: ${burstResult.groups.size} groups found")
 
                 // 설정 읽기

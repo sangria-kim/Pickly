@@ -35,10 +35,5 @@ enum class RejectReason(val label: String, val hasSensitivity: Boolean) {
     /**
      * 얼굴이 잘려서 일부만 보임 — 민감도 파라미터 없음
      */
-    CROPPED("얼굴잘림", false),
-
-    /**
-     * 고개를 과도하게 돌림 (옆/위/아래를 보는 경우)
-     */
-    HEAD_TURNED("고개돌림", true)
+    CROPPED("얼굴잘림", false)
 }

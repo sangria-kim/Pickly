@@ -37,9 +37,8 @@ class DataStoreSettingsRepository @Inject constructor(
             smartDiscardThresholds = SmartDiscardThresholds(
                 blurThreshold = prefs[KEY_BLUR_THRESHOLD] ?: 55.0f,
                 minFaceSize = prefs[KEY_MIN_FACE_SIZE] ?: 0.05f,
-                headAngleLimit = prefs[KEY_HEAD_ANGLE_LIMIT] ?: 30.0f,
-                eyeOpenThreshold = prefs[KEY_EYE_OPEN_THRESHOLD] ?: 0.50f,
-                smileExceptionThreshold = prefs[KEY_SMILE_EXCEPTION_THRESHOLD] ?: 0.70f
+                eyeOpenThreshold = prefs[KEY_EYE_OPEN_THRESHOLD] ?: 0.35f,
+                smileExceptionThreshold = prefs[KEY_SMILE_EXCEPTION_THRESHOLD] ?: 0.60f
             ),
             smartDiscardResultMode = prefs.getEnum(KEY_SMART_DISCARD_RESULT_MODE, SmartDiscardResultMode.ShowAsCandidates),
             hasShownAutoRejectWarning = prefs[KEY_HAS_SHOWN_AUTO_REJECT_WARNING] ?: false,
@@ -62,12 +61,6 @@ class DataStoreSettingsRepository @Inject constructor(
                     ?: migrateSensitivityFromFloat(
                         prefs[KEY_EYE_OPEN_THRESHOLD],
                         EYE_OPEN_FLOAT_PRESETS
-                    ),
-                headAngle = prefs[KEY_SENSITIVITY_HEAD_ANGLE]
-                    ?.let { SensitivityLevel.fromStep(it) }
-                    ?: migrateSensitivityFromFloat(
-                        prefs[KEY_HEAD_ANGLE_LIMIT],
-                        HEAD_ANGLE_FLOAT_PRESETS
                     ),
                 minFaceSize = prefs[KEY_SENSITIVITY_MIN_FACE_SIZE]
                     ?.let { SensitivityLevel.fromStep(it) }
@@ -95,7 +88,6 @@ class DataStoreSettingsRepository @Inject constructor(
         dataStore.edit { prefs ->
             prefs[KEY_BLUR_THRESHOLD] = thresholds.blurThreshold
             prefs[KEY_MIN_FACE_SIZE] = thresholds.minFaceSize
-            prefs[KEY_HEAD_ANGLE_LIMIT] = thresholds.headAngleLimit
             prefs[KEY_EYE_OPEN_THRESHOLD] = thresholds.eyeOpenThreshold
             prefs[KEY_SMILE_EXCEPTION_THRESHOLD] = thresholds.smileExceptionThreshold
         }
@@ -126,7 +118,6 @@ class DataStoreSettingsRepository @Inject constructor(
         dataStore.edit { prefs ->
             prefs[KEY_SENSITIVITY_BLUR] = sensitivities.blur.step
             prefs[KEY_SENSITIVITY_EYE_OPEN] = sensitivities.eyeOpen.step
-            prefs[KEY_SENSITIVITY_HEAD_ANGLE] = sensitivities.headAngle.step
             prefs[KEY_SENSITIVITY_MIN_FACE_SIZE] = sensitivities.minFaceSize.step
         }
     }
@@ -148,7 +139,6 @@ class DataStoreSettingsRepository @Inject constructor(
         // SmartDiscardThresholds keys
         val KEY_BLUR_THRESHOLD = floatPreferencesKey("settings.blur_threshold")
         val KEY_MIN_FACE_SIZE = floatPreferencesKey("settings.min_face_size")
-        val KEY_HEAD_ANGLE_LIMIT = floatPreferencesKey("settings.head_angle_limit")
         val KEY_EYE_OPEN_THRESHOLD = floatPreferencesKey("settings.eye_open_threshold")
         val KEY_SMILE_EXCEPTION_THRESHOLD = floatPreferencesKey("settings.smile_exception_threshold")
 
@@ -168,14 +158,12 @@ class DataStoreSettingsRepository @Inject constructor(
         // SmartDiscardSensitivities keys (Int: SensitivityLevel.step)
         val KEY_SENSITIVITY_BLUR = intPreferencesKey("settings.sensitivity.blur")
         val KEY_SENSITIVITY_EYE_OPEN = intPreferencesKey("settings.sensitivity.eye_open")
-        val KEY_SENSITIVITY_HEAD_ANGLE = intPreferencesKey("settings.sensitivity.head_angle")
         val KEY_SENSITIVITY_MIN_FACE_SIZE = intPreferencesKey("settings.sensitivity.min_face_size")
 
         // 마이그레이션용: 기존 float 값 → 가장 가까운 SensitivityLevel 매핑 테이블
         // 순서: LEVEL_1 ~ LEVEL_7
         val BLUR_FLOAT_PRESETS = listOf(120f, 100f, 80f, 55f, 40f, 30f, 20f)
-        val EYE_OPEN_FLOAT_PRESETS = listOf(0.10f, 0.25f, 0.38f, 0.50f, 0.63f, 0.75f, 0.85f)
-        val HEAD_ANGLE_FLOAT_PRESETS = listOf(55f, 45f, 37f, 30f, 22f, 16f, 11f)
+        val EYE_OPEN_FLOAT_PRESETS = listOf(0.05f, 0.15f, 0.25f, 0.35f, 0.45f, 0.55f, 0.70f)
         val MIN_FACE_FLOAT_PRESETS = listOf(0.02f, 0.03f, 0.04f, 0.05f, 0.08f, 0.11f, 0.14f)
     }
 

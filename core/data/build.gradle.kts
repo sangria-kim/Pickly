@@ -28,6 +28,7 @@ kotlin {
 dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:model"))
+    implementation(project(":lib:photo-analyzer"))
 
     // Room
     implementation(libs.androidx.room.runtime)
@@ -36,13 +37,6 @@ dependencies {
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)
-
-    // ML Kit
-    implementation(libs.mlkit.face.detection)
-    implementation(libs.mlkit.pose.detection)
-
-    // Exif Interface
-    implementation(libs.androidx.exifinterface)
 
     // Gson
     implementation(libs.google.gson)

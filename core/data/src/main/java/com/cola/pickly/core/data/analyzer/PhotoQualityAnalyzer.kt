@@ -1,856 +1,97 @@
 package com.cola.pickly.core.data.analyzer
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Color
-import android.graphics.Matrix
-import android.graphics.Rect
-import android.util.Log
-import android.util.Size
-import androidx.exifinterface.media.ExifInterface
-import com.cola.pickly.core.data.settings.SmartDiscardThresholds
+import com.cola.photoanalyzer.PhotoAnalyzer
+import com.cola.photoanalyzer.model.AnalysisInput
+import com.cola.photoanalyzer.model.AnalysisOutput
+import com.cola.photoanalyzer.model.DefectType
+import com.cola.photoanalyzer.model.PhotoCategory
 import com.cola.pickly.core.model.FaceBoundingBox
+import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.PhotoType
 import com.cola.pickly.core.model.RecommendationScore
-import com.cola.pickly.core.model.Photo
 import com.cola.pickly.core.model.RejectReason
-import com.google.mlkit.vision.face.Face
-import com.google.mlkit.vision.face.FaceLandmark
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlin.math.abs
-import kotlin.math.ln
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 /**
- * 사진 품질을 분석하여 점수를 계산하는 분석기입니다.
- * 얼굴 인식, 선명도, 조명, 구도 등을 평가합니다.
+ * Pickly 전용 어댑터: PhotoAnalyzer → RecommendationScore 변환.
  */
 class PhotoQualityAnalyzer(
-    private val faceDetectorHelper: FaceDetectorHelper,
-    private val poseDetectorHelper: PoseDetectorHelper,
-    private val thresholds: SmartDiscardThresholds,
-    private val enabledCriteria: Set<RejectReason> = RejectReason.entries.toSet()
+    private val analyzer: PhotoAnalyzer,
+    private val enabledCriteria: Set<RejectReason>
 ) {
-
-    /**
-     * 사진을 분석하여 품질 점수를 반환합니다.
-     */
-    suspend fun analyze(photo: Photo): RecommendationScore = withContext(Dispatchers.Default) {
-        try {
-            // 1. 비트맵 로드 (최적화를 위해 리사이징 + EXIF 회전 적용)
-            val loadResult = loadBitmap(photo.filePath)
-                ?: return@withContext RecommendationScore(isCutoff = true, cutoffReason = "Image load failed")
-            
-            val bitmap = loadResult.first
-            val originalSize = loadResult.second
-
-            // 2. 선명도 계산 (미리 계산, 체크는 나중에)
-            val sharpnessRaw = calculateSharpness(bitmap)
-
-            // 3. 얼굴 감지 (작은 얼굴까지 모두 포함)
-            val allDetectedFaces = faceDetectorHelper.detectFaces(bitmap)
-
-            // 4. 우선순위 1위: NO_FACE (얼굴 미검출)
-            if (allDetectedFaces.isEmpty()) {
-                // 얼굴 미검출 시 Pose Detection으로 2차 확인 (뒷모습/옆모습 오탐 방지)
-                val hasPose = poseDetectorHelper.hasPose(
-                    bitmap,
-                    confidenceThreshold = POSE_CONFIDENCE_THRESHOLD,
-                    minLandmarkCount = POSE_MIN_LANDMARK_COUNT
-                )
-                if (hasPose) {
-                    Log.d(TAG, "analyze: ID=${photo.id}, No face but pose detected → skip NO_FACE")
-                    return@withContext RecommendationScore(
-                        faceCount = 0,
-                        isCutoff = false,
-                        photoType = PhotoType.LANDSCAPE,
-                        rawSharpness = sharpnessRaw
-                    )
-                }
-                // 풍경/사물 사진: cutoff이지만 버스트 비교용 점수는 계산
-                val landscapeScore = calculateLandscapeScore(bitmap, sharpnessRaw, originalSize)
-                Log.d(TAG, "analyze: ID=${photo.id}, No face → LANDSCAPE score=${landscapeScore.totalScore}")
-                return@withContext landscapeScore.copy(
-                    isCutoff = true,
-                    cutoffReason = "No face detected",
-                    rejectReason = RejectReason.NO_FACE
-                )
-            }
-            
-            // 5. 유효 얼굴 필터링 (너비가 이미지의 설정된 비율 이상인 얼굴만)
-            val validFaces = allDetectedFaces.filter {
-                it.boundingBox.width() >= bitmap.width * thresholds.minFaceSize
-            }
-            
-            // 6. 우선순위 2위: TOO_SMALL (얼굴 너무 작음, 논리적 제약으로 2위 고정)
-            if (validFaces.isEmpty()) {
-                if (RejectReason.TOO_SMALL in enabledCriteria) {
-                    Log.d(TAG, "analyze: ID=${photo.id}, Faces too small")
-                    return@withContext RecommendationScore(
-                        faceCount = allDetectedFaces.size, // 검출은 됐으나 너무 작음
-                        isCutoff = true,
-                        cutoffReason = "Faces too small ( < 5% )",
-                        rejectReason = RejectReason.TOO_SMALL,
-                        rawSharpness = sharpnessRaw,
-                        analyzedWidth = originalSize.width,
-                        analyzedHeight = originalSize.height,
-                        // 작은 얼굴들이라도 박스는 표시해줌
-                        allFaceBoundingBoxes = getScaledFaceBoundingBoxes(allDetectedFaces, originalSize, bitmap.width, bitmap.height)
-                    )
-                }
-                // TOO_SMALL 비활성화 + validFaces 비어있음 → 후속 체크 불가 → cutoff=false 반환
-                return@withContext RecommendationScore(
-                    faceCount = allDetectedFaces.size,
-                    isCutoff = false,
-                    rawSharpness = sharpnessRaw,
-                    analyzedWidth = originalSize.width,
-                    analyzedHeight = originalSize.height,
-                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(allDetectedFaces, originalSize, bitmap.width, bitmap.height)
-                )
-            }
-
-            // 7. 대표 얼굴 선정 (유효 얼굴 중 가장 큰 얼굴)
-            val bestFace = validFaces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }!!
-
-            // Raw 값 추출
-            val smileProb = bestFace.smilingProbability ?: 0.0f
-            val leftEyeOpen = bestFace.leftEyeOpenProbability ?: 0.0f
-            val rightEyeOpen = bestFace.rightEyeOpenProbability ?: 0.0f
-            val eyeOpenProb = (leftEyeOpen + rightEyeOpen) / 2.0
-            val headEulerX = bestFace.headEulerAngleX
-            val headEulerY = bestFace.headEulerAngleY
-
-            // 8. 우선순위 3위: CROPPED (얼굴 잘림)
-            if (isFaceCropped(bestFace, bitmap.width, bitmap.height) && RejectReason.CROPPED in enabledCriteria) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Face cropped")
-                return@withContext RecommendationScore(
-                    faceCount = validFaces.size,
-                    isCutoff = true,
-                    cutoffReason = "Face cropped at edges",
-                    rejectReason = RejectReason.CROPPED,
-                    rawSharpness = sharpnessRaw,
-                    analyzedWidth = originalSize.width,
-                    analyzedHeight = originalSize.height,
-                    eyeOpenProb = eyeOpenProb.toDouble(),
-                    leftEyeOpenProb = leftEyeOpen.toDouble(),
-                    rightEyeOpenProb = rightEyeOpen.toDouble(),
-                    smileProb = smileProb.toDouble(),
-                    headEulerAngleX = headEulerX,
-                    headEulerAngleY = headEulerY,
-                    faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
-                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
-                )
-            }
-
-            // 9. 우선순위 4위: EYES_CLOSED (눈감음)
-            // 양쪽 눈 모두 threshold 미만이어야 EYES_CLOSED로 판별 (안경 비대칭 반사 대응)
-            val bothEyesClosed = leftEyeOpen < thresholds.eyeOpenThreshold
-                                 && rightEyeOpen < thresholds.eyeOpenThreshold
-
-            // 한쪽 눈만 매우 낮은 경우 (윙크 등): 더 엄격한 임계값 적용
-            val oneEyeVeryClosed = (leftEyeOpen < SINGLE_EYE_STRICT_THRESHOLD
-                                    || rightEyeOpen < SINGLE_EYE_STRICT_THRESHOLD)
-            val eyeAsymmetry = abs(leftEyeOpen - rightEyeOpen)
-            val isAsymmetricBlink = oneEyeVeryClosed && eyeAsymmetry > EYE_ASYMMETRY_THRESHOLD
-
-            val isEyesClosed = bothEyesClosed || isAsymmetricBlink
-            val isSmiling = smileProb > thresholds.smileExceptionThreshold
-
-            if (isEyesClosed && !isSmiling && RejectReason.EYES_CLOSED in enabledCriteria) {
-                // 선글라스 착용 시 EYES_CLOSED 오탐 방지: 눈 영역 픽셀 분석
-                if (isSunglassesLikely(bitmap, bestFace)) {
-                    Log.d(TAG, "analyze: ID=${photo.id}, Eyes closed but sunglasses detected → skip EYES_CLOSED")
-                } else {
-                    Log.d(TAG, "analyze: ID=${photo.id}, Eyes closed (L=$leftEyeOpen, R=$rightEyeOpen)")
-                    return@withContext RecommendationScore(
-                        faceCount = validFaces.size,
-                        isCutoff = true,
-                        cutoffReason = "Eyes closed",
-                        rejectReason = RejectReason.EYES_CLOSED,
-                        rawSharpness = sharpnessRaw,
-                        analyzedWidth = originalSize.width,
-                        analyzedHeight = originalSize.height,
-                        eyeOpenProb = eyeOpenProb.toDouble(),
-                        leftEyeOpenProb = leftEyeOpen.toDouble(),
-                        rightEyeOpenProb = rightEyeOpen.toDouble(),
-                        smileProb = smileProb.toDouble(),
-                        headEulerAngleX = headEulerX,
-                        headEulerAngleY = headEulerY,
-                        faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
-                        allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
-                    )
-                }
-            }
-
-            // 10. 우선순위 5위: OCCLUDED (얼굴가림)
-            if (isFaceOccluded(bestFace) && RejectReason.OCCLUDED in enabledCriteria) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Face occluded")
-                return@withContext RecommendationScore(
-                    faceCount = validFaces.size,
-                    isCutoff = true,
-                    cutoffReason = "Face occluded (Nose/Mouth hidden)",
-                    rejectReason = RejectReason.OCCLUDED,
-                    rawSharpness = sharpnessRaw,
-                    analyzedWidth = originalSize.width,
-                    analyzedHeight = originalSize.height,
-                    eyeOpenProb = eyeOpenProb.toDouble(),
-                    leftEyeOpenProb = leftEyeOpen.toDouble(),
-                    rightEyeOpenProb = rightEyeOpen.toDouble(),
-                    smileProb = smileProb.toDouble(),
-                    headEulerAngleX = headEulerX,
-                    headEulerAngleY = headEulerY,
-                    faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
-                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
-                )
-            }
-
-            // 11. 우선순위 6위: HEAD_TURNED (고개돌림)
-            if (isHeadTurnedTooMuch(bestFace) && RejectReason.HEAD_TURNED in enabledCriteria) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Head turned too much (X=$headEulerX, Y=$headEulerY)")
-                return@withContext RecommendationScore(
-                    faceCount = validFaces.size,
-                    isCutoff = true,
-                    cutoffReason = "Head turned too much",
-                    rejectReason = RejectReason.HEAD_TURNED,
-                    rawSharpness = sharpnessRaw,
-                    analyzedWidth = originalSize.width,
-                    analyzedHeight = originalSize.height,
-                    eyeOpenProb = eyeOpenProb.toDouble(),
-                    leftEyeOpenProb = leftEyeOpen.toDouble(),
-                    rightEyeOpenProb = rightEyeOpen.toDouble(),
-                    smileProb = smileProb.toDouble(),
-                    headEulerAngleX = headEulerX,
-                    headEulerAngleY = headEulerY,
-                    faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
-                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
-                )
-            }
-
-            // 12. 우선순위 7위: BLURRY (흔들림)
-            if (sharpnessRaw < thresholds.blurThreshold.toDouble() && RejectReason.BLURRY in enabledCriteria) {
-                Log.d(TAG, "analyze: ID=${photo.id}, Too blurry (var=$sharpnessRaw)")
-                return@withContext RecommendationScore(
-                    faceCount = validFaces.size,
-                    isCutoff = true,
-                    cutoffReason = "Severe shaking (Blurry)",
-                    rejectReason = RejectReason.BLURRY,
-                    rawSharpness = sharpnessRaw,
-                    analyzedWidth = originalSize.width,
-                    analyzedHeight = originalSize.height,
-                    eyeOpenProb = eyeOpenProb.toDouble(),
-                    leftEyeOpenProb = leftEyeOpen.toDouble(),
-                    rightEyeOpenProb = rightEyeOpen.toDouble(),
-                    smileProb = smileProb.toDouble(),
-                    headEulerAngleX = headEulerX,
-                    headEulerAngleY = headEulerY,
-                    faceBoundingBox = getScaledFaceBoundingBox(bestFace.boundingBox, originalSize, bitmap.width, bitmap.height),
-                    allFaceBoundingBoxes = getScaledFaceBoundingBoxes(validFaces, originalSize, bitmap.width, bitmap.height)
-                )
-            }
-
-            // 13. 좌표 변환 비율 계산
-            val scaleX = originalSize.width.toDouble() / bitmap.width
-            val scaleY = originalSize.height.toDouble() / bitmap.height
-
-            // 14. 점수 계산 (컷오프 아님)
-            val score = calculateScore(
-                bitmap, bestFace, validFaces, scaleX, scaleY, originalSize, 
-                sharpnessRaw, smileProb.toDouble(), eyeOpenProb.toDouble(), 
-                leftEyeOpen.toDouble(), rightEyeOpen.toDouble(), 
-                headEulerX, headEulerY
-            )
-            
-            Log.d(TAG, "analyze: ID=${photo.id}, Score=${score.totalScore} " +
-                    "(S=${score.sharpnessScore}, E=${score.expressionScore}, " +
-                    "L=${score.lightingScore}, C=${score.compositionScore})")
-            
-            score
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            RecommendationScore(isCutoff = true, cutoffReason = "Analysis error: ${e.message}")
-        }
+    suspend fun analyze(photo: Photo): RecommendationScore {
+        val input = AnalysisInput(photo.id, photo.filePath, photo.takenAt)
+        val output = analyzer.analyze(input)
+        return output.toRecommendationScore()
     }
+}
 
-    // 좌표 변환 헬퍼 함수
-    private fun getScaledFaceBoundingBox(box: Rect, originalSize: Size, bitmapWidth: Int, bitmapHeight: Int): FaceBoundingBox {
-        val scaleX = originalSize.width.toDouble() / bitmapWidth
-        val scaleY = originalSize.height.toDouble() / bitmapHeight
-        return FaceBoundingBox(
-            left = (box.left * scaleX).toInt(),
-            top = (box.top * scaleY).toInt(),
-            right = (box.right * scaleX).toInt(),
-            bottom = (box.bottom * scaleY).toInt()
-        )
-    }
+// ─── 변환 함수들 ───
 
-    private fun getScaledFaceBoundingBoxes(faces: List<Face>, originalSize: Size, bitmapWidth: Int, bitmapHeight: Int): List<FaceBoundingBox> {
-        return faces.map { getScaledFaceBoundingBox(it.boundingBox, originalSize, bitmapWidth, bitmapHeight) }
-    }
-    
-    // ... helper functions ... (isFaceCropped, isFaceOccluded, isHeadTurnedTooMuch are same) ...
+fun AnalysisOutput.toRecommendationScore(): RecommendationScore {
+    return RecommendationScore(
+        totalScore = score.total,
+        sharpnessScore = score.sharpness,
+        expressionScore = score.expression,
+        lightingScore = score.lighting,
+        compositionScore = score.composition,
+        photoType = category.toPhotoType(),
+        faceCount = faces.count,
+        isCutoff = hasDefect,
+        cutoffReason = defectType?.label,
+        rejectReason = defectType?.toRejectReason(),
+        rawSharpness = metrics.laplacianVariance,
+        eyeOpenProb = metrics.eyeOpenProb,
+        leftEyeOpenProb = metrics.leftEyeOpenProb,
+        rightEyeOpenProb = metrics.rightEyeOpenProb,
+        smileProb = metrics.smileProb,
+        faceBoundingBox = faces.primaryBox?.let {
+            FaceBoundingBox(it.left, it.top, it.right, it.bottom)
+        },
+        allFaceBoundingBoxes = faces.allBoxes.map {
+            FaceBoundingBox(it.left, it.top, it.right, it.bottom)
+        },
+        analyzedWidth = faces.analyzedImageWidth,
+        analyzedHeight = faces.analyzedImageHeight,
+        allEyesOpenProbs = metrics.allEyesOpenProbs,
+        allSmileProbs = metrics.allSmileProbs,
+        minEyeOpenProb = metrics.minEyeOpenProb,
+        avgEyeOpenProb = metrics.avgEyeOpenProb,
+        faceSharpness = metrics.faceLaplacianVariance
+    )
+}
 
-    private fun isFaceCropped(face: Face, imgWidth: Int, imgHeight: Int): Boolean {
-        val box = face.boundingBox
-        val margin = 0
-        return box.left <= margin || box.top <= margin || 
-               box.right >= imgWidth - margin || box.bottom >= imgHeight - margin
-    }
+fun PhotoCategory.toPhotoType(): PhotoType = when (this) {
+    PhotoCategory.SOLO_PORTRAIT -> PhotoType.SOLO_PORTRAIT
+    PhotoCategory.GROUP_PORTRAIT -> PhotoType.GROUP_PORTRAIT
+    PhotoCategory.LANDSCAPE -> PhotoType.LANDSCAPE
+}
 
-    private fun isFaceOccluded(face: Face): Boolean {
-        val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
-        val mouthLeft = face.getLandmark(FaceLandmark.MOUTH_LEFT)
-        val mouthRight = face.getLandmark(FaceLandmark.MOUTH_RIGHT)
-        val mouthBottom = face.getLandmark(FaceLandmark.MOUTH_BOTTOM)
-        return nose == null || mouthLeft == null || mouthRight == null || mouthBottom == null
-    }
+fun DefectType.toRejectReason(): RejectReason = when (this) {
+    DefectType.NO_FACE -> RejectReason.NO_FACE
+    DefectType.BLURRY -> RejectReason.BLURRY
+    DefectType.TOO_SMALL -> RejectReason.TOO_SMALL
+    DefectType.OCCLUDED -> RejectReason.OCCLUDED
+    DefectType.EYES_CLOSED -> RejectReason.EYES_CLOSED
+    DefectType.CROPPED -> RejectReason.CROPPED
+}
 
-    private fun isHeadTurnedTooMuch(face: Face): Boolean {
-        val pitch = abs(face.headEulerAngleX)
-        val yaw = abs(face.headEulerAngleY)
-        return pitch > thresholds.headAngleLimit || yaw > thresholds.headAngleLimit
-    }
+fun RejectReason.toDefectType(): DefectType = when (this) {
+    RejectReason.NO_FACE -> DefectType.NO_FACE
+    RejectReason.BLURRY -> DefectType.BLURRY
+    RejectReason.TOO_SMALL -> DefectType.TOO_SMALL
+    RejectReason.OCCLUDED -> DefectType.OCCLUDED
+    RejectReason.EYES_CLOSED -> DefectType.EYES_CLOSED
+    RejectReason.CROPPED -> DefectType.CROPPED
+}
 
-    private fun calculateScore(
-        bitmap: Bitmap,
-        bestFace: Face,
-        allValidFaces: List<Face>,
-        scaleX: Double,
-        scaleY: Double,
-        originalSize: Size,
-        sharpnessRaw: Double,
-        smileProb: Double,
-        eyeOpenProb: Double,
-        leftEyeProb: Double,
-        rightEyeProb: Double,
-        headEulerX: Float,
-        headEulerY: Float
-    ): RecommendationScore {
-
-        // 사진 유형 판별
-        val photoType = when {
-            allValidFaces.size >= 2 -> PhotoType.GROUP_PORTRAIT
-            allValidFaces.size == 1 -> PhotoType.SOLO_PORTRAIT
-            else -> PhotoType.LANDSCAPE
-        }
-
-        val bestBox = bestFace.boundingBox
-        val bestFaceBoundingBox = FaceBoundingBox(
-            left = (bestBox.left * scaleX).toInt(),
-            top = (bestBox.top * scaleY).toInt(),
-            right = (bestBox.right * scaleX).toInt(),
-            bottom = (bestBox.bottom * scaleY).toInt()
-        )
-        val allFaceBoundingBoxes = allValidFaces.map { face ->
-            val box = face.boundingBox
-            FaceBoundingBox(
-                left = (box.left * scaleX).toInt(),
-                top = (box.top * scaleY).toInt(),
-                right = (box.right * scaleX).toInt(),
-                bottom = (box.bottom * scaleY).toInt()
-            )
-        }
-
-        // 다중 얼굴 통계 수집
-        val allEyesOpenProbs = allValidFaces.map { face ->
-            val left = face.leftEyeOpenProbability?.toDouble() ?: 0.0
-            val right = face.rightEyeOpenProbability?.toDouble() ?: 0.0
-            (left + right) / 2.0
-        }
-        val allSmileProbs = allValidFaces.map { face ->
-            face.smilingProbability?.toDouble() ?: 0.0
-        }
-        val minEyeOpen = if (allEyesOpenProbs.isNotEmpty()) allEyesOpenProbs.min() else 0.0
-        val avgEyeOpen = if (allEyesOpenProbs.isNotEmpty()) allEyesOpenProbs.average() else 0.0
-
-        // 얼굴 영역 선명도
-        val faceSharpnessRaw = calculateFaceSharpness(bitmap, bestFace)
-
-        return when (photoType) {
-            PhotoType.SOLO_PORTRAIT -> calculateSoloPortraitScore(
-                bitmap, bestFace, faceSharpnessRaw, smileProb, eyeOpenProb,
-                leftEyeProb, rightEyeProb, headEulerX, headEulerY,
-                sharpnessRaw, allValidFaces.size, originalSize,
-                bestFaceBoundingBox, allFaceBoundingBoxes,
-                allEyesOpenProbs, allSmileProbs, minEyeOpen, avgEyeOpen, faceSharpnessRaw
-            )
-            PhotoType.GROUP_PORTRAIT -> calculateGroupPortraitScore(
-                bitmap, bestFace, allValidFaces, sharpnessRaw,
-                smileProb, eyeOpenProb, leftEyeProb, rightEyeProb,
-                headEulerX, headEulerY, originalSize,
-                bestFaceBoundingBox, allFaceBoundingBoxes,
-                allEyesOpenProbs, allSmileProbs, minEyeOpen, avgEyeOpen, faceSharpnessRaw
-            )
-            PhotoType.LANDSCAPE -> calculateLandscapeScore(bitmap, sharpnessRaw, originalSize)
-        }
-    }
-
-    private fun calculateSoloPortraitScore(
-        bitmap: Bitmap,
-        bestFace: Face,
-        faceSharpnessRaw: Double,
-        smileProb: Double,
-        eyeOpenProb: Double,
-        leftEyeProb: Double,
-        rightEyeProb: Double,
-        headEulerX: Float,
-        headEulerY: Float,
-        rawSharpness: Double,
-        faceCount: Int,
-        originalSize: Size,
-        bestFaceBoundingBox: FaceBoundingBox,
-        allFaceBoundingBoxes: List<FaceBoundingBox>,
-        allEyesOpenProbs: List<Double>,
-        allSmileProbs: List<Double>,
-        minEyeOpen: Double,
-        avgEyeOpen: Double,
-        faceSharpnessValue: Double
-    ): RecommendationScore {
-        // 얼굴 영역 선명도 (35%)
-        val sharpness = normalizeSharpness(faceSharpnessRaw)
-        // 표정 (30%)
-        val expression = ((smileProb * 0.6 + eyeOpenProb * 0.4) * 100).coerceIn(0.0, 100.0)
-        // 조명 (20%)
-        val lighting = calculateLighting(bitmap, bestFace)
-        // 구도 (15%)
-        val composition = calculateComposition(bitmap, bestFace)
-
-        val total = (sharpness * 0.35) +
-                    (expression * 0.30) +
-                    (lighting * 0.20) +
-                    (composition * 0.15)
-
-        return RecommendationScore(
-            totalScore = total.coerceIn(0.0, 100.0),
-            sharpnessScore = sharpness,
-            expressionScore = expression,
-            lightingScore = lighting,
-            compositionScore = composition,
-            photoType = PhotoType.SOLO_PORTRAIT,
-            faceCount = faceCount,
-            isCutoff = false,
-            faceBoundingBox = bestFaceBoundingBox,
-            allFaceBoundingBoxes = allFaceBoundingBoxes,
-            analyzedWidth = originalSize.width,
-            analyzedHeight = originalSize.height,
-            rawSharpness = rawSharpness,
-            eyeOpenProb = eyeOpenProb,
-            leftEyeOpenProb = leftEyeProb,
-            rightEyeOpenProb = rightEyeProb,
-            smileProb = smileProb,
-            headEulerAngleX = headEulerX,
-            headEulerAngleY = headEulerY,
-            allEyesOpenProbs = allEyesOpenProbs,
-            allSmileProbs = allSmileProbs,
-            minEyeOpenProb = minEyeOpen,
-            avgEyeOpenProb = avgEyeOpen,
-            faceSharpness = faceSharpnessValue
-        )
-    }
-
-    private fun calculateGroupPortraitScore(
-        bitmap: Bitmap,
-        bestFace: Face,
-        allValidFaces: List<Face>,
-        rawSharpness: Double,
-        smileProb: Double,
-        eyeOpenProb: Double,
-        leftEyeProb: Double,
-        rightEyeProb: Double,
-        headEulerX: Float,
-        headEulerY: Float,
-        originalSize: Size,
-        bestFaceBoundingBox: FaceBoundingBox,
-        allFaceBoundingBoxes: List<FaceBoundingBox>,
-        allEyesOpenProbs: List<Double>,
-        allSmileProbs: List<Double>,
-        minEyeOpen: Double,
-        avgEyeOpen: Double,
-        faceSharpnessValue: Double
-    ): RecommendationScore {
-        // 전체 선명도 (20%)
-        val sharpness = normalizeSharpness(rawSharpness)
-        // 최소 눈 뜸 (30%) - 한 명이라도 눈 감으면 큰 감점
-        val minEyeOpenScore = (minEyeOpen * 100).coerceIn(0.0, 100.0)
-        // 평균 표정 (25%) - 모든 얼굴의 평균
-        val avgExpressionScores = allValidFaces.map { face ->
-            val smile = face.smilingProbability?.toDouble() ?: 0.0
-            val leftEye = face.leftEyeOpenProbability?.toDouble() ?: 0.0
-            val rightEye = face.rightEyeOpenProbability?.toDouble() ?: 0.0
-            val eyeOpen = (leftEye + rightEye) / 2.0
-            (smile * 0.6 + eyeOpen * 0.4) * 100
-        }
-        val avgExpression = if (avgExpressionScores.isNotEmpty()) avgExpressionScores.average() else 0.0
-        // 조명 (15%)
-        val lighting = calculateLighting(bitmap, bestFace)
-        // 구도 (10%) - 얼굴들의 중심점 기준
-        val composition = calculateGroupComposition(bitmap, allValidFaces)
-
-        val total = (sharpness * 0.20) +
-                    (minEyeOpenScore * 0.30) +
-                    (avgExpression.coerceIn(0.0, 100.0) * 0.25) +
-                    (lighting * 0.15) +
-                    (composition * 0.10)
-
-        return RecommendationScore(
-            totalScore = total.coerceIn(0.0, 100.0),
-            sharpnessScore = sharpness,
-            expressionScore = avgExpression.coerceIn(0.0, 100.0),
-            lightingScore = lighting,
-            compositionScore = composition,
-            photoType = PhotoType.GROUP_PORTRAIT,
-            faceCount = allValidFaces.size,
-            isCutoff = false,
-            faceBoundingBox = bestFaceBoundingBox,
-            allFaceBoundingBoxes = allFaceBoundingBoxes,
-            analyzedWidth = originalSize.width,
-            analyzedHeight = originalSize.height,
-            rawSharpness = rawSharpness,
-            eyeOpenProb = eyeOpenProb,
-            leftEyeOpenProb = leftEyeProb,
-            rightEyeOpenProb = rightEyeProb,
-            smileProb = smileProb,
-            headEulerAngleX = headEulerX,
-            headEulerAngleY = headEulerY,
-            allEyesOpenProbs = allEyesOpenProbs,
-            allSmileProbs = allSmileProbs,
-            minEyeOpenProb = minEyeOpen,
-            avgEyeOpenProb = avgEyeOpen,
-            faceSharpness = faceSharpnessValue
-        )
-    }
-
-    private fun calculateLandscapeScore(
-        bitmap: Bitmap,
-        rawSharpness: Double,
-        originalSize: Size
-    ): RecommendationScore {
-        // 선명도 (50%)
-        val sharpness = normalizeSharpness(rawSharpness)
-        // 색감 대비 (30%)
-        val colorContrast = calculateColorContrast(bitmap)
-        // 조명 균일도 (20%)
-        val lightingUniformity = calculateLightingUniformity(bitmap)
-
-        val total = (sharpness * 0.50) +
-                    (colorContrast * 0.30) +
-                    (lightingUniformity * 0.20)
-
-        return RecommendationScore(
-            totalScore = total.coerceIn(0.0, 100.0),
-            sharpnessScore = sharpness,
-            lightingScore = lightingUniformity,
-            compositionScore = colorContrast,
-            photoType = PhotoType.LANDSCAPE,
-            faceCount = 0,
-            isCutoff = false,
-            analyzedWidth = originalSize.width,
-            analyzedHeight = originalSize.height,
-            rawSharpness = rawSharpness
-        )
-    }
-    
-    // ... existing helpers ...
-    private fun calculateSharpness(bitmap: Bitmap): Double {
-        val width = bitmap.width
-        val height = bitmap.height
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-
-        val grayPixels = pixels.map { color ->
-            (Color.red(color) * 0.299 + Color.green(color) * 0.587 + Color.blue(color) * 0.114).toInt()
-        }
-
-        var variance = 0.0
-        var mean = 0.0
-        val laplacianValues = mutableListOf<Int>()
-        for (y in 1 until height - 1) {
-            for (x in 1 until width - 1) {
-                val idx = y * width + x
-                val center = grayPixels[idx]
-                val top = grayPixels[idx - width]
-                val bottom = grayPixels[idx + width]
-                val left = grayPixels[idx - 1]
-                val right = grayPixels[idx + 1]
-                val laplacian = top + bottom + left + right - (4 * center)
-                laplacianValues.add(laplacian)
-                mean += laplacian
-            }
-        }
-        if (laplacianValues.isEmpty()) return 0.0
-        mean /= laplacianValues.size
-        for (valVal in laplacianValues) {
-            variance += (valVal - mean).pow(2)
-        }
-        return variance / laplacianValues.size
-    }
-
-    private fun normalizeSharpness(variance: Double): Double {
-        if (variance <= 0.0) return 0.0
-        return (ln(1.0 + variance) / ln(1.0 + 2000.0) * 100.0).coerceIn(0.0, 100.0)
-    }
-
-    private fun calculateLighting(bitmap: Bitmap, face: Face): Double {
-        val box = face.boundingBox
-        val left = box.left.coerceAtLeast(0)
-        val top = box.top.coerceAtLeast(0)
-        val right = box.right.coerceAtMost(bitmap.width)
-        val bottom = box.bottom.coerceAtMost(bitmap.height)
-        if (left >= right || top >= bottom) return 0.0
-
-        val width = right - left
-        val height = bottom - top
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, left, top, width, height)
-        var totalLuminance = 0.0
-        for (pixel in pixels) {
-             val r = Color.red(pixel)
-             val g = Color.green(pixel)
-             val b = Color.blue(pixel)
-             totalLuminance += (0.299 * r + 0.587 * g + 0.114 * b)
-        }
-        val avgLuminance = totalLuminance / pixels.size
-        val dist = abs(avgLuminance - 128)
-        return ((1.0 - (dist / 128.0)) * 100).coerceIn(0.0, 100.0)
-    }
-
-    private fun calculateComposition(bitmap: Bitmap, face: Face): Double {
-        val imgWidth = bitmap.width.toDouble()
-        val imgHeight = bitmap.height.toDouble()
-        val faceCenterX = face.boundingBox.centerX().toDouble()
-        val faceCenterY = face.boundingBox.centerY().toDouble()
-        val thirdsX = listOf(imgWidth / 3.0, imgWidth * 2.0 / 3.0)
-        val thirdsY = listOf(imgHeight / 3.0, imgHeight * 2.0 / 3.0)
-        var minDistance = Double.MAX_VALUE
-        for (tx in thirdsX) {
-            for (ty in thirdsY) {
-                val dx = faceCenterX - tx
-                val dy = faceCenterY - ty
-                val distance = sqrt(dx*dx + dy*dy)
-                if (distance < minDistance) {
-                    minDistance = distance
-                }
-            }
-        }
-        val maxDist = sqrt(imgWidth*imgWidth + imgHeight*imgHeight)
-        return ((1.0 - (minDistance / (maxDist * 0.5))) * 100).coerceIn(0.0, 100.0)
-    }
-    
-    private fun calculateFaceSharpness(bitmap: Bitmap, face: Face): Double {
-        val box = face.boundingBox
-        val left = box.left.coerceAtLeast(0)
-        val top = box.top.coerceAtLeast(0)
-        val right = box.right.coerceAtMost(bitmap.width)
-        val bottom = box.bottom.coerceAtMost(bitmap.height)
-        val width = right - left
-        val height = bottom - top
-        if (width <= 2 || height <= 2) return calculateSharpness(bitmap)
-
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, left, top, width, height)
-
-        val grayPixels = pixels.map { color ->
-            (Color.red(color) * 0.299 + Color.green(color) * 0.587 + Color.blue(color) * 0.114).toInt()
-        }
-
-        var mean = 0.0
-        val laplacianValues = mutableListOf<Int>()
-        for (y in 1 until height - 1) {
-            for (x in 1 until width - 1) {
-                val idx = y * width + x
-                val center = grayPixels[idx]
-                val t = grayPixels[idx - width]
-                val b = grayPixels[idx + width]
-                val l = grayPixels[idx - 1]
-                val r = grayPixels[idx + 1]
-                val laplacian = t + b + l + r - (4 * center)
-                laplacianValues.add(laplacian)
-                mean += laplacian
-            }
-        }
-        if (laplacianValues.isEmpty()) return 0.0
-        mean /= laplacianValues.size
-        var variance = 0.0
-        for (v in laplacianValues) {
-            variance += (v - mean).pow(2)
-        }
-        return variance / laplacianValues.size
-    }
-
-    private fun calculateGroupComposition(bitmap: Bitmap, faces: List<Face>): Double {
-        if (faces.isEmpty()) return 50.0
-        val imgWidth = bitmap.width.toDouble()
-        val imgHeight = bitmap.height.toDouble()
-        // 모든 얼굴의 중심점 평균 계산
-        val avgCenterX = faces.map { it.boundingBox.centerX().toDouble() }.average()
-        val avgCenterY = faces.map { it.boundingBox.centerY().toDouble() }.average()
-        val thirdsX = listOf(imgWidth / 3.0, imgWidth * 2.0 / 3.0)
-        val thirdsY = listOf(imgHeight / 3.0, imgHeight * 2.0 / 3.0)
-        var minDistance = Double.MAX_VALUE
-        for (tx in thirdsX) {
-            for (ty in thirdsY) {
-                val dx = avgCenterX - tx
-                val dy = avgCenterY - ty
-                val distance = sqrt(dx * dx + dy * dy)
-                if (distance < minDistance) minDistance = distance
-            }
-        }
-        val maxDist = sqrt(imgWidth * imgWidth + imgHeight * imgHeight)
-        return ((1.0 - (minDistance / (maxDist * 0.5))) * 100).coerceIn(0.0, 100.0)
-    }
-
-    private fun calculateColorContrast(bitmap: Bitmap): Double {
-        val width = bitmap.width
-        val height = bitmap.height
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-
-        var sum = 0.0
-        var sumSq = 0.0
-        for (pixel in pixels) {
-            val lum = Color.red(pixel) * 0.299 + Color.green(pixel) * 0.587 + Color.blue(pixel) * 0.114
-            sum += lum
-            sumSq += lum * lum
-        }
-        val n = pixels.size.toDouble()
-        val mean = sum / n
-        val variance = (sumSq / n) - (mean * mean)
-        val stdDev = sqrt(variance.coerceAtLeast(0.0))
-        return (stdDev / 80.0 * 100).coerceIn(0.0, 100.0)
-    }
-
-    private fun calculateLightingUniformity(bitmap: Bitmap): Double {
-        val width = bitmap.width
-        val height = bitmap.height
-        val halfW = width / 2
-        val halfH = height / 2
-
-        val regions = listOf(
-            Rect(0, 0, halfW, halfH),
-            Rect(halfW, 0, width, halfH),
-            Rect(0, halfH, halfW, height),
-            Rect(halfW, halfH, width, height)
-        )
-
-        val regionMeans = regions.map { rect ->
-            val rw = rect.right - rect.left
-            val rh = rect.bottom - rect.top
-            if (rw <= 0 || rh <= 0) return@map 128.0
-            val pixels = IntArray(rw * rh)
-            bitmap.getPixels(pixels, 0, rw, rect.left, rect.top, rw, rh)
-            var sum = 0.0
-            for (pixel in pixels) {
-                sum += Color.red(pixel) * 0.299 + Color.green(pixel) * 0.587 + Color.blue(pixel) * 0.114
-            }
-            sum / pixels.size
-        }
-
-        val mean = regionMeans.average()
-        val variance = regionMeans.map { (it - mean).pow(2) }.average()
-        val stdDev = sqrt(variance)
-        return ((1.0 - stdDev / 128.0) * 100).coerceIn(0.0, 100.0)
-    }
-
-    private data class BrightnessStats(val mean: Float, val variance: Float)
-
-    private fun isSunglassesLikely(bitmap: Bitmap, face: Face): Boolean {
-        val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)?.position ?: return false
-        val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)?.position ?: return false
-        val faceWidth = face.boundingBox.width()
-        val halfSize = (faceWidth * EYE_REGION_RATIO / 2).toInt().coerceAtLeast(1)
-
-        val leftStats = getRegionBrightnessStats(bitmap, leftEye.x.toInt(), leftEye.y.toInt(), halfSize)
-            ?: return false
-        val rightStats = getRegionBrightnessStats(bitmap, rightEye.x.toInt(), rightEye.y.toInt(), halfSize)
-            ?: return false
-
-        return leftStats.mean < SUNGLASSES_DARK_THRESHOLD
-               && rightStats.mean < SUNGLASSES_DARK_THRESHOLD
-               && leftStats.variance < SUNGLASSES_VARIANCE_THRESHOLD
-               && rightStats.variance < SUNGLASSES_VARIANCE_THRESHOLD
-    }
-
-    private fun getRegionBrightnessStats(bitmap: Bitmap, cx: Int, cy: Int, halfSize: Int): BrightnessStats? {
-        val left = (cx - halfSize).coerceAtLeast(0)
-        val top = (cy - halfSize).coerceAtLeast(0)
-        val right = (cx + halfSize).coerceAtMost(bitmap.width)
-        val bottom = (cy + halfSize).coerceAtMost(bitmap.height)
-        val width = right - left
-        val height = bottom - top
-        if (width <= 0 || height <= 0) return null
-
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, left, top, width, height)
-
-        var sum = 0f
-        for (pixel in pixels) {
-            sum += (0.299f * Color.red(pixel) + 0.587f * Color.green(pixel) + 0.114f * Color.blue(pixel))
-        }
-        val mean = sum / pixels.size
-
-        var varianceSum = 0f
-        for (pixel in pixels) {
-            val lum = 0.299f * Color.red(pixel) + 0.587f * Color.green(pixel) + 0.114f * Color.blue(pixel)
-            varianceSum += (lum - mean) * (lum - mean)
-        }
-        val variance = varianceSum / pixels.size
-
-        return BrightnessStats(mean, variance)
-    }
-
-    private fun loadBitmap(path: String): Pair<Bitmap, Size>? {
-        val options = BitmapFactory.Options().apply {
-            inJustDecodeBounds = true
-        }
-        BitmapFactory.decodeFile(path, options)
-        val originalWidth = options.outWidth
-        val originalHeight = options.outHeight
-        if (originalWidth <= 0 || originalHeight <= 0) return null
-        val targetSize = 1024
-        var sampleSize = 1
-        while (options.outWidth / sampleSize > targetSize || options.outHeight / sampleSize > targetSize) {
-            sampleSize *= 2
-        }
-        val finalOptions = BitmapFactory.Options().apply {
-            inSampleSize = sampleSize
-        }
-        val bitmap = BitmapFactory.decodeFile(path, finalOptions) ?: return null
-        val exif = ExifInterface(path)
-        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-        val matrix = Matrix()
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-        }
-        val rotatedBitmap = if (orientation != ExifInterface.ORIENTATION_NORMAL && orientation != ExifInterface.ORIENTATION_UNDEFINED) {
-             Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-        } else {
-            bitmap
-        }
-        val rotatedOriginalSize = if (orientation == ExifInterface.ORIENTATION_ROTATE_90 || 
-                                      orientation == ExifInterface.ORIENTATION_ROTATE_270) {
-            Size(originalHeight, originalWidth)
-        } else {
-            Size(originalWidth, originalHeight)
-        }
-        return Pair(rotatedBitmap, rotatedOriginalSize)
-    }
-
-    companion object {
-        private const val TAG = "PhotoQualityAnalyzer"
-        private const val POSE_CONFIDENCE_THRESHOLD = 0.5f
-        private const val POSE_MIN_LANDMARK_COUNT = 5
-
-        // 일반 안경 대응: EYES_CLOSED 판별 강화
-        private const val SINGLE_EYE_STRICT_THRESHOLD = 0.15f
-        private const val EYE_ASYMMETRY_THRESHOLD = 0.3f
-
-        // 선글라스 감지 파라미터
-        private const val EYE_REGION_RATIO = 0.15f
-        private const val SUNGLASSES_DARK_THRESHOLD = 60f
-        private const val SUNGLASSES_VARIANCE_THRESHOLD = 400f
-    }
+fun com.cola.pickly.core.data.settings.SmartDiscardThresholds.toAnalysisConfig(
+    criteria: Set<RejectReason>
+): com.cola.photoanalyzer.model.AnalysisConfig {
+    return com.cola.photoanalyzer.model.AnalysisConfig(
+        blurThreshold = blurThreshold,
+        minFaceRatio = minFaceSize,
+        eyeOpenThreshold = eyeOpenThreshold,
+        smileExceptionThreshold = smileExceptionThreshold,
+        enabledDefects = criteria.map { it.toDefectType() }.toSet()
+    )
 }
