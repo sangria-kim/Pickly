@@ -35,7 +35,7 @@ sealed class BulkAction(
     object Delete : BulkAction(R.string.bulk_action_delete, Icons.Outlined.Delete)
 
     companion object {
-        val organizeActions = listOf(Accept, Unmark, Reject)
+        val organizeActions = listOf(Accept, Unmark, Reject, Delete)
         val archiveActions = listOf(Share, Move, Copy, Delete)
     }
 }
@@ -51,18 +51,20 @@ fun BulkActionBar(
         contentColor = MaterialTheme.colorScheme.outline
     ) {
         // 정리하기 탭 멀티 셀렉트 전용 배치:
-        // 채택(33%) · 해제(33%) · 제외(33%)
+        // 채택(25%) · 해제(25%) · 제외(25%) · 삭제(25%)
         if (actions == BulkAction.organizeActions) {
             val organizeSlots: List<BulkAction> = listOf(
                 BulkAction.Accept,
                 BulkAction.Unmark,
-                BulkAction.Reject
+                BulkAction.Reject,
+                BulkAction.Delete
             )
 
             organizeSlots.forEach { action ->
                 val itemColor = when (action) {
                     is BulkAction.Accept -> TealAccent
                     is BulkAction.Reject -> RejectRed
+                    is BulkAction.Delete -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.outline
                 }
                 val disabledColor = itemColor.copy(alpha = 0.38f)

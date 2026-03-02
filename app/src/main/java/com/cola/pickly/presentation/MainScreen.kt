@@ -204,7 +204,11 @@ fun MainScreen(
                             is BulkAction.Share -> onArchiveShareClick?.invoke()
                             is BulkAction.Move -> onArchiveMoveClick?.invoke()
                             is BulkAction.Copy -> onArchiveCopyClick?.invoke()
-                            is BulkAction.Delete -> onArchiveDeleteClick?.invoke()
+                            is BulkAction.Delete -> when (currentTab) {
+                                MainTab.Organize.route -> organizeViewModel.requestDeleteConfirmation()
+                                MainTab.Archive.route -> onArchiveDeleteClick?.invoke()
+                                else -> {}
+                            }
                         }
                     },
                     isActionInProgress = archiveActionInProgress

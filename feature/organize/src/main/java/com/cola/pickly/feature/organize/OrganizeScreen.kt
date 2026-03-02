@@ -1,6 +1,10 @@
 package com.cola.pickly.feature.organize
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,6 +65,7 @@ fun OrganizeScreen(
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
     val showAutoRejectDialog by viewModel.showAutoRejectDialog.collectAsStateWithLifecycle()
     val showInterruptDialog by viewModel.showInterruptDialog.collectAsStateWithLifecycle()
+    val showDeleteConfirm by viewModel.showDeleteConfirm.collectAsStateWithLifecycle()
     val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -88,6 +93,18 @@ fun OrganizeScreen(
     LaunchedEffect(Unit) {
         viewModel.snackbarMessages.collectLatest { message ->
             snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    val storageAccessLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        viewModel.onStorageAccessResult(result.resultCode == Activity.RESULT_OK)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.storageAccessRequests.collectLatest { intentSender ->
+            storageAccessLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
         }
     }
 
@@ -343,6 +360,30 @@ fun OrganizeScreen(
                     ) {
                         Text(text = "계속 분석")
                     }
+                }
+            )
+        }
+
+        if (showDeleteConfirm) {
+            val deleteSelectedCount = (uiState as? OrganizeUiState.GridReady)?.selectedCount ?: 0
+            AlertDialog(
+                onDismissRequest = {
+                    if (!isActionInProgress) viewModel.dismissDeleteConfirmation()
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.deleteSelectedPhotos() },
+                        enabled = !isActionInProgress
+                    ) { Text(text = stringResource(R.string.delete_confirm_button)) }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissDeleteConfirmation() },
+                        enabled = !isActionInProgress
+                    ) { Text(text = stringResource(R.string.delete_confirm_cancel)) }
+                },
+                text = {
+                    Text(text = stringResource(R.string.delete_confirm_message, deleteSelectedCount))
                 }
             )
         }
