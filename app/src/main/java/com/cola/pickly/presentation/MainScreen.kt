@@ -102,8 +102,8 @@ fun PicklyBottomNavigation(
                 selected = isSelected,
                 onClick = {
                     // 분석 중이면 중단 확인 다이얼로그 표시
-                    val isAnalyzing = (organizeUiState as? com.cola.pickly.feature.organize.OrganizeUiState.GridReady)?.isAnalyzing ?: false
-                    if (isAnalyzing) {
+                    val isSmartOrganizing = (organizeUiState as? com.cola.pickly.feature.organize.OrganizeUiState.GridReady)?.isSmartOrganizing ?: false
+                    if (isSmartOrganizing) {
                         organizeViewModel.requestInterruptConfirmation {
                             navController.navigate(tab.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {

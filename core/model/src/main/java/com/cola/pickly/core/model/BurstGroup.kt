@@ -11,7 +11,7 @@ data class BurstGroup(
     val groupIndex: Int,
     val photoIds: List<Long>,
     val bestPhotoId: Long,
-    val runnerUpPhotoId: Long?,
+    val recommendedPhotoIds: List<Long>,
     val bestScore: Double
 ) {
     fun rankOf(photoId: Long): Int? {

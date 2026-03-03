@@ -51,8 +51,8 @@ fun PhotoGridItem(
     isSelected: Boolean,
     selectionState: PhotoSelectionState? = null,
     isMultiSelectMode: Boolean = false,
-    isAnalyzing: Boolean = false,
-    autoRejectReason: RejectReason? = null,
+    isSmartOrganizing: Boolean = false,
+    rejectReason: RejectReason? = null,
     burstRecommendRank: BurstRecommendRank? = null,
     burstDebugInfo: BurstDebugInfo? = null,
     onClick: () -> Unit,
@@ -78,9 +78,9 @@ fun PhotoGridItem(
                     }
                 },
                 onLongClick = {
-                    // 분석 중일 때 롱프레스 제한
-                    if (isAnalyzing) {
-                        Toast.makeText(context, "분석이 끝난 뒤에 선택할 수 있어요.", Toast.LENGTH_SHORT).show()
+                    // 스마트 정리 중일 때 롱프레스 제한
+                    if (isSmartOrganizing) {
+                        Toast.makeText(context, "스마트 정리가 끝난 뒤에 선택할 수 있어요.", Toast.LENGTH_SHORT).show()
                         return@combinedClickable
                     }
 
@@ -180,8 +180,8 @@ fun PhotoGridItem(
 
         // 우하단 pill 배지 (제외 뱃지 우선, 없으면 추천 뱃지)
         when {
-            autoRejectReason != null -> RejectReasonBadge(
-                reason = autoRejectReason,
+            rejectReason != null -> RejectReasonBadge(
+                reason = rejectReason,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(6.dp)

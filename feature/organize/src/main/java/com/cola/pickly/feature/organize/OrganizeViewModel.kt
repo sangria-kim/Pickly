@@ -95,8 +95,8 @@ class OrganizeViewModel @Inject constructor(
     private val _isActionInProgress = MutableStateFlow(false)
     val isActionInProgress: StateFlow<Boolean> = _isActionInProgress.asStateFlow()
 
-    private val _showAutoRejectDialog = MutableStateFlow(false)
-    val showAutoRejectDialog: StateFlow<Boolean> = _showAutoRejectDialog.asStateFlow()
+    private val _showSmartOrganizeDialog = MutableStateFlow(false)
+    val showSmartOrganizeDialog: StateFlow<Boolean> = _showSmartOrganizeDialog.asStateFlow()
 
     private val _showInterruptDialog = MutableStateFlow(false)
     val showInterruptDialog: StateFlow<Boolean> = _showInterruptDialog.asStateFlow()
@@ -112,7 +112,7 @@ class OrganizeViewModel @Inject constructor(
 
     private var pendingAction: PendingAction? = null
 
-    private var analysisJob: Job? = null
+    private var smartOrganizeJob: Job? = null
 
     private var pendingNavigation: (() -> Unit)? = null
 
@@ -670,49 +670,49 @@ class OrganizeViewModel @Inject constructor(
     }
 
     /**
-     * 스마트 제외 확인 다이얼로그 표시
+     * 스마트 정리 확인 다이얼로그 표시
      */
-    fun showAutoRejectConfirmDialog() {
-        _showAutoRejectDialog.value = true
+    fun showSmartOrganizeConfirmDialog() {
+        _showSmartOrganizeDialog.value = true
     }
 
     /**
-     * 스마트 제외 확인 다이얼로그 닫기
+     * 스마트 정리 확인 다이얼로그 닫기
      */
-    fun dismissAutoRejectDialog() {
-        _showAutoRejectDialog.value = false
+    fun dismissSmartOrganizeDialog() {
+        _showSmartOrganizeDialog.value = false
     }
 
     /**
      * ✨ 아이콘 클릭 핸들러 (시작/취소 토글)
      */
-    fun handleAutoRejectIconClick() {
+    fun handleSmartOrganizeIconClick() {
         val currentState = _uiState.value
-        if (currentState is OrganizeUiState.GridReady && currentState.isAnalyzing) {
-            // 분석 중이면 취소
-            cancelAutoRejectAnalysis()
+        if (currentState is OrganizeUiState.GridReady && currentState.isSmartOrganizing) {
+            // 스마트 정리 중이면 취소
+            cancelSmartOrganize()
         } else {
-            // 분석 중이 아니면 확인 다이얼로그 표시
-            showAutoRejectConfirmDialog()
+            // 스마트 정리 중이 아니면 확인 다이얼로그 표시
+            showSmartOrganizeConfirmDialog()
         }
     }
 
     /**
-     * 스마트 제외 분석 취소
+     * 스마트 정리 취소
      */
-    fun cancelAutoRejectAnalysis() {
-        analysisJob?.cancel()
-        analysisJob = null
+    fun cancelSmartOrganize() {
+        smartOrganizeJob?.cancel()
+        smartOrganizeJob = null
 
         val currentState = _uiState.value
         if (currentState is OrganizeUiState.GridReady) {
             _uiState.update {
-                currentState.copy(isAnalyzing = false)
+                currentState.copy(isSmartOrganizing = false)
             }
         }
 
         viewModelScope.launch {
-            _snackbarMessages.emit("분석을 중단했어요.")
+            _snackbarMessages.emit("스마트 정리를 중단했어요.")
         }
     }
 
@@ -721,7 +721,7 @@ class OrganizeViewModel @Inject constructor(
      */
     fun requestInterruptConfirmation(navigation: () -> Unit) {
         val currentState = _uiState.value
-        if (currentState is OrganizeUiState.GridReady && currentState.isAnalyzing) {
+        if (currentState is OrganizeUiState.GridReady && currentState.isSmartOrganizing) {
             pendingNavigation = navigation
             _showInterruptDialog.value = true
         } else {
@@ -738,32 +738,32 @@ class OrganizeViewModel @Inject constructor(
     }
 
     /**
-     * 중단 확인 (분석 중단 + 화면 전환)
+     * 중단 확인 (스마트 정리 중단 + 화면 전환)
      */
     fun confirmInterrupt() {
         _showInterruptDialog.value = false
-        cancelAutoRejectAnalysis()
+        cancelSmartOrganize()
         pendingNavigation?.invoke()
         pendingNavigation = null
     }
 
     /**
-     * 스마트 제외 분석 시작
+     * 스마트 정리 시작
      */
-    fun startAutoRejectAnalysis() {
+    fun startSmartOrganize() {
         val currentState = _uiState.value
         if (currentState !is OrganizeUiState.GridReady) return
-        if (currentState.isAnalyzing) return
+        if (currentState.isSmartOrganizing) return
 
-        analysisJob = viewModelScope.launch {
+        smartOrganizeJob = viewModelScope.launch {
             try {
-                // 분석 시작
+                // 스마트 정리 시작
                 _uiState.update {
-                    currentState.copy(isAnalyzing = true)
+                    currentState.copy(isSmartOrganizing = true)
                 }
 
                 // 1회성 스낵바: 취소 방법 안내
-                _snackbarMessages.emit("분석 중… ✨을 다시 누르면 취소할 수 있어요.")
+                _snackbarMessages.emit("스마트 정리 중… ✨을 다시 누르면 취소할 수 있어요.")
 
                 // 파이프라인 병렬 실행: 품질 분석 + 버스트 그룹 감지(dHash)
                 val analysisDeferred = async { analyzePhotosForAutoRejectUseCase(currentState.photos) }
@@ -800,8 +800,8 @@ class OrganizeViewModel @Inject constructor(
                         }
 
                         state.copy(
-                            isAnalyzing = false,
-                            autoRejectCandidates = result.candidates,
+                            isSmartOrganizing = false,
+                            rejectCandidates = result.candidates,
                             selectionMap = newSelectionMap,
                             burstGroups = burstResult.groups,
                             burstGroupByPhotoId = burstResult.burstGroupByPhotoId
@@ -810,13 +810,13 @@ class OrganizeViewModel @Inject constructor(
                 }
 
                 // 결과 안내 메시지
-                val burstInfo = if (burstResult.groups.isNotEmpty()) {
-                    " 연사 그룹 ${burstResult.groups.size}개를 감지했어요."
+                val burstPrefix = if (burstResult.groups.isNotEmpty()) {
+                    "연사 그룹 ${burstResult.groups.size}개에서 베스트 사진을 추천했어요. "
                 } else ""
                 val message = when {
-                    result.candidates.isEmpty() -> "후보로 표시할 사진이 없어요.$burstInfo"
-                    isAutoRejectMode -> "아쉬운 사진 ${result.candidates.size}개를 자동으로 제외했어요.$burstInfo"
-                    else -> "아쉬운 사진 후보를 표시했어요.$burstInfo"
+                    result.candidates.isEmpty() -> "${burstPrefix}아쉬운 사진 후보가 없어요."
+                    isAutoRejectMode -> "${burstPrefix}아쉬운 사진 ${result.candidates.size}개를 제외했어요."
+                    else -> "${burstPrefix}아쉬운 사진 후보를 표시했어요."
                 }
                 _snackbarMessages.emit(message)
 
@@ -824,15 +824,15 @@ class OrganizeViewModel @Inject constructor(
                 logE("Auto-reject analysis failed", e)
                 _uiState.update { state ->
                     if (state is OrganizeUiState.GridReady) {
-                        state.copy(isAnalyzing = false)
+                        state.copy(isSmartOrganizing = false)
                     } else state
                 }
                 // 취소된 경우 에러 메시지를 표시하지 않음
                 if (e !is kotlinx.coroutines.CancellationException) {
-                    _snackbarMessages.emit("분석을 완료하지 못했어요. 다시 시도해주세요.")
+                    _snackbarMessages.emit("스마트 정리를 완료하지 못했어요. 다시 시도해주세요.")
                 }
             } finally {
-                analysisJob = null
+                smartOrganizeJob = null
             }
         }
     }

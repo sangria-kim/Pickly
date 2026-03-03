@@ -63,7 +63,7 @@ fun OrganizeScreen(
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val debugOptions by viewModel.debugOptions.collectAsStateWithLifecycle()
     val folderSelectState by folderSelectViewModel.uiState.collectAsStateWithLifecycle()
-    val showAutoRejectDialog by viewModel.showAutoRejectDialog.collectAsStateWithLifecycle()
+    val showSmartOrganizeDialog by viewModel.showSmartOrganizeDialog.collectAsStateWithLifecycle()
     val showInterruptDialog by viewModel.showInterruptDialog.collectAsStateWithLifecycle()
     val showDeleteConfirm by viewModel.showDeleteConfirm.collectAsStateWithLifecycle()
     val isActionInProgress by viewModel.isActionInProgress.collectAsStateWithLifecycle()
@@ -140,7 +140,7 @@ fun OrganizeScreen(
                         photos = state.photos,
                         selectedIds = state.selectedIds,
                         selectionMap = state.selectionMap,
-                        isAnalyzing = state.isAnalyzing,
+                        isSmartOrganizing = state.isSmartOrganizing,
                         activePhotoFilter = state.activePhotoFilter,
                         sortOrder = sortOrder,
                         onSortToggle = { viewModel.toggleSortOrder() },
@@ -148,7 +148,7 @@ fun OrganizeScreen(
                         onAcceptedToggle = { viewModel.toggleAcceptedSelection() },
                         onRejectedToggle = { viewModel.toggleRejectedSelection() },
                         onCancelSelection = { viewModel.exitMultiSelectMode() },
-                        onAutoRejectClick = { viewModel.handleAutoRejectIconClick() }
+                        onSmartOrganizeClick = { viewModel.handleSmartOrganizeIconClick() }
                     )
                 }
                 is OrganizeUiState.EmptyFolder -> {
@@ -220,7 +220,7 @@ fun OrganizeScreen(
                         buildMap {
                             state.burstGroups.forEach { group ->
                                 put(group.bestPhotoId, BurstRecommendRank.Best)
-                                group.runnerUpPhotoId?.let { put(it, BurstRecommendRank.RunnerUp) }
+                                group.recommendedPhotoIds.forEach { put(it, BurstRecommendRank.Recommended) }
                             }
                         }
                     }
@@ -243,8 +243,8 @@ fun OrganizeScreen(
                         selectedIds = state.selectedIds,
                         selectionMap = state.selectionMap,
                         isMultiSelectMode = state.isMultiSelectMode,
-                        isAnalyzing = state.isAnalyzing,
-                        autoRejectCandidates = state.autoRejectCandidates,
+                        isSmartOrganizing = state.isSmartOrganizing,
+                        rejectCandidates = state.rejectCandidates,
                         burstRecommendMap = burstRecommendMap,
                         burstDebugMap = burstDebugMap,
                         gridState = gridState,
@@ -261,7 +261,7 @@ fun OrganizeScreen(
                                     photo.id,
                                     state.selectionMap,
                                     false,
-                                    state.autoRejectCandidates,
+                                    state.rejectCandidates,
                                     state.displayedPhotos.map { it.id }
                                 )
                             }
@@ -312,30 +312,30 @@ fun OrganizeScreen(
             )
         }
 
-        if (showAutoRejectDialog) {
-            val isAnalyzing = (uiState as? OrganizeUiState.GridReady)?.isAnalyzing ?: false
+        if (showSmartOrganizeDialog) {
+            val isSmartOrganizing = (uiState as? OrganizeUiState.GridReady)?.isSmartOrganizing ?: false
             AlertDialog(
                 onDismissRequest = {
-                    if (!isAnalyzing) {
-                        viewModel.dismissAutoRejectDialog()
+                    if (!isSmartOrganizing) {
+                        viewModel.dismissSmartOrganizeDialog()
                     }
                 },
-                text = { Text(text = "아쉬운 사진을 자동으로 제외할까요?") },
+                text = { Text(text = "스마트 정리를 시작할까요?") },
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            viewModel.dismissAutoRejectDialog()
-                            viewModel.startAutoRejectAnalysis()
+                            viewModel.dismissSmartOrganizeDialog()
+                            viewModel.startSmartOrganize()
                         },
-                        enabled = !isAnalyzing
+                        enabled = !isSmartOrganizing
                     ) {
-                        Text(text = "제외하기")
+                        Text(text = "시작하기")
                     }
                 },
                 dismissButton = {
                     TextButton(
-                        onClick = { viewModel.dismissAutoRejectDialog() },
-                        enabled = !isAnalyzing
+                        onClick = { viewModel.dismissSmartOrganizeDialog() },
+                        enabled = !isSmartOrganizing
                     ) {
                         Text(text = "취소")
                     }
@@ -346,7 +346,7 @@ fun OrganizeScreen(
         if (showInterruptDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissInterruptDialog() },
-                text = { Text(text = "분석을 중단하고 계속할까요?") },
+                text = { Text(text = "스마트 정리를 중단하고 계속할까요?") },
                 confirmButton = {
                     TextButton(
                         onClick = { viewModel.confirmInterrupt() }
@@ -358,7 +358,7 @@ fun OrganizeScreen(
                     TextButton(
                         onClick = { viewModel.dismissInterruptDialog() }
                     ) {
-                        Text(text = "계속 분석")
+                        Text(text = "계속 정리")
                     }
                 }
             )

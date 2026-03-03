@@ -94,12 +94,18 @@ class BurstDetectionEngine @Inject constructor() {
             }
             val sortedIds = raw.photoIds.sortedWith(scoreComparator)
             val bestId = sortedIds.first()
+            val recommendedCount = when (raw.photoIds.size) {
+                in 2..3 -> 0
+                in 4..6 -> 1
+                else    -> 2
+            }
+            val recommendedIds = sortedIds.drop(1).take(recommendedCount)
             BurstGroup(
                 groupId = "burst_$bestId",
                 groupIndex = raw.groupIndex,
                 photoIds = raw.photoIds,
                 bestPhotoId = bestId,
-                runnerUpPhotoId = sortedIds.getOrNull(1),
+                recommendedPhotoIds = recommendedIds,
                 bestScore = scoreMap[bestId]?.totalScore ?: 0.0
             )
         }

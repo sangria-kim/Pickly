@@ -53,7 +53,7 @@ fun OrganizeTopBar(
     photos: List<Photo> = emptyList(),
     selectedIds: Set<Long> = emptySet(),
     selectionMap: Map<Long, PhotoSelectionState> = emptyMap(),
-    isAnalyzing: Boolean = false,
+    isSmartOrganizing: Boolean = false,
     activePhotoFilter: PhotoFilter? = null,
     sortOrder: SortOrder = SortOrder.DESCENDING,
     onSortToggle: () -> Unit = {},
@@ -61,7 +61,7 @@ fun OrganizeTopBar(
     onAcceptedToggle: () -> Unit,
     onRejectedToggle: () -> Unit,
     onCancelSelection: () -> Unit = {},
-    onAutoRejectClick: () -> Unit = {}
+    onSmartOrganizeClick: () -> Unit = {}
 ) {
     var showFilterMenu by remember { mutableStateOf(false) }
 
@@ -163,14 +163,14 @@ fun OrganizeTopBar(
             // 스마트 제외 버튼 (폴더 선택됐을 때만, Multi Select Mode 아닐 때만)
             if (hasSelectedFolder && !isMultiSelectMode) {
                 IconButton(
-                    onClick = onAutoRejectClick,
-                    enabled = true  // 분석 중에도 클릭 가능 (취소 용도)
+                    onClick = onSmartOrganizeClick,
+                    enabled = true  // 스마트 정리 중에도 클릭 가능 (취소 용도)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         // 항상 AutoAwesome 아이콘 표시
                         Icon(
                             Icons.Outlined.AutoAwesome,
-                            contentDescription = if (isAnalyzing) "분석 취소" else "스마트 제외",
+                            contentDescription = if (isSmartOrganizing) "취소" else "스마트 정리",
                         )
                     }
                 }
@@ -178,7 +178,7 @@ fun OrganizeTopBar(
 
             // 정렬 토글 버튼 (Normal Mode, Multi Select Mode 모두 표시)
             if (hasSelectedFolder || isMultiSelectMode) {
-                IconButton(onClick = onSortToggle, enabled = !isAnalyzing) {
+                IconButton(onClick = onSortToggle, enabled = !isSmartOrganizing) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Sort,
                         contentDescription = if (sortOrder == SortOrder.DESCENDING) "최신순" else "오래된순",
@@ -193,7 +193,7 @@ fun OrganizeTopBar(
                 Box {
                     IconButton(
                         onClick = { showFilterMenu = !showFilterMenu },
-                        enabled = !isAnalyzing  // 분석 중일 때 비활성화
+                        enabled = !isSmartOrganizing  // 스마트 정리 중일 때 비활성화
                     ) {
                         Icon(
                             Icons.Default.FilterAlt,
@@ -243,7 +243,7 @@ fun OrganizeTopBar(
         )
 
         // Top Bar 하단에 overlay로 프로그레스 바 배치 (높이 변화 없음)
-        if (isAnalyzing) {
+        if (isSmartOrganizing) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)

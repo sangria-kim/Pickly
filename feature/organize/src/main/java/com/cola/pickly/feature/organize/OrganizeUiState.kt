@@ -30,8 +30,8 @@ sealed interface OrganizeUiState {
         val photos: List<Photo>,
         val selectedIds: Set<Long> = emptySet(),
         val selectionMap: Map<Long, PhotoSelectionState> = emptyMap(),
-        val autoRejectCandidates: Map<Long, RejectReason> = emptyMap(), // 스마트 제외 후보 ID와 제외 사유
-        val isAnalyzing: Boolean = false, // 스마트 제외 분석 진행 중 여부
+        val rejectCandidates: Map<Long, RejectReason> = emptyMap(), // 스마트 제외 후보 ID와 제외 사유
+        val isSmartOrganizing: Boolean = false, // 스마트 정리 진행 중 여부
         val activePhotoFilter: PhotoFilter? = null,
         val burstGroups: List<BurstGroup> = emptyList(), // 연사 그룹 목록
         val burstGroupByPhotoId: Map<Long, BurstGroup> = emptyMap() // 사진 ID → 연사 그룹 매핑
